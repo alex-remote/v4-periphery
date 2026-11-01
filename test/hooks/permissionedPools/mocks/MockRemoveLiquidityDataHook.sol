@@ -5,9 +5,9 @@ import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 import {ModifyLiquidityParams} from "@uniswap/v4-core/src/types/PoolOperation.sol";
 import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
 
-/// @notice Stands in for a custom permissioned-hook extension that requires `hookData` on removal.
-/// @dev Mined with `BEFORE_REMOVE_LIQUIDITY_FLAG` only, so it is never invoked on add and cannot interfere
-///      with seeding liquidity. Reverts on empty `hookData` so callers can assert the value was forwarded.
+/// @notice 充当一个在移除流动性时要求提供 `hookData` 的自定义许可 hook 扩展。
+/// @dev 挖掘地址时只带 `BEFORE_REMOVE_LIQUIDITY_FLAG`，因此添加流动性时永远不会被调用，也不会干扰
+///      初始流动性的注入。`hookData` 为空时回滚，以便调用方断言该值确实被转发了。
 contract MockRemoveLiquidityDataHook {
     error HookDataRequired();
 

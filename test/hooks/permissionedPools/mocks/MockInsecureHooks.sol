@@ -6,7 +6,7 @@ import {ModifyLiquidityParams, SwapParams} from "@uniswap/v4-core/src/types/Pool
 import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
 import {BeforeSwapDelta, BeforeSwapDeltaLibrary} from "@uniswap/v4-core/src/types/BeforeSwapDelta.sol";
 
-/// @notice This contract is used in the testing of security for the permissioned pool manager
+/// @notice 本合约用于许可池管理器（permissioned pool manager）的安全性测试
 contract MockInsecureHooks {
     function beforeAddLiquidity(address, PoolKey calldata, ModifyLiquidityParams calldata, bytes calldata)
         external

@@ -19,7 +19,7 @@ import {IV4Router} from "../../src/interfaces/IV4Router.sol";
 import {ActionConstants} from "../../src/libraries/ActionConstants.sol";
 import {ModifyLiquidityParams, SwapParams} from "@uniswap/v4-core/src/types/PoolOperation.sol";
 
-/// @notice A shared test contract that wraps the v4-core deployers contract and exposes basic helpers for swapping with the router.
+/// @notice 一个共享测试合约，封装了 v4-core 的 deployers 合约，并对外提供通过路由器进行兑换（swap）的基础辅助函数。
 contract RoutingTestHelpers is Test, Deployers {
     PoolModifyLiquidityTest positionManager;
     MockV4Router router;
@@ -27,12 +27,12 @@ contract RoutingTestHelpers is Test, Deployers {
     uint256 MAX_SETTLE_AMOUNT = type(uint256).max;
     uint256 MIN_TAKE_AMOUNT = 0;
 
-    // nativeKey is already defined in Deployers.sol
+    // nativeKey 已在 Deployers.sol 中定义
     PoolKey key0;
     PoolKey key1;
     PoolKey key2;
 
-    // currency0 and currency1 are defined in Deployers.sol
+    // currency0 和 currency1 已在 Deployers.sol 中定义
     Currency currency2;
     Currency currency3;
 
@@ -166,7 +166,7 @@ contract RoutingTestHelpers is Test, Deployers {
 
         uint256 value = (inputCurrency.isAddressZero()) ? amountIn : 0;
 
-        // otherwise just execute as normal
+        // 否则照常执行
         router.executeActions{value: value}(data);
 
         inputBalanceAfter = inputCurrency.balanceOfSelf();
@@ -203,7 +203,7 @@ contract RoutingTestHelpers is Test, Deployers {
 
         bytes memory data = plan.finalizeSwap(inputCurrency, outputCurrency, ActionConstants.MSG_SENDER);
 
-        // send too much ETH to mimic slippage
+        // 发送过量的 ETH 以模拟滑点
         uint256 value = expectedAmountIn + 0.1 ether;
         router.executeActionsAndSweepExcessETH{value: value}(data);
 

@@ -62,14 +62,14 @@ contract PositionManagerModifyLiquiditiesTest is Test, PosmTestSetup, LiquidityF
         deployFreshManagerAndRouters();
         deployMintAndApprove2Currencies();
 
-        // Requires currency0 and currency1 to be set in base Deployers contract.
+        // 要求在基础 Deployers 合约中已设置 currency0 和 currency1。
         deployAndApprovePosm(manager);
 
         seedBalance(alice);
         approvePosmFor(alice);
 
-        // must deploy after posm
-        // Deploys a hook which can accesses IPositionManager.modifyLiquiditiesWithoutUnlock
+        // 必须在 posm 之后部署
+        // 部署一个可以访问 IPositionManager.modifyLiquiditiesWithoutUnlock 的 hook
         deployPosmHookModifyLiquidities();
         seedBalance(address(hookModifyLiquidities));
 
@@ -98,13 +98,13 @@ contract PositionManagerModifyLiquiditiesTest is Test, PosmTestSetup, LiquidityF
         fotKey = initPoolUnsorted(Currency.wrap(address(fotToken)), currency1, IHooks(address(0)), 3000, SQRT_PRICE_1_1);
     }
 
-    /// @dev minting liquidity without approval is allowable
+    /// @dev 未经授权铸造流动性是允许的
     function test_hook_mint() public {
         uint256 initialLiquidity = 100e18;
         uint256 tokenId = lpm.nextTokenId();
         mint(config, initialLiquidity, address(this), ZERO_BYTES);
 
-        // hook mints a new position in beforeSwap via hookData
+        // hook 在 beforeSwap 中通过 hookData 铸造一个新头寸
         uint256 hookTokenId = lpm.nextTokenId();
         uint256 newLiquidity = 10e18;
         bytes memory calls = getMintEncoded(config, newLiquidity, address(hookModifyLiquidities), ZERO_BYTES);
@@ -113,27 +113,27 @@ contract PositionManagerModifyLiquiditiesTest is Test, PosmTestSetup, LiquidityF
 
         uint256 liquidity = lpm.getPositionLiquidity(tokenId);
 
-        // original liquidity unchanged
+        // 原有流动性不变
         assertEq(liquidity, initialLiquidity);
 
-        // hook minted its own position
+        // hook 铸造了它自己的头寸
         liquidity = lpm.getPositionLiquidity(hookTokenId);
         assertEq(liquidity, newLiquidity);
 
-        assertEq(IERC721(address(lpm)).ownerOf(tokenId), address(this)); // original position owned by this contract
-        assertEq(IERC721(address(lpm)).ownerOf(hookTokenId), address(hookModifyLiquidities)); // hook position owned by hook
+        assertEq(IERC721(address(lpm)).ownerOf(tokenId), address(this)); // 原头寸归本合约所有
+        assertEq(IERC721(address(lpm)).ownerOf(hookTokenId), address(hookModifyLiquidities)); // hook 的头寸归 hook 所有
     }
 
-    /// @dev hook must be approved to increase liquidity
+    /// @dev hook 必须获得授权才能增加流动性
     function test_hook_increaseLiquidity() public {
         uint256 initialLiquidity = 100e18;
         uint256 tokenId = lpm.nextTokenId();
         mint(config, initialLiquidity, address(this), ZERO_BYTES);
 
-        // approve the hook for increasing liquidity
+        // 授权 hook 增加流动性
         IERC721(address(lpm)).approve(address(hookModifyLiquidities), tokenId);
 
-        // hook increases liquidity in beforeSwap via hookData
+        // hook 在 beforeSwap 中通过 hookData 增加流动性
         uint256 newLiquidity = 10e18;
         bytes memory calls = getIncreaseEncoded(tokenId, config, newLiquidity, ZERO_BYTES);
 
@@ -144,16 +144,16 @@ contract PositionManagerModifyLiquiditiesTest is Test, PosmTestSetup, LiquidityF
         assertEq(liquidity, initialLiquidity + newLiquidity);
     }
 
-    /// @dev hook can decrease liquidity with approval
+    /// @dev hook 获得授权后可以减少流动性
     function test_hook_decreaseLiquidity() public {
         uint256 initialLiquidity = 100e18;
         uint256 tokenId = lpm.nextTokenId();
         mint(config, initialLiquidity, address(this), ZERO_BYTES);
 
-        // approve the hook for decreasing liquidity
+        // 授权 hook 减少流动性
         IERC721(address(lpm)).approve(address(hookModifyLiquidities), tokenId);
 
-        // hook decreases liquidity in beforeSwap via hookData
+        // hook 在 beforeSwap 中通过 hookData 减少流动性
         uint256 liquidityToDecrease = 10e18;
         bytes memory calls = getDecreaseEncoded(tokenId, config, liquidityToDecrease, ZERO_BYTES);
 
@@ -164,16 +164,16 @@ contract PositionManagerModifyLiquiditiesTest is Test, PosmTestSetup, LiquidityF
         assertEq(liquidity, initialLiquidity - liquidityToDecrease);
     }
 
-    /// @dev hook can collect liquidity with approval
+    /// @dev hook 获得授权后可以收取流动性（手续费）
     function test_hook_collect() public {
         uint256 initialLiquidity = 100e18;
         uint256 tokenId = lpm.nextTokenId();
         mint(config, initialLiquidity, address(this), ZERO_BYTES);
 
-        // approve the hook for collecting liquidity
+        // 授权 hook 收取流动性（手续费）
         IERC721(address(lpm)).approve(address(hookModifyLiquidities), tokenId);
 
-        // donate to generate revenue
+        // 捐赠（donate）以产生收益
         uint256 feeRevenue0 = 1e18;
         uint256 feeRevenue1 = 0.1e18;
         donateRouter.donate(config.poolKey, feeRevenue0, feeRevenue1, ZERO_BYTES);
@@ -181,55 +181,55 @@ contract PositionManagerModifyLiquiditiesTest is Test, PosmTestSetup, LiquidityF
         uint256 balance0HookBefore = currency0.balanceOf(address(hookModifyLiquidities));
         uint256 balance1HookBefore = currency1.balanceOf(address(hookModifyLiquidities));
 
-        // hook collects liquidity in beforeSwap via hookData
+        // hook 在 beforeSwap 中通过 hookData 收取流动性（手续费）
         bytes memory calls = getCollectEncoded(tokenId, config, ZERO_BYTES);
         swap(key, true, -1e18, calls);
 
         uint256 liquidity = lpm.getPositionLiquidity(tokenId);
 
-        // liquidity unchanged
+        // 流动性不变
         assertEq(liquidity, initialLiquidity);
 
-        // hook collected the fee revenue
-        assertEq(currency0.balanceOf(address(hookModifyLiquidities)), balance0HookBefore + feeRevenue0 - 1 wei); // imprecision, core is keeping 1 wei
+        // hook 收取了手续费收益
+        assertEq(currency0.balanceOf(address(hookModifyLiquidities)), balance0HookBefore + feeRevenue0 - 1 wei); // 精度误差，core 会保留 1 wei
         assertEq(currency1.balanceOf(address(hookModifyLiquidities)), balance1HookBefore + feeRevenue1 - 1 wei);
     }
 
-    /// @dev hook can burn liquidity with approval
+    /// @dev hook 获得授权后可以销毁流动性
     function test_hook_burn() public {
-        // mint some liquidity that is NOT burned in beforeSwap
+        // 铸造一些不会在 beforeSwap 中被销毁的流动性
         mint(config, 100e18, address(this), ZERO_BYTES);
 
-        // the position to be burned by the hook
+        // 将被 hook 销毁的头寸
         uint256 initialLiquidity = 100e18;
         uint256 tokenId = lpm.nextTokenId();
         mint(config, initialLiquidity, address(this), ZERO_BYTES);
-        // TODO: make this less jank since HookModifyLiquidites also has delta saving capabilities
+        // TODO: 改得不那么别扭，因为 HookModifyLiquidites 也具备保存 delta 的能力
         // BalanceDelta mintDelta = getLastDelta();
         BalanceDelta mintDelta = hookModifyLiquidities.deltas(hookModifyLiquidities.numberDeltasReturned() - 1);
 
-        // approve the hook for burning liquidity
+        // 授权 hook 销毁流动性
         IERC721(address(lpm)).approve(address(hookModifyLiquidities), tokenId);
 
         uint256 balance0HookBefore = currency0.balanceOf(address(hookModifyLiquidities));
         uint256 balance1HookBefore = currency1.balanceOf(address(hookModifyLiquidities));
 
-        // hook burns liquidity in beforeSwap via hookData
+        // hook 在 beforeSwap 中通过 hookData 销毁流动性
         bytes memory calls = getBurnEncoded(tokenId, config, ZERO_BYTES);
         swap(key, true, -1e18, calls);
 
         uint256 liquidity = lpm.getPositionLiquidity(tokenId);
 
-        // liquidity burned
+        // 流动性已销毁
         assertEq(liquidity, 0);
-        // 721 will revert if the token does not exist
+        // 若该 token 不存在，721 会回滚（revert）
         vm.expectRevert();
         IERC721(address(lpm)).ownerOf(tokenId);
 
-        // hook claimed the burned liquidity
+        // hook 领取了被销毁的流动性
         assertEq(
             currency0.balanceOf(address(hookModifyLiquidities)),
-            balance0HookBefore + uint128(-mintDelta.amount0() - 1 wei) // imprecision since core is keeping 1 wei
+            balance0HookBefore + uint128(-mintDelta.amount0() - 1 wei) // 精度误差，因为 core 会保留 1 wei
         );
         assertEq(
             currency1.balanceOf(address(hookModifyLiquidities)),
@@ -237,18 +237,18 @@ contract PositionManagerModifyLiquiditiesTest is Test, PosmTestSetup, LiquidityF
         );
     }
 
-    // --- Revert Scenarios --- //
-    /// @dev Hook does not have approval so increasing liquidity should revert
+    // --- 回滚（revert）场景 --- //
+    /// @dev hook 未获授权，因此增加流动性应回滚（revert）
     function test_hook_increaseLiquidity_revert() public {
         uint256 initialLiquidity = 100e18;
         uint256 tokenId = lpm.nextTokenId();
         mint(config, initialLiquidity, address(this), ZERO_BYTES);
 
-        // hook decreases liquidity in beforeSwap via hookData
+        // hook 在 beforeSwap 中通过 hookData 减少流动性
         uint256 liquidityToAdd = 10e18;
         bytes memory calls = getIncreaseEncoded(tokenId, config, liquidityToAdd, ZERO_BYTES);
 
-        // should revert because hook is not approved
+        // 应回滚（revert），因为 hook 未获授权
         vm.expectRevert(
             abi.encodeWithSelector(
                 CustomRevert.WrappedError.selector,
@@ -261,17 +261,17 @@ contract PositionManagerModifyLiquiditiesTest is Test, PosmTestSetup, LiquidityF
         swap(key, true, -1e18, calls);
     }
 
-    /// @dev Hook does not have approval so decreasing liquidity should revert
+    /// @dev hook 未获授权，因此减少流动性应回滚（revert）
     function test_hook_decreaseLiquidity_revert() public {
         uint256 initialLiquidity = 100e18;
         uint256 tokenId = lpm.nextTokenId();
         mint(config, initialLiquidity, address(this), ZERO_BYTES);
 
-        // hook decreases liquidity in beforeSwap via hookData
+        // hook 在 beforeSwap 中通过 hookData 减少流动性
         uint256 liquidityToDecrease = 10e18;
         bytes memory calls = getDecreaseEncoded(tokenId, config, liquidityToDecrease, ZERO_BYTES);
 
-        // should revert because hook is not approved
+        // 应回滚（revert），因为 hook 未获授权
         vm.expectRevert(
             abi.encodeWithSelector(
                 CustomRevert.WrappedError.selector,
@@ -284,21 +284,21 @@ contract PositionManagerModifyLiquiditiesTest is Test, PosmTestSetup, LiquidityF
         swap(key, true, -1e18, calls);
     }
 
-    /// @dev hook does not have approval so collecting liquidity should revert
+    /// @dev hook 未获授权，因此收取流动性（手续费）应回滚（revert）
     function test_hook_collect_revert() public {
         uint256 initialLiquidity = 100e18;
         uint256 tokenId = lpm.nextTokenId();
         mint(config, initialLiquidity, address(this), ZERO_BYTES);
 
-        // donate to generate revenue
+        // 捐赠（donate）以产生收益
         uint256 feeRevenue0 = 1e18;
         uint256 feeRevenue1 = 0.1e18;
         donateRouter.donate(config.poolKey, feeRevenue0, feeRevenue1, ZERO_BYTES);
 
-        // hook collects liquidity in beforeSwap via hookData
+        // hook 在 beforeSwap 中通过 hookData 收取流动性（手续费）
         bytes memory calls = getCollectEncoded(tokenId, config, ZERO_BYTES);
 
-        // should revert because hook is not approved
+        // 应回滚（revert），因为 hook 未获授权
         vm.expectRevert(
             abi.encodeWithSelector(
                 CustomRevert.WrappedError.selector,
@@ -311,17 +311,17 @@ contract PositionManagerModifyLiquiditiesTest is Test, PosmTestSetup, LiquidityF
         swap(key, true, -1e18, calls);
     }
 
-    /// @dev hook does not have approval so burning liquidity should revert
+    /// @dev hook 未获授权，因此销毁流动性应回滚（revert）
     function test_hook_burn_revert() public {
-        // the position to be burned by the hook
+        // 将被 hook 销毁的头寸
         uint256 initialLiquidity = 100e18;
         uint256 tokenId = lpm.nextTokenId();
         mint(config, initialLiquidity, address(this), ZERO_BYTES);
 
-        // hook burns liquidity in beforeSwap via hookData
+        // hook 在 beforeSwap 中通过 hookData 销毁流动性
         bytes memory calls = getBurnEncoded(tokenId, config, ZERO_BYTES);
 
-        // should revert because hook is not approved
+        // 应回滚（revert），因为 hook 未获授权
         vm.expectRevert(
             abi.encodeWithSelector(
                 CustomRevert.WrappedError.selector,
@@ -334,7 +334,7 @@ contract PositionManagerModifyLiquiditiesTest is Test, PosmTestSetup, LiquidityF
         swap(key, true, -1e18, calls);
     }
 
-    /// @dev hook cannot re-enter modifyLiquiditiesWithoutUnlock in beforeRemoveLiquidity
+    /// @dev hook 不能在 beforeRemoveLiquidity 中重入 modifyLiquiditiesWithoutUnlock
     function test_hook_increaseLiquidity_reenter_revert() public {
         uint256 initialLiquidity = 100e18;
         uint256 tokenId = lpm.nextTokenId();
@@ -342,11 +342,11 @@ contract PositionManagerModifyLiquiditiesTest is Test, PosmTestSetup, LiquidityF
 
         uint256 newLiquidity = 10e18;
 
-        // to be provided as hookData, so beforeAddLiquidity attempts to increase liquidity
+        // 作为 hookData 传入，使 beforeAddLiquidity 尝试增加流动性
         bytes memory hookCall = getIncreaseEncoded(tokenId, config, newLiquidity, ZERO_BYTES);
         bytes memory calls = getIncreaseEncoded(tokenId, config, newLiquidity, hookCall);
 
-        // should revert because hook is re-entering modifyLiquiditiesWithoutUnlock
+        // 应回滚（revert），因为 hook 正在重入 modifyLiquiditiesWithoutUnlock
         vm.expectRevert(
             abi.encodeWithSelector(
                 CustomRevert.WrappedError.selector,
@@ -360,14 +360,14 @@ contract PositionManagerModifyLiquiditiesTest is Test, PosmTestSetup, LiquidityF
     }
 
     function test_wrap_mint_usingContractBalance() public {
-        // weth-currency1 pool initialized as wethKey
-        // input: eth, currency1
-        // modifyLiquidities call to mint liquidity weth and currency1
-        // 1 _wrap with contract balance
+        // weth-currency1 池已初始化为 wethKey
+        // 输入：eth、currency1
+        // 调用 modifyLiquidities 用 weth 和 currency1 铸造流动性
+        // 1 _wrap 使用合约余额
         // 2 _mint
-        // 3 _settle weth where the payer is the contract
-        // 4 _close currency1, payer is caller
-        // 5 _sweep weth since eth was entirely wrapped
+        // 3 _settle weth，付款方为合约
+        // 4 _close currency1，付款方为调用者
+        // 5 _sweep weth，因为 eth 已全部被包装
 
         uint256 balanceEthBefore = address(this).balance;
         uint256 balance1Before = IERC20(Currency.unwrap(currency1)).balanceOf(address(this));
@@ -397,21 +397,21 @@ contract PositionManagerModifyLiquiditiesTest is Test, PosmTestSetup, LiquidityF
             )
         );
 
-        // weth9 payer is the contract
+        // weth9 的付款方为合约
         planner.add(Actions.SETTLE, abi.encode(address(_WETH9), ActionConstants.OPEN_DELTA, false));
-        // other currency can close normally
+        // 另一种代币可以正常 close
         planner.add(Actions.CLOSE_CURRENCY, abi.encode(currency1));
-        // we wrapped the full contract balance so we sweep back in the wrapped currency
+        // 我们包装了合约的全部余额，因此以包装后的代币形式 sweep 回来
         planner.add(Actions.SWEEP, abi.encode(address(_WETH9), ActionConstants.MSG_SENDER));
         bytes memory actions = planner.encode();
 
-        // Overestimate eth amount.
+        // 高估 eth 数量。
         lpm.modifyLiquidities{value: 102 ether}(actions, _deadline);
 
         uint256 balanceEthAfter = address(this).balance;
         uint256 balance1After = IERC20(Currency.unwrap(currency1)).balanceOf(address(this));
 
-        // The full eth amount was "spent" because some was wrapped into weth and refunded.
+        // 全部 eth 数量都被“花掉”了，因为其中一部分被包装成 weth 后退还。
         assertApproxEqAbs(balanceEthBefore - balanceEthAfter, 102 ether, 1 wei);
         assertApproxEqAbs(balance1Before - balance1After, 100 ether, 1 wei);
         assertEq(IERC721(address(lpm)).ownerOf(tokenId), address(this));
@@ -421,14 +421,14 @@ contract PositionManagerModifyLiquiditiesTest is Test, PosmTestSetup, LiquidityF
     }
 
     function test_wrap_mint_openDelta() public {
-        // weth-currency1 pool initialized as wethKey
-        // input: eth, currency1
-        // modifyLiquidities call to mint liquidity weth and currency1
+        // weth-currency1 池已初始化为 wethKey
+        // 输入：eth、currency1
+        // 调用 modifyLiquidities 用 weth 和 currency1 铸造流动性
         // 1 _mint
-        // 2 _wrap with open delta
-        // 3 _settle weth where the payer is the contract
-        // 4 _close currency1, payer is caller
-        // 5 _sweep eth since only the open delta amount was wrapped
+        // 2 _wrap 使用未结 delta（open delta）
+        // 3 _settle weth，付款方为合约
+        // 4 _close currency1，付款方为调用者
+        // 5 _sweep eth，因为只包装了未结 delta 对应的数量
 
         uint256 balanceEthBefore = address(this).balance;
         uint256 balance1Before = IERC20(Currency.unwrap(currency1)).balanceOf(address(this));
@@ -460,11 +460,11 @@ contract PositionManagerModifyLiquiditiesTest is Test, PosmTestSetup, LiquidityF
 
         planner.add(Actions.WRAP, abi.encode(ActionConstants.OPEN_DELTA));
 
-        // weth9 payer is the contract
+        // weth9 的付款方为合约
         planner.add(Actions.SETTLE, abi.encode(address(_WETH9), ActionConstants.OPEN_DELTA, false));
-        // other currency can close normally
+        // 另一种代币可以正常 close
         planner.add(Actions.CLOSE_CURRENCY, abi.encode(currency1));
-        // we wrapped the open delta balance so we sweep back in the native currency
+        // 我们只包装了未结 delta 对应的余额，因此以原生代币形式 sweep 回来
         planner.add(Actions.SWEEP, abi.encode(CurrencyLibrary.ADDRESS_ZERO, ActionConstants.MSG_SENDER));
         bytes memory actions = planner.encode();
 
@@ -473,7 +473,7 @@ contract PositionManagerModifyLiquiditiesTest is Test, PosmTestSetup, LiquidityF
         uint256 balanceEthAfter = address(this).balance;
         uint256 balance1After = IERC20(Currency.unwrap(currency1)).balanceOf(address(this));
 
-        // Approx 100 eth was spent because the extra 2 were refunded.
+        // 约花费 100 eth，因为多出的 2 个被退还了。
         assertApproxEqAbs(balanceEthBefore - balanceEthAfter, 100 ether, 1 wei);
         assertApproxEqAbs(balance1Before - balance1After, 100 ether, 1 wei);
         assertEq(IERC721(address(lpm)).ownerOf(tokenId), address(this));
@@ -483,14 +483,14 @@ contract PositionManagerModifyLiquiditiesTest is Test, PosmTestSetup, LiquidityF
     }
 
     function test_wrap_mint_usingExactAmount() public {
-        // weth-currency1 pool initialized as wethKey
-        // input: eth, currency1
-        // modifyLiquidities call to mint liquidity weth and currency1
-        // 1 _wrap with an amount
+        // weth-currency1 池已初始化为 wethKey
+        // 输入：eth、currency1
+        // 调用 modifyLiquidities 用 weth 和 currency1 铸造流动性
+        // 1 _wrap 指定数量
         // 2 _mint
-        // 3 _settle weth where the payer is the contract
-        // 4 _close currency1, payer is caller
-        // 5 _sweep weth since eth was entirely wrapped
+        // 3 _settle weth，付款方为合约
+        // 4 _close currency1，付款方为调用者
+        // 5 _sweep weth，因为 eth 已全部被包装
 
         uint256 balanceEthBefore = address(this).balance;
         uint256 balance1Before = IERC20(Currency.unwrap(currency1)).balanceOf(address(this));
@@ -520,11 +520,11 @@ contract PositionManagerModifyLiquiditiesTest is Test, PosmTestSetup, LiquidityF
             )
         );
 
-        // weth9 payer is the contract
+        // weth9 的付款方为合约
         planner.add(Actions.SETTLE, abi.encode(address(_WETH9), ActionConstants.OPEN_DELTA, false));
-        // other currency can close normally
+        // 另一种代币可以正常 close
         planner.add(Actions.CLOSE_CURRENCY, abi.encode(currency1));
-        // we wrapped all 100 eth so we sweep back in the wrapped currency for safety measure
+        // 我们包装了全部 100 eth，因此出于安全考虑以包装后的代币形式 sweep 回来
         planner.add(Actions.SWEEP, abi.encode(address(_WETH9), ActionConstants.MSG_SENDER));
         bytes memory actions = planner.encode();
 
@@ -533,7 +533,7 @@ contract PositionManagerModifyLiquiditiesTest is Test, PosmTestSetup, LiquidityF
         uint256 balanceEthAfter = address(this).balance;
         uint256 balance1After = IERC20(Currency.unwrap(currency1)).balanceOf(address(this));
 
-        // The full eth amount was "spent" because some was wrapped into weth and refunded.
+        // 全部 eth 数量都被“花掉”了，因为其中一部分被包装成 weth 后退还。
         assertApproxEqAbs(balanceEthBefore - balanceEthAfter, 100 ether, 1 wei);
         assertApproxEqAbs(balance1Before - balance1After, 100 ether, 1 wei);
         assertEq(IERC721(address(lpm)).ownerOf(tokenId), address(this));
@@ -543,10 +543,10 @@ contract PositionManagerModifyLiquiditiesTest is Test, PosmTestSetup, LiquidityF
     }
 
     function test_wrap_mint_revertsInsufficientBalance() public {
-        // 1 _wrap with more eth than is sent in
+        // 1 _wrap 的 eth 多于转入的数量
 
         Plan memory planner = Planner.init();
-        // Wrap more eth than what is sent in.
+        // 包装比转入数量更多的 eth。
         planner.add(Actions.WRAP, abi.encode(101 ether));
 
         bytes memory actions = planner.encode();
@@ -556,14 +556,14 @@ contract PositionManagerModifyLiquiditiesTest is Test, PosmTestSetup, LiquidityF
     }
 
     function test_unwrap_usingContractBalance() public {
-        // weth-currency1 pool
-        // output: eth, currency1
-        // modifyLiquidities call to mint liquidity weth and currency1
+        // weth-currency1 池
+        // 输出：eth、currency1
+        // 调用 modifyLiquidities 用 weth 和 currency1 铸造流动性
         // 1 _burn
-        // 2 _take where the weth is sent to the lpm contract
-        // 3 _take where currency1 is sent to the msg sender
-        // 4 _unwrap using contract balance
-        // 5 _sweep where eth is sent to msg sender
+        // 2 _take，将 weth 发送到 lpm 合约
+        // 3 _take，将 currency1 发送给 msg sender
+        // 4 _unwrap 使用合约余额
+        // 5 _sweep，将 eth 发送给 msg sender
         uint256 tokenId = lpm.nextTokenId();
 
         uint128 liquidityAmount = LiquidityAmounts.getLiquidityForAmounts(
@@ -586,7 +586,7 @@ contract PositionManagerModifyLiquiditiesTest is Test, PosmTestSetup, LiquidityF
         planner.add(
             Actions.BURN_POSITION, abi.encode(tokenId, MIN_SLIPPAGE_DECREASE, MIN_SLIPPAGE_DECREASE, ZERO_BYTES)
         );
-        // take the weth to the position manager to be unwrapped
+        // 将 weth 提取到 PositionManager 以便解包
         planner.add(Actions.TAKE, abi.encode(address(_WETH9), ActionConstants.ADDRESS_THIS, ActionConstants.OPEN_DELTA));
         planner.add(
             Actions.TAKE,
@@ -610,16 +610,16 @@ contract PositionManagerModifyLiquiditiesTest is Test, PosmTestSetup, LiquidityF
     }
 
     function test_unwrap_openDelta_reinvest() public {
-        // weth-currency1 pool rolls half to eth-currency1 pool
-        // output: eth, currency1
-        // modifyLiquidities call to mint liquidity weth and currency1
+        // weth-currency1 池将一半转投到 eth-currency1 池
+        // 输出：eth、currency1
+        // 调用 modifyLiquidities 用 weth 和 currency1 铸造流动性
         // 1 _burn (weth-currency1)
-        // 2 _take where the weth is sent to the lpm contract
-        // 4 _mint to an eth pool
-        // 4 _unwrap using open delta (pool managers ETH balance)
-        // 3 _take where leftover currency1 is sent to the msg sender
-        // 5 _settle eth open delta
-        // 5 _sweep leftover weth
+        // 2 _take，将 weth 发送到 lpm 合约
+        // 4 _mint 到 eth 池
+        // 4 _unwrap 使用未结 delta（PoolManager 的 ETH 余额）
+        // 3 _take，将剩余的 currency1 发送给 msg sender
+        // 5 _settle eth 的未结 delta
+        // 5 _sweep 剩余的 weth
 
         uint256 tokenId = lpm.nextTokenId();
 
@@ -652,7 +652,7 @@ contract PositionManagerModifyLiquiditiesTest is Test, PosmTestSetup, LiquidityF
         planner.add(
             Actions.BURN_POSITION, abi.encode(tokenId, MIN_SLIPPAGE_DECREASE, MIN_SLIPPAGE_DECREASE, ZERO_BYTES)
         );
-        // take the weth to the position manager to be unwrapped
+        // 将 weth 提取到 PositionManager 以便解包
         planner.add(Actions.TAKE, abi.encode(address(_WETH9), ActionConstants.ADDRESS_THIS, ActionConstants.OPEN_DELTA));
         planner.add(
             Actions.MINT_POSITION,
@@ -668,9 +668,9 @@ contract PositionManagerModifyLiquiditiesTest is Test, PosmTestSetup, LiquidityF
             )
         );
         planner.add(Actions.UNWRAP, abi.encode(ActionConstants.OPEN_DELTA));
-        // pay the eth
+        // 支付 eth
         planner.add(Actions.SETTLE, abi.encode(CurrencyLibrary.ADDRESS_ZERO, ActionConstants.OPEN_DELTA, false));
-        // take the leftover currency1
+        // 提取剩余的 currency1
         planner.add(
             Actions.TAKE,
             abi.encode(address(Currency.unwrap(currency1)), ActionConstants.MSG_SENDER, ActionConstants.OPEN_DELTA)
@@ -685,9 +685,9 @@ contract PositionManagerModifyLiquiditiesTest is Test, PosmTestSetup, LiquidityF
         uint256 balance1After = IERC20(Currency.unwrap(currency1)).balanceOf(address(this));
         uint256 balanceWethAfter = _WETH9.balanceOf(address(this));
 
-        // Eth balance should not change.
+        // Eth 余额不应变化。
         assertEq(balanceEthAfter, balanceEthBefore);
-        // Only half of the original liquidity was reinvested.
+        // 只有一半的原始流动性被再投资。
         assertApproxEqAbs(balance1After - balance1Before, 50 ether, 1 wei);
         assertApproxEqAbs(balanceWethAfter - balanceWethBefore, 50 ether, 1 wei);
         assertEq(lpm.getPositionLiquidity(tokenId), 0);
@@ -696,10 +696,10 @@ contract PositionManagerModifyLiquiditiesTest is Test, PosmTestSetup, LiquidityF
     }
 
     function test_unwrap_revertsInsufficientBalance() public {
-        // 1 _unwrap with more than is in the contract
+        // 1 _unwrap 的数量多于合约中的余额
 
         Plan memory planner = Planner.init();
-        // unwraps more eth than what is in the contract
+        // 解包比合约中余额更多的 eth
         planner.add(Actions.UNWRAP, abi.encode(101 ether));
 
         bytes memory actions = planner.encode();
@@ -709,7 +709,7 @@ contract PositionManagerModifyLiquiditiesTest is Test, PosmTestSetup, LiquidityF
     }
 
     function test_mintFromDeltas_fot() public {
-        // Use a 1% fee.
+        // 使用 1% 的手续费。
         MockFOT(address(fotToken)).setFee(100);
         uint256 tokenId = lpm.nextTokenId();
 
@@ -722,7 +722,7 @@ contract PositionManagerModifyLiquiditiesTest is Test, PosmTestSetup, LiquidityF
             ? (amountToSendFot, amountAfterTransfer)
             : (amountAfterTransfer, amountToSendFot);
 
-        // Calculcate the expected liquidity from the amounts after the transfer. They are the same for both currencies.
+        // 根据转账后的数量计算预期流动性。两种代币的数量相同。
         uint256 expectedLiquidity = LiquidityAmounts.getLiquidityForAmounts(
             SQRT_PRICE_1_1,
             TickMath.getSqrtPriceAtTick(LIQUIDITY_PARAMS.tickLower),
@@ -801,10 +801,10 @@ contract PositionManagerModifyLiquiditiesTest is Test, PosmTestSetup, LiquidityF
         assertEq(IERC721(address(lpm)).ownerOf(tokenId), address(this));
         assertEq(lpm.getPositionLiquidity(tokenId), initialLiquidity);
 
-        // Use a 1% fee.
+        // 使用 1% 的手续费。
         MockFOT(address(fotToken)).setFee(100);
 
-        // Set the fee on transfer amount 1% higher.
+        // 将转账扣费（fee on transfer）代币的数量设高 1%。
         (uint256 amount0, uint256 amount1) =
             fotKey.currency0 == Currency.wrap(address(fotToken)) ? (100e18, 99e18) : (99e18, 100e18);
 
@@ -911,11 +911,11 @@ contract PositionManagerModifyLiquiditiesTest is Test, PosmTestSetup, LiquidityF
                 ZERO_BYTES
             )
         );
-        // take the excess of each currency
+        // 提取每种代币的多余部分
         planner.add(Actions.TAKE_PAIR, abi.encode(fotKey.currency0, fotKey.currency1, ActionConstants.MSG_SENDER));
 
-        // needed to remove variables because of stack too deep
-        // Read below as:
+        // 由于 stack too deep 需要去掉变量
+        // 下面的代码可理解为：
         // bool currency0IsFOT = fotKey.currency0 == Currency.wrap(address(fotToken));
         // bool positionIsEntirelyInOtherToken = currency0IsFOT
         //     ? TickMath.getSqrtPriceAtTick(tickUpper) <= sqrtPriceX96
@@ -930,7 +930,7 @@ contract PositionManagerModifyLiquiditiesTest is Test, PosmTestSetup, LiquidityF
             vm.expectRevert(Position.CannotUpdateEmptyPosition.selector);
             lpm.modifyLiquidities(planner.encode(), _deadline);
         } else {
-            // MINT FROM DELTAS.
+            // 根据 delta 铸造（MINT FROM DELTAS）。
             lpm.modifyLiquidities(planner.encode(), _deadline);
 
             balance0._after = fotKey.currency0.balanceOf(address(this));
@@ -938,7 +938,7 @@ contract PositionManagerModifyLiquiditiesTest is Test, PosmTestSetup, LiquidityF
             balance0PM._after = fotKey.currency0.balanceOf(address(manager));
             balance1PM._after = fotKey.currency1.balanceOf(address(manager));
 
-            // Calculate the expected resulting balances used to create liquidity after the fee is applied.
+            // 计算扣除手续费后用于创建流动性的预期余额。
             Balance memory expected;
             {
                 bool currency0IsFOT = fotKey.currency0 == Currency.wrap(address(fotToken));
@@ -950,7 +950,7 @@ contract PositionManagerModifyLiquiditiesTest is Test, PosmTestSetup, LiquidityF
             assertEq(expected._0, balance0PM._after - balance0PM._before);
             assertEq(expected._1, balance1PM._after - balance1PM._before);
             {
-                // the liquidity that was created is a diff of the balance change
+                // 创建的流动性由余额变化的差值决定
                 uint128 expectedLiquidity = LiquidityAmounts.getLiquidityForAmounts(
                     sqrtPriceX96,
                     TickMath.getSqrtPriceAtTick(tickLower),
@@ -962,9 +962,9 @@ contract PositionManagerModifyLiquiditiesTest is Test, PosmTestSetup, LiquidityF
                 assertEq(IERC721(address(lpm)).ownerOf(tokenId), address(this));
                 assertEq(lpm.getPositionLiquidity(tokenId), expectedLiquidity);
             }
-            // BURN.
+            // 销毁（BURN）。
             planner = Planner.init();
-            // Note that the slippage does not include the fee from the transfer.
+            // 注意：滑点不包含转账产生的手续费。
             planner.add(
                 Actions.BURN_POSITION,
                 abi.encode(

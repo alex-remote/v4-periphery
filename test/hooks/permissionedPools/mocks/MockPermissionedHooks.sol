@@ -17,7 +17,7 @@ import {
 } from "../../../../src/hooks/permissionedPools/interfaces/IPermissionsAdapterFactory.sol";
 import {PermissionFlags, PermissionFlag} from "../../../../src/hooks/permissionedPools/libraries/PermissionFlags.sol";
 
-/// @notice Standalone mock that replicates PermissionedHooks logic without inheriting BaseHook
+/// @notice 独立的 mock（模拟合约），在不继承 BaseHook 的前提下复刻 PermissionedHooks 的逻辑
 contract MockPermissionedHooks {
     using StateLibrary for IPoolManager;
 

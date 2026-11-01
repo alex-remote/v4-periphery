@@ -25,7 +25,7 @@
 
 ## 总体进度
 
-**已完成：140 / 179**
+**已完成：158 / 179**
 
 ## 分组明细
 
@@ -176,16 +176,16 @@
 
 - [x] `test/hooks/permissionedPools/PermissionedV4Router.t.sol` — 2422 行｜注释 130 行
 
-### G17（8 个文件，1549 行，注释 119 行）· 进度 0/8
+### G17（8 个文件，1549 行，注释 119 行）· 进度 8/8 ✅
 
-- [ ] `test/hooks/permissionedPools/PermissionsAdapter.t.sol` — 543 行｜注释 36 行
-- [ ] `test/hooks/permissionedPools/PermissionsAdapterFactory.t.sol` — 94 行｜注释 0 行（无英文注释，仅需确认）
-- [ ] `test/hooks/permissionedPools/UnwindGasGriefPoC.t.sol` — 236 行｜注释 39 行
-- [ ] `test/hooks/permissionedPools/UnwindReentrancyFixedPoC.t.sol` — 437 行｜注释 34 行
-- [ ] `test/hooks/permissionedPools/mocks/MockInsecureHooks.sol` — 28 行｜注释 1 行
-- [ ] `test/hooks/permissionedPools/mocks/MockPermissionedHooks.sol` — 162 行｜注释 1 行
-- [ ] `test/hooks/permissionedPools/mocks/MockRemoveLiquidityDataHook.sol` — 26 行｜注释 3 行
-- [ ] `test/hooks/permissionedPools/mocks/MockUnapprovedWrapper.sol` — 23 行｜注释 5 行
+- [x] `test/hooks/permissionedPools/PermissionsAdapter.t.sol` — 543 行｜注释 36 行
+- [x] `test/hooks/permissionedPools/PermissionsAdapterFactory.t.sol` — 94 行｜注释 0 行（无英文注释，仅需确认）
+- [x] `test/hooks/permissionedPools/UnwindGasGriefPoC.t.sol` — 236 行｜注释 39 行
+- [x] `test/hooks/permissionedPools/UnwindReentrancyFixedPoC.t.sol` — 437 行｜注释 34 行
+- [x] `test/hooks/permissionedPools/mocks/MockInsecureHooks.sol` — 28 行｜注释 1 行
+- [x] `test/hooks/permissionedPools/mocks/MockPermissionedHooks.sol` — 162 行｜注释 1 行
+- [x] `test/hooks/permissionedPools/mocks/MockRemoveLiquidityDataHook.sol` — 26 行｜注释 3 行
+- [x] `test/hooks/permissionedPools/mocks/MockUnapprovedWrapper.sol` — 23 行｜注释 5 行
 
 ### G18（10 个文件，1993 行，注释 115 行）· 进度 10/10 ✅
 
@@ -242,9 +242,9 @@
 
 - [x] `test/position-managers/PositionManager.gas.t.sol` — 928 行｜注释 64 行
 
-### G23（1 个文件，982 行，注释 133 行）· 进度 0/1
+### G23（1 个文件，982 行，注释 133 行）· 进度 1/1 ✅
 
-- [ ] `test/position-managers/PositionManager.modifyLiquidities.t.sol` — 982 行｜注释 133 行
+- [x] `test/position-managers/PositionManager.modifyLiquidities.t.sol` — 982 行｜注释 133 行
 
 ### G24（2 个文件，1191 行，注释 90 行）· 进度 2/2 ✅
 
@@ -271,17 +271,17 @@
 - [ ] `test/shared/HookMinerCreate3.sol` — 82 行｜注释 28 行
 - [ ] `test/shared/HookModifyLiquidities.sol` — 83 行｜注释 14 行
 
-### G27（9 个文件，1016 行，注释 37 行）· 进度 0/9
+### G27（9 个文件，1016 行，注释 37 行）· 进度 9/9 ✅
 
-- [ ] `test/shared/HookSavesDelta.sol` — 49 行｜注释 11 行
-- [ ] `test/shared/LiquidityOperations.sol` — 209 行｜注释 7 行
-- [ ] `test/shared/Permit2SignatureHelpers.sol` — 132 行｜注释 2 行
-- [ ] `test/shared/Planner.sol` — 97 行｜注释 2 行
-- [ ] `test/shared/PositionConfig.sol` — 11 行｜注释 1 行
-- [ ] `test/shared/PosmTestSetup.sol` — 175 行｜注释 9 行
-- [ ] `test/shared/ReservesReference.sol` — 82 行｜注释 0 行（无英文注释，仅需确认）
-- [ ] `test/shared/RoutingTestHelpers.sol` — 213 行｜注释 5 行
-- [ ] `test/shared/fuzz/LiquidityFuzzers.sol` — 48 行｜注释 0 行（无英文注释，仅需确认）
+- [x] `test/shared/HookSavesDelta.sol` — 49 行｜注释 11 行
+- [x] `test/shared/LiquidityOperations.sol` — 209 行｜注释 7 行
+- [x] `test/shared/Permit2SignatureHelpers.sol` — 132 行｜注释 2 行
+- [x] `test/shared/Planner.sol` — 97 行｜注释 2 行
+- [x] `test/shared/PositionConfig.sol` — 11 行｜注释 1 行
+- [x] `test/shared/PosmTestSetup.sol` — 175 行｜注释 9 行
+- [x] `test/shared/ReservesReference.sol` — 82 行｜注释 0 行（无英文注释，仅需确认）
+- [x] `test/shared/RoutingTestHelpers.sol` — 213 行｜注释 5 行
+- [x] `test/shared/fuzz/LiquidityFuzzers.sol` — 48 行｜注释 0 行（无英文注释，仅需确认）
 
 ### G28（6 个文件，199 行，注释 4 行）· 进度 0/6
 

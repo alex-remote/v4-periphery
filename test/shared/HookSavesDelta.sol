@@ -7,7 +7,7 @@ import {BalanceDelta, BalanceDeltaLibrary} from "@uniswap/v4-core/src/types/Bala
 import {BaseTestHooks} from "@uniswap/v4-core/src/test/BaseTestHooks.sol";
 import {ModifyLiquidityParams} from "@uniswap/v4-core/src/types/PoolOperation.sol";
 
-/// @notice This contract is NOT a production use contract. It is meant to be used in testing to verify the delta amounts against changes in a user's balance.
+/// @notice 本合约不是用于生产环境的合约。它仅用于测试，用来将 delta 数量与用户余额的变化进行核对。
 contract HookSavesDelta is BaseTestHooks {
     BalanceDelta[] public deltas;
 

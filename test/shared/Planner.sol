@@ -24,7 +24,7 @@ library Planner {
         bytes[] memory params = new bytes[](plan.params.length + 1);
 
         for (uint256 i; i < params.length - 1; i++) {
-            // Copy from plan.
+            // 从 plan 中复制。
             params[i] = plan.params[i];
             actions[i] = plan.actions[i];
         }
@@ -85,7 +85,7 @@ library Planner {
         returns (bytes memory)
     {
         if (takeRecipient == ActionConstants.MSG_SENDER) {
-            // blindly settling and taking all, without slippage checks, isnt recommended in prod
+            // 不做滑点检查就盲目地全部结算和提取，不建议在生产环境中使用
             plan = plan.add(Actions.SETTLE_ALL, abi.encode(inputCurrency, type(uint256).max));
             plan = plan.add(Actions.TAKE_ALL, abi.encode(outputCurrency, 0));
         } else {

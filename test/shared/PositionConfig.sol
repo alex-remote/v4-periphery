@@ -3,7 +3,7 @@ pragma solidity ^0.8.24;
 
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 
-// A helper struct used for tests
+// 用于测试的辅助结构体
 struct PositionConfig {
     PoolKey poolKey;
     int24 tickLower;

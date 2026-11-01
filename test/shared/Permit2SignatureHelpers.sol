@@ -7,7 +7,7 @@ import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.s
 import {IAllowanceTransfer} from "permit2/src/interfaces/IAllowanceTransfer.sol";
 import {ISignatureTransfer} from "permit2/src/interfaces/ISignatureTransfer.sol";
 
-/// taken from permit2 utils PermitSignature files
+/// 取自 permit2 utils 中的 PermitSignature 文件
 contract Permit2SignatureHelpers {
     Vm private constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
 
@@ -65,7 +65,7 @@ contract Permit2SignatureHelpers {
         pure
         returns (bytes32 r, bytes32 vs)
     {
-        uint8 v = vRaw - 27; // 27 is 0, 28 is 1
+        uint8 v = vRaw - 27; // 27 对应 0，28 对应 1
         vs = bytes32(uint256(v) << 255) | sRaw;
         return (rRaw, vs);
     }

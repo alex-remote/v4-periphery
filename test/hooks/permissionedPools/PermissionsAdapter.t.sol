@@ -108,7 +108,7 @@ contract PermissionsAdapterTest is PermissionedPoolsBase {
     function testRevert_WhenNotSupportedInterfaceEOA(IAllowlistChecker newAllowListCheckerEOA) public {
         vm.assume(newAllowListCheckerEOA != allowlistChecker);
         vm.prank(owner);
-        vm.expectRevert(); // expect revert without data
+        vm.expectRevert(); // 预期回滚，且不带错误数据
         permissionsAdapter.updateAllowListChecker(newAllowListCheckerEOA);
     }
 
@@ -121,9 +121,9 @@ contract PermissionsAdapterTest is PermissionedPoolsBase {
         permissionsAdapter.updateAllowListChecker(newAllowListCheckerContract);
     }
 
-    /// @dev ERC-165 compliant contracts must return `false` for `0xffffffff`. A checker that returns
-    ///      `true` for any interfaceId would bypass a direct `supportsInterface` check. The new
-    ///      `ERC165Checker.supportsInterface` pre-check catches this.
+    /// @dev 符合 ERC-165 的合约对 `0xffffffff` 必须返回 `false`。若某个检查器
+    ///      对任意 interfaceId 都返回 `true`，就能绕过直接调用 `supportsInterface` 的检查。新增的
+    ///      `ERC165Checker.supportsInterface` 预检查可以捕获这种情况。
     function testRevert_WhenBypassFakeSupportsInterface() public {
         IAllowlistChecker bypassChecker = new BypassAllowlistChecker();
         vm.prank(owner);
@@ -153,9 +153,9 @@ contract PermissionsAdapterTest is PermissionedPoolsBase {
         assertEq(permissionedToken.balanceOf(address(permissionsAdapter)), amount);
     }
 
-    /// @dev USDT-style underlying tokens omit the bool return value on transferFrom. The raw
-    ///      `transferFrom` call would revert when Solidity tries to decode bool from empty
-    ///      returndata; `safeTransferFrom` accepts empty returndata as success.
+    /// @dev USDT 风格的底层代币在 transferFrom 中省略了 bool 返回值。直接调用
+    ///      `transferFrom` 时，Solidity 会尝试从空的 returndata 中解码 bool，从而回滚（revert）；
+    ///      而 `safeTransferFrom` 会把空 returndata 视为成功。
     function test_DepositForVerification_NonReturningUnderlying() public {
         NonReturningToken usdtLike = new NonReturningToken();
         bytes memory args = abi.encode(IERC20(address(usdtLike)), mockPoolManager, owner, allowlistChecker);
@@ -196,8 +196,8 @@ contract PermissionsAdapterTest is PermissionedPoolsBase {
     }
 
     function testRevert_PoolManagerSelfTransfer(uint256 mintAmount, uint256 transferAmount) public {
-        // Cantina ECO-340: a TAKE(adapter, poolManager, ...) would otherwise unwrap raw underlying
-        // back into the pool manager, breaking the adapter accounting boundary.
+        // Cantina ECO-340：否则 TAKE(adapter, poolManager, ...) 会把原始底层代币解包
+        // 回 PoolManager，破坏适配器的记账边界。
         transferAmount = bound(transferAmount, 0, mintAmount);
         permissionedToken.mint(address(permissionsAdapter), mintAmount);
         permissionsAdapter.wrapToPoolManager(mintAmount);
@@ -208,7 +208,7 @@ contract PermissionsAdapterTest is PermissionedPoolsBase {
         );
         permissionsAdapter.transfer(mockPoolManager, transferAmount);
 
-        // adapter and underlying state are unchanged
+        // 适配器与底层代币的状态均未改变
         assertEq(permissionsAdapter.balanceOf(mockPoolManager), mintAmount);
         assertEq(permissionedToken.balanceOf(mockPoolManager), 0);
         assertEq(permissionedToken.balanceOf(address(permissionsAdapter)), mintAmount);
@@ -243,7 +243,7 @@ contract PermissionsAdapterTest is PermissionedPoolsBase {
         vm.expectRevert("TRANSFER_FAILED");
         IERC20(address(adapter)).transfer(recipient, 50);
 
-        // Burn and payout are atomic: nothing moved.
+        // 销毁与支付是原子性的：没有任何资产被转移。
         assertEq(adapter.totalSupply(), 100);
         assertEq(adapter.balanceOf(mockPoolManager), 100);
         assertEq(falseToken.balanceOf(recipient), 0);
@@ -285,7 +285,7 @@ contract PermissionsAdapterTest is PermissionedPoolsBase {
         assertEq(pausableToken.balanceOf(address(adapter)), 50);
     }
 
-    // --- ERC20 metadata fallbacks ---
+    // --- ERC20 元数据回退 ---
 
     function _assertMetadataFallbacks(IPermissionsAdapter adapter) internal view {
         assertEq(IERC20Metadata(address(adapter)).name(), "Uniswap v4 Permissioned Token");
@@ -301,28 +301,28 @@ contract PermissionsAdapterTest is PermissionedPoolsBase {
         _assertMetadataFallbacks(_deployAdapterForToken(IERC20(address(new RevertingMetadataToken()))));
     }
 
-    /// @dev bytes32 returns aren't standard ABI-encoded strings, so decode fails and we fall back.
+    /// @dev bytes32 返回值不是标准 ABI 编码的字符串，因此解码失败并回退到默认值。
     function test_Constructor_FallsBackOnBytes32Metadata() public {
         IPermissionsAdapter adapter = _deployAdapterForToken(IERC20(address(new Bytes32MetadataToken())));
         assertEq(IERC20Metadata(address(adapter)).name(), "Uniswap v4 Permissioned Token");
         assertEq(IERC20Metadata(address(adapter)).symbol(), "v4PT");
-        // decimals() is a valid uint8 here, so it does NOT fall back.
+        // 此处 decimals() 是合法的 uint8，因此不会回退。
         assertEq(IERC20Metadata(address(adapter)).decimals(), 18);
     }
 
     function test_Constructor_FallsBackWhenDecimalsDoesNotFitInUint8() public {
         IPermissionsAdapter adapter = _deployAdapterForToken(IERC20(address(new OversizedDecimalsToken())));
-        // name/symbol decode cleanly.
+        // name/symbol 能正常解码。
         assertEq(IERC20Metadata(address(adapter)).name(), "Uniswap v4 Big");
         assertEq(IERC20Metadata(address(adapter)).symbol(), "v4BIG");
-        // decimals decode as uint8 fails on the oversized value -> fallback.
+        // decimals 的值过大，按 uint8 解码失败 -> 回退。
         assertEq(IERC20Metadata(address(adapter)).decimals(), 18);
     }
 
-    /// @dev The adapter must always have an owner: `unwindPosition` authorizes against it and its
-    ///      per-currency fallback routes to it, so a zero owner permanently disables the force-exit.
-    ///      This is the case that matters — `Ownable.renounceOwnership` is `onlyOwner`, so the owner is the
-    ///      only party who could ever have zeroed it.
+    /// @dev 适配器必须始终有所有者：`unwindPosition` 依据所有者进行权限校验，且其
+    ///      按代币的回退路径也会把资产转给所有者，因此所有者为零地址会永久禁用强制退出。
+    ///      这才是关键情形——`Ownable.renounceOwnership` 带有 `onlyOwner`，因此所有者是
+    ///      唯一可能把它置零的一方。
     function testRevert_WhenRenouncingOwnership_fromOwner() public {
         vm.prank(owner);
         vm.expectRevert(IPermissionsAdapter.RenounceDisabled.selector);
@@ -331,8 +331,8 @@ contract PermissionsAdapterTest is PermissionedPoolsBase {
         assertEq(permissionsAdapter.owner(), owner);
     }
 
-    /// @dev Reverts for everyone, not just the owner: the override drops `onlyOwner` and reverts
-    ///      unconditionally, so the error is `RenounceDisabled` rather than `OwnableUnauthorizedAccount`.
+    /// @dev 对任何人都回滚，而不仅是所有者：重写版本去掉了 `onlyOwner` 并无条件
+    ///      回滚，因此错误是 `RenounceDisabled` 而非 `OwnableUnauthorizedAccount`。
     function testRevert_WhenRenouncingOwnership(address caller) public {
         vm.assume(caller != owner);
         vm.prank(caller);
@@ -342,7 +342,7 @@ contract PermissionsAdapterTest is PermissionedPoolsBase {
         assertEq(permissionsAdapter.owner(), owner);
     }
 
-    /// @dev The normal two-step handover is untouched.
+    /// @dev 正常的两步移交流程不受影响。
     function test_transferOwnership_twoStepStillWorks() public {
         address newOwner = makeAddr("newOwner");
 
@@ -355,8 +355,8 @@ contract PermissionsAdapterTest is PermissionedPoolsBase {
         assertEq(permissionsAdapter.owner(), newOwner);
     }
 
-    /// @dev The other route to a zero owner: `transferOwnership(address(0))` only sets a pending owner, and
-    ///      address(0) can never call `acceptOwnership`, so ownership cannot reach zero this way either.
+    /// @dev 使所有者变为零地址的另一条途径：`transferOwnership(address(0))` 只会设置待定所有者，而
+    ///      address(0) 永远无法调用 `acceptOwnership`，因此这种方式同样无法使所有权变为零地址。
     function test_transferOwnership_toZeroCannotComplete() public {
         vm.prank(owner);
         Ownable2Step(address(permissionsAdapter)).transferOwnership(address(0));
@@ -379,7 +379,7 @@ contract PermissionsAdapterTest is PermissionedPoolsBase {
     }
 }
 
-/// @dev ERC-20 that silently returns false from transfer without reverting or moving balances.
+/// @dev transfer 时静默返回 false 的 ERC-20：既不回滚，也不改变余额。
 contract FalseReturningToken is ERC20 {
     constructor() ERC20("FalseToken", "FT") {}
 
@@ -392,7 +392,7 @@ contract FalseReturningToken is ERC20 {
     }
 }
 
-/// @dev ERC-20 with pause logic that silently returns false on transfer when paused.
+/// @dev 带暂停逻辑的 ERC-20：暂停时 transfer 静默返回 false。
 contract PausableSilentFailToken is ERC20 {
     bool public paused;
 
@@ -412,7 +412,7 @@ contract PausableSilentFailToken is ERC20 {
     }
 }
 
-/// @dev Bare-minimum IERC20 so the mocks below do not inherit OZ ERC20 (which would auto-provide metadata).
+/// @dev 最精简的 IERC20 实现，使下面的 mock 不必继承 OZ ERC20（后者会自动提供元数据）。
 abstract contract StubIERC20 is IERC20 {
     function totalSupply() external pure override returns (uint256) {
         return 0;
@@ -455,7 +455,7 @@ contract RevertingMetadataToken is StubIERC20 {
     }
 }
 
-/// @dev Legacy MKR-style token that returns `bytes32` instead of `string` for name/symbol.
+/// @dev 旧式 MKR 风格代币：name/symbol 返回 `bytes32` 而不是 `string`。
 contract Bytes32MetadataToken is StubIERC20 {
     function name() external pure returns (bytes32) {
         return bytes32("MakerDAO");
@@ -470,7 +470,7 @@ contract Bytes32MetadataToken is StubIERC20 {
     }
 }
 
-/// @dev `decimals()` returns a uint256 that does not fit in uint8 — ABI decode as uint8 must fail.
+/// @dev `decimals()` 返回超出 uint8 范围的 uint256——按 uint8 进行 ABI 解码必然失败。
 contract OversizedDecimalsToken is StubIERC20 {
     function name() external pure returns (string memory) {
         return "Big";
@@ -495,8 +495,8 @@ contract ImproperAllowlistChecker is IAllowlistChecker {
     }
 }
 
-/// @dev Returns `true` for every interfaceId, including `0xffffffff`. Defeats a naive direct
-///      `supportsInterface` check; rejected by ERC-165's required pre-checks.
+/// @dev 对所有 interfaceId（包括 `0xffffffff`）都返回 `true`。可绕过简单的直接
+///      `supportsInterface` 检查；但会被 ERC-165 规定的预检查拒绝。
 contract BypassAllowlistChecker is IAllowlistChecker {
     function checkAllowlist(address, address) public pure returns (PermissionFlag) {
         return PermissionFlags.ALL_ALLOWED;
@@ -507,8 +507,8 @@ contract BypassAllowlistChecker is IAllowlistChecker {
     }
 }
 
-/// @notice USDT-style ERC20: omits the bool return value on transfer/transferFrom. Used to confirm
-///         that `PermissionsAdapter.depositForVerification` tolerates non-standard return shapes.
+/// @notice USDT 风格的 ERC20：transfer/transferFrom 省略 bool 返回值。用于确认
+///         `PermissionsAdapter.depositForVerification` 能兼容非标准的返回值形式。
 contract NonReturningToken {
     mapping(address => uint256) public balanceOf;
     mapping(address => mapping(address => uint256)) public allowance;
@@ -529,7 +529,7 @@ contract NonReturningToken {
         require(balanceOf[msg.sender] >= amount, "balance");
         balanceOf[msg.sender] -= amount;
         balanceOf[to] += amount;
-        // intentionally no return value
+        // 故意不返回值
     }
 
     function transferFrom(address from, address to, uint256 amount) external {
@@ -538,6 +538,6 @@ contract NonReturningToken {
         allowance[from][msg.sender] -= amount;
         balanceOf[from] -= amount;
         balanceOf[to] += amount;
-        // intentionally no return value
+        // 故意不返回值
     }
 }

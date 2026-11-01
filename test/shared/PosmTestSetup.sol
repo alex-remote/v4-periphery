@@ -24,7 +24,7 @@ import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
 import {PositionConfig} from "../shared/PositionConfig.sol";
 import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
-/// @notice A shared test contract that wraps the v4-core deployers contract and exposes basic liquidity operations on posm.
+/// @notice 一个共享测试合约，封装了 v4-core 的 deployers 合约，并对外提供 posm 上的基础流动性操作。
 contract PosmTestSetup is Test, Deployers, DeployPermit2, LiquidityOperations {
     uint256 constant STARTING_USER_BALANCE = 10_000_000 ether;
 
@@ -56,13 +56,13 @@ contract PosmTestSetup is Test, Deployers, DeployPermit2, LiquidityOperations {
         hook = HookSavesDelta(hookAddr);
     }
 
-    /// @dev deploys a special test hook where beforeSwap hookData is used to modify liquidity
+    /// @dev 部署一个特殊的测试 hook，其 beforeSwap 的 hookData 会被用来修改流动性
     function deployPosmHookModifyLiquidities() public {
         HookModifyLiquidities impl = new HookModifyLiquidities();
         vm.etch(hookModifyLiquiditiesAddr, address(impl).code);
         hookModifyLiquidities = HookModifyLiquidities(hookModifyLiquiditiesAddr);
 
-        // set posm address since constructor args are not easily copied by vm.etch
+        // 设置 posm 地址，因为构造函数参数无法通过 vm.etch 方便地复制
         hookModifyLiquidities.setAddresses(lpm, permit2);
     }
 
@@ -72,7 +72,7 @@ contract PosmTestSetup is Test, Deployers, DeployPermit2, LiquidityOperations {
     }
 
     function deployPosm(IPoolManager poolManager) internal {
-        // We use deployPermit2() to prevent having to use via-ir in this repository.
+        // 使用 deployPermit2()，以避免在本仓库中不得不启用 via-ir。
         permit2 = IAllowanceTransfer(deployPermit2());
         _WETH9 = deployWETH();
         proxyAsImplementation = deployDescriptor(poolManager, "ETH");
@@ -104,14 +104,14 @@ contract PosmTestSetup is Test, Deployers, DeployPermit2, LiquidityOperations {
     }
 
     function approvePosmCurrency(Currency currency) internal {
-        // Because POSM uses permit2, we must execute 2 permits/approvals.
-        // 1. First, the caller must approve permit2 on the token.
+        // 由于 POSM 使用 permit2，我们必须执行 2 次许可（permit）/授权。
+        // 1. 首先，调用者必须在代币上授权 permit2。
         IERC20(Currency.unwrap(currency)).approve(address(permit2), type(uint256).max);
-        // 2. Then, the caller must approve POSM as a spender of permit2. TODO: This could also be a signature.
+        // 2. 然后，调用者必须在 permit2 中授权 POSM 作为被授权者。TODO: 这里也可以改用签名。
         permit2.approve(Currency.unwrap(currency), address(lpm), type(uint160).max, type(uint48).max);
     }
 
-    // Does the same approvals as approvePosm, but for a specific address.
+    // 执行与 approvePosm 相同的授权，但针对指定地址。
     function approvePosmFor(address addr) internal {
         vm.startPrank(addr);
         approvePosm();
@@ -163,7 +163,7 @@ contract PosmTestSetup is Test, Deployers, DeployPermit2, LiquidityOperations {
     }
 
     function getLastDelta() internal view returns (BalanceDelta delta) {
-        delta = hook.deltas(hook.numberDeltasReturned() - 1); // just want the most recently written delta
+        delta = hook.deltas(hook.numberDeltasReturned() - 1); // 只需要最近一次写入的 delta
     }
 
     function getNetDelta() internal view returns (BalanceDelta delta) {

@@ -37,7 +37,7 @@ abstract contract LiquidityOperations is CommonBase {
         address recipient,
         bytes memory hookData
     ) internal {
-        // determine the amount of ETH to send on-mint
+        // 计算铸造时需要发送的 ETH 数量
         (uint256 amount0,) = LiquidityAmounts.getAmountsForLiquidity(
             sqrtPriceX96,
             TickMath.getSqrtPriceAtTick(config.tickLower),
@@ -45,7 +45,7 @@ abstract contract LiquidityOperations is CommonBase {
             liquidity.toUint128()
         );
         bytes memory calls = getMintEncoded(config, liquidity, recipient, hookData);
-        // add extra wei because modifyLiquidities may be rounding up, LiquidityAmounts is imprecise?
+        // 额外多加 1 wei，因为 modifyLiquidities 可能会向上取整，LiquidityAmounts 的计算不够精确？
         lpm.modifyLiquidities{value: amount0 + 1}(calls, _deadline);
     }
 
@@ -59,7 +59,7 @@ abstract contract LiquidityOperations is CommonBase {
         lpm.modifyLiquidities(calls, _deadline);
     }
 
-    // do not make external call before unlockAndExecute, allows us to test reverts
+    // 在 unlockAndExecute 之前不要进行外部调用，这样便于测试回滚（revert）
     function decreaseLiquidity(
         uint256 tokenId,
         PositionConfig memory config,
@@ -75,13 +75,13 @@ abstract contract LiquidityOperations is CommonBase {
         lpm.modifyLiquidities(calls, _deadline);
     }
 
-    // This is encoded with close calls. Not all burns need to be encoded with closes if there is no liquidity in the position.
+    // 这里编码时附带了 close 调用。如果头寸中没有流动性，并非所有销毁都需要附带 close 编码。
     function burn(uint256 tokenId, PositionConfig memory config, bytes memory hookData) internal {
         bytes memory calls = getBurnEncoded(tokenId, config, hookData);
         lpm.modifyLiquidities(calls, _deadline);
     }
 
-    // Helper functions for getting encoded calldata for .modifyLiquidities() or .modifyLiquiditiesWithoutUnlock()
+    // 用于获取 .modifyLiquidities() 或 .modifyLiquiditiesWithoutUnlock() 编码后 calldata 的辅助函数
     function getMintEncoded(PositionConfig memory config, uint256 liquidity, address recipient, bytes memory hookData)
         internal
         pure
@@ -122,7 +122,7 @@ abstract contract LiquidityOperations is CommonBase {
         uint256 liquidityToAdd,
         bytes memory hookData
     ) internal pure returns (bytes memory) {
-        // max slippage
+        // 最大滑点
         return
             getIncreaseEncoded(tokenId, config, liquidityToAdd, MAX_SLIPPAGE_INCREASE, MAX_SLIPPAGE_INCREASE, hookData);
     }
@@ -203,7 +203,7 @@ abstract contract LiquidityOperations is CommonBase {
     ) internal pure returns (bytes memory) {
         Plan memory planner = Planner.init();
         planner.add(Actions.BURN_POSITION, abi.encode(tokenId, amount0Min, amount1Min, hookData));
-        // Close needed on burn in case there is liquidity left in the position.
+        // 销毁时需要 close，以防头寸中仍有剩余流动性。
         return planner.finalizeModifyLiquidityWithClose(config.poolKey);
     }
 }

@@ -20,7 +20,7 @@ import {
     IERC20 as IERC20Adapter
 } from "../../../src/hooks/permissionedPools/interfaces/IPermissionsAdapter.sol";
 
-/// @notice Contract-wallet LP whose receive() strands a PoolManager delta (native-ETH reentrancy).
+/// @notice 合约钱包形式的 LP，其 receive() 会遗留一个未结清的 PoolManager delta（原生 ETH 重入）。
 contract MaliciousNativeLP {
     IPoolManager public immutable manager;
     bool public armed;
@@ -42,13 +42,13 @@ contract MaliciousNativeLP {
     receive() external payable {
         if (armed) {
             armed = false;
-            manager.mint(address(this), 0, 1); // strand a global delta mid-unlock, only when armed
+            manager.mint(address(this), 0, 1); // 仅在已激活（armed）时，于 unlock 过程中遗留一个未结清的全局 delta
         }
     }
 }
 
-/// @notice Contract-wallet LP whose receive() burns nearly all forwarded gas then reverts.
-///         The native take reverts, so delivery is caught and the LP falls back to an ETH 6909 claim.
+/// @notice 合约钱包形式的 LP，其 receive() 会耗尽几乎所有转发进来的 gas，然后回滚。
+///         原生代币的提取（take）会回滚，因此交付失败会被捕获，LP 改为获得 ETH 的 6909 claim。
 contract GasGriefingLP {
     function exec(address t, uint256 v, bytes calldata d) external returns (bytes memory) {
         (bool ok, bytes memory ret) = t.call{value: v}(d);
@@ -57,7 +57,7 @@ contract GasGriefingLP {
     }
 
     receive() external payable {
-        // Burn a full block's worth of gas (the realistic per-call cap), then revert.
+        // 烧掉相当于一整个区块的 gas（实际中单次调用的上限），然后回滚。
         uint256 g = gasleft();
         uint256 target = g > 30_000_000 ? g - 30_000_000 : g / 2;
         while (gasleft() > target) {}
@@ -65,7 +65,7 @@ contract GasGriefingLP {
     }
 }
 
-/// @notice LP-supplied ERC20 whose transfer reenters PoolManager.mint to strand a delta (finding note 1).
+/// @notice 由 LP 提供的 ERC20，其 transfer 会重入 PoolManager.mint 以遗留一个未结清的 delta（审计发现备注 1）。
 contract MaliciousPairedToken {
     string public name = "MAL";
     string public symbol = "MAL";
@@ -106,7 +106,7 @@ contract MaliciousPairedToken {
     function _x(address f, address to, uint256 a) internal returns (bool) {
         if (armed) {
             armed = false;
-            manager.mint(address(this), 0, 1); // strand a global delta mid-unlock, only when armed
+            manager.mint(address(this), 0, 1); // 仅在已激活（armed）时，于 unlock 过程中遗留一个未结清的全局 delta
         }
         balanceOf[f] -= a;
         balanceOf[to] += a;
@@ -114,9 +114,9 @@ contract MaliciousPairedToken {
     }
 }
 
-/// @notice A permissioned token the LP controls: it satisfies the adapter's allowlist path (via MockPermissionedToken)
-///         but strands a PoolManager delta on transfer when armed. Wrapped in a verified PA the LP admins, this is
-///         the "malicious PA" case: the adapter unwrap during delivery runs this token's reentrant transfer.
+/// @notice 由 LP 控制的许可代币：它能通过适配器的白名单路径（借助 MockPermissionedToken），
+///         但在已激活时会在 transfer 中遗留一个未结清的 PoolManager delta。将其包装进由 LP 管理的已验证 PA，就构成了
+///         “恶意 PA”场景：交付过程中适配器解包时会执行该代币的重入式 transfer。
 contract MaliciousPermUnderlying is MockPermissionedToken {
     IPoolManager public immutable mgr;
     bool public armed;
@@ -142,7 +142,7 @@ contract MaliciousPermUnderlying is MockPermissionedToken {
     function _grief() internal {
         if (armed) {
             armed = false;
-            mgr.mint(address(this), 0, 1); // strand a global delta mid-unlock, only when armed
+            mgr.mint(address(this), 0, 1); // 仅在已激活（armed）时，于 unlock 过程中遗留一个未结清的全局 delta
         }
     }
 }
@@ -191,7 +191,7 @@ contract UnwindReentrancyFixedPoC is PermissionedPositionManagerTest {
             );
     }
 
-    // 1. Native pool + malicious contract-wallet LP: force-exit SUCCEEDS; LP gets an ETH 6909 claim.
+    // 1. 原生代币池 + 恶意合约钱包 LP：强制退出成功；LP 获得 ETH 的 6909 claim。
     function test_forceExit_succeeds_vs_native_contract_LP_griefer() public {
         PoolKey memory key = PoolKey({
             currency0: Currency.wrap(address(0)),
@@ -211,17 +211,17 @@ contract UnwindReentrancyFixedPoC is PermissionedPositionManagerTest {
         uint256 tokenId = _mintPosition(key, address(lp), 1 ether);
         assertEq(IERC721(address(lpm)).ownerOf(tokenId), address(lp));
 
-        lp.arm(true); // its receive() will try to strand a delta when handed ETH
+        lp.arm(true); // 收到 ETH 时，其 receive() 会尝试遗留一个未结清的 delta
         (bool ok,) =
             address(lpm).call(abi.encodeWithSelector(_UNWIND_SELECTOR, tokenId, uint128(0), uint128(0), bytes("")));
         assertTrue(ok, "force-exit must succeed despite native reentrancy");
 
         vm.expectRevert();
-        IERC721(address(lpm)).ownerOf(tokenId); // NFT burned -> LP removed
+        IERC721(address(lpm)).ownerOf(tokenId); // NFT 已销毁 -> LP 被移除
         assertGt(manager.balanceOf(address(lp), 0), 0, "griefer LP was handed an ETH 6909 claim instead of real ETH");
     }
 
-    // 2. LP pairs the permissioned token with their OWN malicious ERC20: force-exit SUCCEEDS.
+    // 2. LP 将许可代币与其自己的恶意 ERC20 配对：强制退出成功。
     function test_forceExit_succeeds_vs_malicious_paired_token() public {
         MaliciousPairedToken mal = new MaliciousPairedToken(manager);
         (Currency c0, Currency c1) = address(permissionsAdapter0) < address(mal)
@@ -277,7 +277,7 @@ contract UnwindReentrancyFixedPoC is PermissionedPositionManagerTest {
         );
     }
 
-    // 3. Benign EOA LP in a native pool gets REAL ETH, not a claim.
+    // 3. 原生代币池中的良性 EOA LP 收到的是真实 ETH，而不是 claim。
     function test_forceExit_delivers_real_ETH_to_benign_EOA_LP() public {
         PoolKey memory key = PoolKey({
             currency0: Currency.wrap(address(0)),
@@ -299,9 +299,9 @@ contract UnwindReentrancyFixedPoC is PermissionedPositionManagerTest {
         assertEq(manager.balanceOf(alice, 0), 0, "no ETH claim minted for the benign case");
     }
 
-    /// @notice Builds a pool pairing the valid adapter0 with an LP-created, LP-admined PA that wraps a
-    ///         malicious permissioned token, then mints a position owned by the LP. `lpm` is allowed to
-    ///         wrap the evil PA. Returns the position and the pieces callers arm or mutate.
+    /// @notice 构建一个池：将合法的 adapter0 与一个由 LP 创建并管理、包装了
+    ///         恶意许可代币的 PA 配对，然后铸造一个归 LP 所有的头寸。`lpm` 被允许
+    ///         包装该恶意 PA。返回该头寸以及调用方需要激活或修改的各个组件。
     function _setupMaliciousPaPool()
         internal
         returns (uint256 tokenId, MaliciousPermUnderlying malU, address paEvil, address evilLp)
@@ -309,18 +309,18 @@ contract UnwindReentrancyFixedPoC is PermissionedPositionManagerTest {
         evilLp = makeAddr("EVIL_LP");
         MockAllowlistChecker checker = new MockAllowlistChecker();
 
-        // The LP creates and verifies a PA wrapping their own malicious permissioned token, as its admin.
+        // LP 以管理员身份创建并验证一个 PA，该 PA 包装了 LP 自己的恶意许可代币。
         malU = new MaliciousPermUnderlying(manager);
         vm.prank(evilLp);
         paEvil = permissionsAdapterFactory.createPermissionsAdapter(IERC20Adapter(address(malU)), evilLp, checker);
 
-        // Everyone that will hold/receive malU must be on its token allowlist (mock reverts on !isAllowed[to]).
+        // 所有会持有/接收 malU 的地址都必须在其代币白名单中（mock 在 !isAllowed[to] 时回滚）。
         malU.setAllowlist(evilLp, PermissionFlags.ALL_ALLOWED);
         malU.setAllowlist(paEvil, PermissionFlags.ALL_ALLOWED);
         malU.setAllowlist(address(manager), PermissionFlags.ALL_ALLOWED);
         malU.setAllowlist(address(lpm), PermissionFlags.ALL_ALLOWED);
 
-        malU.mint(paEvil, 1); // verification requires the adapter to hold a nonzero balance
+        malU.mint(paEvil, 1); // 验证要求适配器持有非零余额
         permissionsAdapterFactory.verifyPermissionsAdapter(paEvil);
 
         vm.prank(evilLp);
@@ -335,7 +335,7 @@ contract UnwindReentrancyFixedPoC is PermissionedPositionManagerTest {
             PoolKey({currency0: c0, currency1: c1, fee: 3000, tickSpacing: 60, hooks: permissionedHooks});
         manager.initialize(key, SQRT_PRICE_1_1);
 
-        // Fund + allowlist the LP on the valid adapter's underlying, and on malU (already done above).
+        // 为 LP 在合法适配器的底层代币上注资并加入白名单，malU 上同样如此（已在上面处理过）。
         MockPermissionedToken(Currency.unwrap(currency0)).setAllowlist(evilLp, PermissionFlags.ALL_ALLOWED);
         MockPermissionedToken(Currency.unwrap(currency0)).mint(evilLp, 100 ether);
         malU.mint(evilLp, 100 ether);
@@ -371,14 +371,14 @@ contract UnwindReentrancyFixedPoC is PermissionedPositionManagerTest {
         assertEq(IERC721(address(lpm)).ownerOf(tokenId), evilLp);
     }
 
-    // 4. LP pairs the valid PA with ANOTHER PA they created and admin, wrapping their own malicious token.
-    //    The adapter unwrap during delivery runs the malicious token; the force-exit must still succeed.
+    // 4. LP 将合法 PA 与另一个由其创建并管理、包装了其自有恶意代币的 PA 配对。
+    //    交付过程中适配器解包时会执行该恶意代币的逻辑；强制退出仍必须成功。
     function test_forceExit_succeeds_vs_LP_admined_malicious_PA() public {
         (uint256 tokenId, MaliciousPermUnderlying malU,,) = _setupMaliciousPaPool();
 
-        malU.arm(true); // its transfer during the adapter unwrap will strand a delta
+        malU.arm(true); // 适配器解包时，其 transfer 会遗留一个未结清的 delta
 
-        // address(this) is admin of the valid adapter0, so it is authorized to force-exit.
+        // address(this) 是合法 adapter0 的管理员，因此有权执行强制退出。
         (bool ok,) =
             address(lpm).call(abi.encodeWithSelector(_UNWIND_SELECTOR, tokenId, uint128(0), uint128(0), bytes("")));
         assertTrue(ok, "force-exit must succeed vs an LP-admined malicious PA");
@@ -386,14 +386,14 @@ contract UnwindReentrancyFixedPoC is PermissionedPositionManagerTest {
         IERC721(address(lpm)).ownerOf(tokenId);
     }
 
-    // 5. LP revokes lpm from their evil PA's allowedWrappers after minting. allowedWrappers is checked only in
-    //    the wrap direction, so the force-exit (which unwraps) is unaffected and still succeeds.
+    // 5. LP 在铸造后将 lpm 从其恶意 PA 的 allowedWrappers 中移除。allowedWrappers 只在
+    //    包装方向上检查，因此强制退出（执行的是解包）不受影响，依然成功。
     function test_forceExit_survives_removed_allowedWrappers() public {
         (uint256 tokenId, MaliciousPermUnderlying malU, address paEvil, address evilLp) = _setupMaliciousPaPool();
 
-        // The LP strips PermPosm (lpm) from allowedWrappers after minting. A UR entry would be revoked the same
-        // way, but this base wires no UR, so revoking lpm is the meaningful case. allowedWrappers gates only the
-        // wrap direction, so this cannot brick the unwind.
+        // LP 在铸造后从 allowedWrappers 中移除 PermPosm（lpm）。UR 条目也会以同样的方式
+        // 被撤销，但此测试基类没有接入 UR，因此撤销 lpm 才是有意义的情形。allowedWrappers 只限制
+        // 包装方向，因此这不会让 unwind 卡死。
         vm.prank(evilLp);
         IPermissionsAdapter(paEvil).updateAllowedWrapper(address(lpm), false);
 
@@ -405,8 +405,8 @@ contract UnwindReentrancyFixedPoC is PermissionedPositionManagerTest {
         IERC721(address(lpm)).ownerOf(tokenId);
     }
 
-    // 6. Contract-wallet LP in a native pool whose receive() burns nearly all forwarded gas then reverts.
-    //    The native take is caught by the try/catch and the LP falls back to an ETH 6909 claim.
+    // 6. 原生代币池中的合约钱包 LP，其 receive() 会耗尽几乎所有转发进来的 gas，然后回滚。
+    //    原生代币的提取（take）失败会被 try/catch 捕获，LP 改为获得 ETH 的 6909 claim。
     function test_forceExit_survives_gas_griefing_native_LP() public {
         PoolKey memory key = PoolKey({
             currency0: Currency.wrap(address(0)),
