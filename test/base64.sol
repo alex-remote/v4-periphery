@@ -3,7 +3,7 @@ pragma solidity ^0.8.24;
 
 /// @title Base64
 /// @author Brecht Devos - <brecht@loopring.org>
-/// @notice Provides functions for decoding base64
+/// @notice 提供 base64 解码函数
 library Base64 {
     bytes internal constant TABLE_DECODE = hex"0000000000000000000000000000000000000000000000000000000000000000"
         hex"00000000000000000000003e0000003f3435363738393a3b3c3d000000000000"
@@ -16,43 +16,43 @@ library Base64 {
         if (data.length == 0) return new bytes(0);
         require(data.length % 4 == 0, "invalid base64 decoder input");
 
-        // load the table into memory
+        // 将查找表加载到内存
         bytes memory table = TABLE_DECODE;
 
-        // every 4 characters represent 3 bytes
+        // 每 4 个字符表示 3 个字节
         uint256 decodedLen = (data.length / 4) * 3;
 
-        // add some extra buffer at the end required for the writing
+        // 在末尾添加写入所需的额外缓冲区
         bytes memory result = new bytes(decodedLen + 32);
 
         assembly {
-            // padding with '='
+            // 处理 '=' 填充
             let lastBytes := mload(add(data, mload(data)))
             if eq(and(lastBytes, 0xFF), 0x3d) {
                 decodedLen := sub(decodedLen, 1)
                 if eq(and(lastBytes, 0xFFFF), 0x3d3d) { decodedLen := sub(decodedLen, 1) }
             }
 
-            // set the actual output length
+            // 设置实际输出长度
             mstore(result, decodedLen)
 
-            // prepare the lookup table
+            // 准备查找表
             let tablePtr := add(table, 1)
 
-            // input ptr
+            // 输入指针
             let dataPtr := data
             let endPtr := add(dataPtr, mload(data))
 
-            // result ptr, jump over length
+            // 结果指针，跳过长度字段
             let resultPtr := add(result, 32)
 
-            // run over the input, 4 characters at a time
+            // 遍历输入，每次处理 4 个字符
             for {} lt(dataPtr, endPtr) {} {
-                // read 4 characters
+                // 读取 4 个字符
                 dataPtr := add(dataPtr, 4)
                 let input := mload(dataPtr)
 
-                // write 3 bytes
+                // 写入 3 个字节
                 let output :=
                     add(
                         add(

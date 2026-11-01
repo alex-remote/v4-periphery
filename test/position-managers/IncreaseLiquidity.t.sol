@@ -38,66 +38,66 @@ contract IncreaseLiquidityTest is Test, PosmTestSetup, Fuzzers {
     address alice = makeAddr("ALICE");
     address bob = makeAddr("BOB");
 
-    // expresses the fee as a wad (i.e. 3000 = 0.003e18 = 0.30%)
+    // 以 wad 形式表示手续费（即 3000 = 0.003e18 = 0.30%）
     uint256 FEE_WAD;
 
     PositionConfig config;
 
-    // Error tolerance.
+    // 误差容限。
     uint256 tolerance = 0.00000000001 ether;
 
     function setUp() public {
         deployFreshManagerAndRouters();
         deployMintAndApprove2Currencies();
 
-        // This is needed to receive return deltas from modifyLiquidity calls.
+        // 需要它来接收 modifyLiquidity 调用返回的 delta。
         deployPosmHookSavesDelta();
 
         (key, poolId) = initPool(currency0, currency1, IHooks(hook), 3000, SQRT_PRICE_1_1);
         FEE_WAD = uint256(key.fee).mulDivDown(FixedPointMathLib.WAD, 1_000_000);
 
-        // Requires currency0 and currency1 to be set in base Deployers contract.
+        // 要求已在基础合约 Deployers 中设置 currency0 和 currency1。
         deployAndApprovePosm(manager);
 
-        // Give tokens to Alice and Bob.
+        // 给 Alice 和 Bob 发放代币。
         seedBalance(alice);
         seedBalance(bob);
 
-        // Approve posm for Alice and bob.
+        // 让 Alice 和 Bob 对 posm 授权。
         approvePosmFor(alice);
         approvePosmFor(bob);
 
-        // define a reusable range
+        // 定义一个可复用的区间
         config = PositionConfig({poolKey: key, tickLower: -300, tickUpper: 300});
     }
 
-    /// @notice Increase liquidity by less than the amount of liquidity the position has earned, requiring a take
+    /// @notice 增加的流动性少于头寸已赚取的流动性，因此需要一次提取（take）
     function test_increaseLiquidity_withCollection_takePair() public {
-        // Alice and Bob provide liquidity on the range
-        // Alice uses her exact fees to increase liquidity (compounding)
+        // Alice 和 Bob 在该区间上提供流动性
+        // Alice 用她恰好赚到的手续费增加流动性（复投）
 
         uint256 liquidityAlice = 3_000e18;
         uint256 liquidityBob = 1_000e18;
 
-        // alice provides liquidity
+        // alice 提供流动性
         vm.startPrank(alice);
         uint256 tokenIdAlice = lpm.nextTokenId();
         mint(config, liquidityAlice, alice, ZERO_BYTES);
         vm.stopPrank();
 
-        // bob provides liquidity
+        // bob 提供流动性
         vm.startPrank(bob);
         mint(config, liquidityBob, bob, ZERO_BYTES);
         vm.stopPrank();
 
-        // donate to create fees
+        // 通过 donate 产生手续费
         uint256 amountDonate = 0.1e18;
         donateRouter.donate(key, amountDonate, amountDonate, ZERO_BYTES);
 
-        // alice uses her half her fees to increase liquidity
-        // Slight error in this calculation vs. actual fees.. TODO: Fix this.
+        // alice 用她一半的手续费增加流动性
+        // 此计算与实际手续费之间存在轻微误差。TODO: 修复此问题。
         BalanceDelta feesOwedAlice = IPositionManager(lpm).getFeesOwed(manager, config, tokenIdAlice);
-        // Note: You can alternatively calculate Alice's fees owed from the swap amount, fee on the pool, and total liquidity in that range.
+        // 注意：也可以根据兑换（swap）数量、池的手续费率以及该区间内的总流动性来计算 Alice 应得的手续费。
         // swapAmount.mulWadDown(FEE_WAD).mulDivDown(liquidityAlice, liquidityAlice + liquidityBob);
 
         (uint160 sqrtPriceX96,,,) = StateLibrary.getSlot0(manager, config.poolKey.toId());
@@ -112,7 +112,7 @@ contract IncreaseLiquidityTest is Test, PosmTestSetup, Fuzzers {
         uint256 balance0BeforeAlice = currency0.balanceOf(alice);
         uint256 balance1BeforeAlice = currency1.balanceOf(alice);
 
-        //  Set the slippage amounts to be exactly half the fees that alice is reinvesting.
+        //  把滑点数量设为恰好等于 alice 用于再投资的那一半手续费。
 
         Plan memory planner = Planner.init();
         planner.add(
@@ -126,7 +126,7 @@ contract IncreaseLiquidityTest is Test, PosmTestSetup, Fuzzers {
         lpm.modifyLiquidities(calls, _deadline);
         vm.stopPrank();
 
-        // alices current balance is the balanceBefore plus half of her fees owed
+        // alice 当前的余额等于 balanceBefore 加上她应得手续费的一半
         assertApproxEqAbs(
             currency0.balanceOf(alice), balance0BeforeAlice + uint256(int256(feesOwedAlice.amount0() / 2)), tolerance
         );
@@ -135,34 +135,34 @@ contract IncreaseLiquidityTest is Test, PosmTestSetup, Fuzzers {
         );
     }
 
-    /// @notice Increase liquidity with exact fees, taking dust
+    /// @notice 用恰好的手续费增加流动性，并提取（take）剩余零头（dust）
     function test_increaseLiquidity_withExactFees_take() public {
-        // Alice and Bob provide liquidity on the range
-        // Alice uses her exact fees to increase liquidity (compounding)
+        // Alice 和 Bob 在该区间上提供流动性
+        // Alice 用她恰好赚到的手续费增加流动性（复投）
 
         uint256 liquidityAlice = 3_000e18;
         uint256 liquidityBob = 1_000e18;
 
-        // alice provides liquidity
+        // alice 提供流动性
         vm.startPrank(alice);
         uint256 tokenIdAlice = lpm.nextTokenId();
         mint(config, liquidityAlice, alice, ZERO_BYTES);
         vm.stopPrank();
 
-        // bob provides liquidity
+        // bob 提供流动性
         vm.startPrank(bob);
         mint(config, liquidityBob, bob, ZERO_BYTES);
         vm.stopPrank();
 
-        // swap to create fees
+        // 通过兑换（swap）产生手续费
         uint256 swapAmount = 0.001e18;
         swap(key, true, -int256(swapAmount), ZERO_BYTES);
-        swap(key, false, -int256(swapAmount), ZERO_BYTES); // move the price back
+        swap(key, false, -int256(swapAmount), ZERO_BYTES); // 把价格移回原处
 
-        // alice uses her exact fees to increase liquidity
-        // Slight error in this calculation vs. actual fees.. TODO: Fix this.
+        // alice 用她恰好赚到的手续费增加流动性
+        // 此计算与实际手续费之间存在轻微误差。TODO: 修复此问题。
         BalanceDelta feesOwedAlice = IPositionManager(lpm).getFeesOwed(manager, config, tokenIdAlice);
-        // Note: You can alternatively calculate Alice's fees owed from the swap amount, fee on the pool, and total liquidity in that range.
+        // 注意：也可以根据兑换（swap）数量、池的手续费率以及该区间内的总流动性来计算 Alice 应得的手续费。
         // swapAmount.mulWadDown(FEE_WAD).mulDivDown(liquidityAlice, liquidityAlice + liquidityBob);
 
         (uint160 sqrtPriceX96,,,) = StateLibrary.getSlot0(manager, config.poolKey.toId());
@@ -187,39 +187,39 @@ contract IncreaseLiquidityTest is Test, PosmTestSetup, Fuzzers {
         lpm.modifyLiquidities(calls, _deadline);
         vm.stopPrank();
 
-        // alice barely spent any tokens
+        // alice 几乎没有花费任何代币
         assertApproxEqAbs(balance0BeforeAlice, currency0.balanceOf(alice), tolerance);
         assertApproxEqAbs(balance1BeforeAlice, currency1.balanceOf(alice), tolerance);
     }
 
-    /// @dev Increase liquidity with exact fees, clearing dust
+    /// @dev 用恰好的手续费增加流动性，并清除（clear）剩余零头（dust）
     function test_increaseLiquidity_withExactFees_clear() public {
-        // Alice and Bob provide liquidity on the range
-        // Alice uses her exact fees to increase liquidity (compounding)
+        // Alice 和 Bob 在该区间上提供流动性
+        // Alice 用她恰好赚到的手续费增加流动性（复投）
 
         uint256 liquidityAlice = 3_000e18;
         uint256 liquidityBob = 1_000e18;
 
-        // alice provides liquidity
+        // alice 提供流动性
         vm.startPrank(alice);
         uint256 tokenIdAlice = lpm.nextTokenId();
         mint(config, liquidityAlice, alice, ZERO_BYTES);
         vm.stopPrank();
 
-        // bob provides liquidity
+        // bob 提供流动性
         vm.startPrank(bob);
         mint(config, liquidityBob, bob, ZERO_BYTES);
         vm.stopPrank();
 
-        // swap to create fees
+        // 通过兑换（swap）产生手续费
         uint256 swapAmount = 0.001e18;
         swap(key, true, -int256(swapAmount), ZERO_BYTES);
-        swap(key, false, -int256(swapAmount), ZERO_BYTES); // move the price back
+        swap(key, false, -int256(swapAmount), ZERO_BYTES); // 把价格移回原处
 
-        // alice uses her exact fees to increase liquidity
-        // Slight error in this calculation vs. actual fees.. TODO: Fix this.
+        // alice 用她恰好赚到的手续费增加流动性
+        // 此计算与实际手续费之间存在轻微误差。TODO: 修复此问题。
         BalanceDelta feesOwedAlice = IPositionManager(lpm).getFeesOwed(manager, config, tokenIdAlice);
-        // Note: You can alternatively calculate Alice's fees owed from the swap amount, fee on the pool, and total liquidity in that range.
+        // 注意：也可以根据兑换（swap）数量、池的手续费率以及该区间内的总流动性来计算 Alice 应得的手续费。
         // swapAmount.mulWadDown(FEE_WAD).mulDivDown(liquidityAlice, liquidityAlice + liquidityBob);
 
         (uint160 sqrtPriceX96,,,) = StateLibrary.getSlot0(manager, config.poolKey.toId());
@@ -239,43 +239,43 @@ contract IncreaseLiquidityTest is Test, PosmTestSetup, Fuzzers {
             Actions.INCREASE_LIQUIDITY,
             abi.encode(tokenIdAlice, liquidityDelta, MAX_SLIPPAGE_INCREASE, MAX_SLIPPAGE_INCREASE, ZERO_BYTES)
         );
-        planner.add(Actions.CLEAR_OR_TAKE, abi.encode(config.poolKey.currency0, 18 wei)); // alice is willing to forfeit 18 wei
+        planner.add(Actions.CLEAR_OR_TAKE, abi.encode(config.poolKey.currency0, 18 wei)); // alice 愿意放弃 18 wei
         planner.add(Actions.CLEAR_OR_TAKE, abi.encode(config.poolKey.currency1, 18 wei));
         bytes memory calls = planner.encode();
 
         vm.prank(alice);
         lpm.modifyLiquidities(calls, _deadline);
 
-        // alice did not spend or receive tokens
-        // (alice forfeited a small amount of tokens to the pool with CLEAR)
+        // alice 既没有花费也没有收到代币
+        // （alice 通过 CLEAR 把少量代币放弃给了池）
         assertEq(currency0.balanceOf(alice), balance0BeforeAlice);
         assertEq(currency1.balanceOf(alice), balance1BeforeAlice);
     }
 
-    // uses donate to simulate fee revenue, taking dust
+    // 使用 donate 模拟手续费收入，并提取（take）零头（dust）
     function test_increaseLiquidity_withExactFees_take_donate() public {
-        // Alice and Bob provide liquidity on the range
-        // Alice uses her exact fees to increase liquidity (compounding)
+        // Alice 和 Bob 在该区间上提供流动性
+        // Alice 用她恰好赚到的手续费增加流动性（复投）
 
         uint256 liquidityAlice = 3_000e18;
         uint256 liquidityBob = 1_000e18;
 
-        // alice provides liquidity
+        // alice 提供流动性
         vm.startPrank(alice);
         uint256 tokenIdAlice = lpm.nextTokenId();
         mint(config, liquidityAlice, alice, ZERO_BYTES);
         vm.stopPrank();
 
-        // bob provides liquidity
+        // bob 提供流动性
         vm.startPrank(bob);
         mint(config, liquidityBob, bob, ZERO_BYTES);
         vm.stopPrank();
 
-        // donate to create fees
+        // 通过 donate 产生手续费
         uint256 amountDonate = 0.2e18;
         donateRouter.donate(key, 0.2e18, 0.2e18, ZERO_BYTES);
 
-        // subtract 1 cause we'd rather take than pay
+        // 减去 1，因为我们宁可提取（take）也不愿支付
         uint256 feesAmount = amountDonate.mulDivDown(liquidityAlice, liquidityAlice + liquidityBob) - 1;
 
         (uint160 sqrtPriceX96,,,) = StateLibrary.getSlot0(manager, config.poolKey.toId());
@@ -294,35 +294,35 @@ contract IncreaseLiquidityTest is Test, PosmTestSetup, Fuzzers {
         increaseLiquidity(tokenIdAlice, config, liquidityDelta, ZERO_BYTES);
         vm.stopPrank();
 
-        // alice barely spent any tokens
+        // alice 几乎没有花费任何代币
         assertApproxEqAbs(balance0BeforeAlice, currency0.balanceOf(alice), 1 wei);
         assertApproxEqAbs(balance1BeforeAlice, currency1.balanceOf(alice), 1 wei);
     }
 
-    // uses donate to simulate fee revenue, clearing dust
+    // 使用 donate 模拟手续费收入，并清除（clear）零头（dust）
     function test_increaseLiquidity_withExactFees_clear_donate() public {
-        // Alice and Bob provide liquidity on the range
-        // Alice uses her exact fees to increase liquidity (compounding)
+        // Alice 和 Bob 在该区间上提供流动性
+        // Alice 用她恰好赚到的手续费增加流动性（复投）
 
         uint256 liquidityAlice = 3_000e18;
         uint256 liquidityBob = 1_000e18;
 
-        // alice provides liquidity
+        // alice 提供流动性
         vm.startPrank(alice);
         uint256 tokenIdAlice = lpm.nextTokenId();
         mint(config, liquidityAlice, alice, ZERO_BYTES);
         vm.stopPrank();
 
-        // bob provides liquidity
+        // bob 提供流动性
         vm.startPrank(bob);
         mint(config, liquidityBob, bob, ZERO_BYTES);
         vm.stopPrank();
 
-        // donate to create fees
+        // 通过 donate 产生手续费
         uint256 amountDonate = 0.2e18;
         donateRouter.donate(key, 0.2e18, 0.2e18, ZERO_BYTES);
 
-        // subtract 1 cause we'd rather take than pay
+        // 减去 1，因为我们宁可提取（take）也不愿支付
         uint256 feesAmount = amountDonate.mulDivDown(liquidityAlice, liquidityAlice + liquidityBob) - 1;
 
         (uint160 sqrtPriceX96,,,) = StateLibrary.getSlot0(manager, config.poolKey.toId());
@@ -342,46 +342,46 @@ contract IncreaseLiquidityTest is Test, PosmTestSetup, Fuzzers {
             Actions.INCREASE_LIQUIDITY,
             abi.encode(tokenIdAlice, liquidityDelta, MAX_SLIPPAGE_INCREASE, MAX_SLIPPAGE_INCREASE, ZERO_BYTES)
         );
-        planner.add(Actions.CLEAR_OR_TAKE, abi.encode(config.poolKey.currency0, 1 wei)); // alice is willing to forfeit 1 wei
+        planner.add(Actions.CLEAR_OR_TAKE, abi.encode(config.poolKey.currency0, 1 wei)); // alice 愿意放弃 1 wei
         planner.add(Actions.CLEAR_OR_TAKE, abi.encode(config.poolKey.currency1, 1 wei));
         bytes memory calls = planner.encode();
 
         vm.prank(alice);
         lpm.modifyLiquidities(calls, _deadline);
 
-        // alice did not spend or receive tokens
-        // (alice forfeited a small amount of tokens to the pool with CLEAR)
+        // alice 既没有花费也没有收到代币
+        // （alice 通过 CLEAR 把少量代币放弃给了池）
         assertEq(currency0.balanceOf(alice), balance0BeforeAlice);
         assertEq(currency1.balanceOf(alice), balance1BeforeAlice);
     }
 
     function test_increaseLiquidity_sameRange_withExcessFees() public {
-        // Alice and Bob provide liquidity on the same range
-        // Alice uses half her fees to increase liquidity. The other half are collected to her wallet.
-        // Bob collects all fees.
+        // Alice 和 Bob 在同一区间上提供流动性
+        // Alice 用一半的手续费增加流动性，另一半被收取到她的钱包。
+        // Bob 收取全部手续费。
         uint256 liquidityAlice = 3_000e18;
         uint256 liquidityBob = 1_000e18;
         uint256 totalLiquidity = liquidityAlice + liquidityBob;
 
-        // alice provides liquidity
+        // alice 提供流动性
         vm.startPrank(alice);
         uint256 tokenIdAlice = lpm.nextTokenId();
         mint(config, liquidityAlice, alice, ZERO_BYTES);
         vm.stopPrank();
 
-        // bob provides liquidity
+        // bob 提供流动性
         vm.prank(bob);
         uint256 tokenIdBob = lpm.nextTokenId();
         mint(config, liquidityBob, bob, ZERO_BYTES);
         vm.stopPrank();
 
-        // swap to create fees
+        // 通过兑换（swap）产生手续费
         uint256 swapAmount = 0.001e18;
         swap(key, true, -int256(swapAmount), ZERO_BYTES);
-        swap(key, false, -int256(swapAmount), ZERO_BYTES); // move the price back
+        swap(key, false, -int256(swapAmount), ZERO_BYTES); // 把价格移回原处
 
         {
-            // alice will use half of her fees to increase liquidity
+            // alice 将用她一半的手续费增加流动性
             BalanceDelta aliceFeesOwed = IPositionManager(lpm).getFeesOwed(manager, config, tokenIdAlice);
 
             (uint160 sqrtPriceX96,,,) = StateLibrary.getSlot0(manager, config.poolKey.toId());
@@ -419,7 +419,7 @@ contract IncreaseLiquidityTest is Test, PosmTestSetup, Fuzzers {
         }
 
         {
-            // bob collects his fees
+            // bob 收取他的手续费
             uint256 balance0BeforeBob = currency0.balanceOf(bob);
             uint256 balance1BeforeBob = currency1.balanceOf(bob);
             vm.startPrank(bob);
@@ -453,30 +453,30 @@ contract IncreaseLiquidityTest is Test, PosmTestSetup, Fuzzers {
     }
 
     function test_increaseLiquidity_withInsufficientFees() public {
-        // Alice and Bob provide liquidity on the range
-        // Alice uses her fees to increase liquidity. Additional funds are used by alice to increase liquidity
+        // Alice 和 Bob 在该区间上提供流动性
+        // Alice 用她的手续费增加流动性，并额外投入资金来增加流动性
         uint256 liquidityAlice = 3_000e18;
         uint256 liquidityBob = 1_000e18;
         uint256 totalLiquidity = liquidityAlice + liquidityBob;
 
-        // alice provides liquidity
+        // alice 提供流动性
         vm.startPrank(alice);
         uint256 tokenIdAlice = lpm.nextTokenId();
         mint(config, liquidityAlice, alice, ZERO_BYTES);
         vm.stopPrank();
 
-        // bob provides liquidity
+        // bob 提供流动性
         vm.startPrank(bob);
         uint256 tokenIdBob = lpm.nextTokenId();
         mint(config, liquidityBob, bob, ZERO_BYTES);
         vm.stopPrank();
 
-        // swap to create fees
+        // 通过兑换（swap）产生手续费
         uint256 swapAmount = 0.001e18;
         swap(key, true, -int256(swapAmount), ZERO_BYTES);
-        swap(key, false, -int256(swapAmount), ZERO_BYTES); // move the price back
+        swap(key, false, -int256(swapAmount), ZERO_BYTES); // 把价格移回原处
 
-        // alice will use all of her fees + additional capital to increase liquidity
+        // alice 将用她全部的手续费 + 额外资金来增加流动性
         BalanceDelta feesOwed = IPositionManager(lpm).getFeesOwed(manager, config, tokenIdAlice);
 
         {
@@ -497,13 +497,13 @@ contract IncreaseLiquidityTest is Test, PosmTestSetup, Fuzzers {
             uint256 balance0AfterAlice = currency0.balanceOf(alice);
             uint256 balance1AfterAlice = currency1.balanceOf(alice);
 
-            // Alice owed feesOwed amount in 0 and 1 because she places feesOwed * 2 back into the pool.
+            // Alice 在 0 和 1 上各需支付 feesOwed 数量，因为她向池中投入了 feesOwed * 2。
             assertApproxEqAbs(balance0BeforeAlice - balance0AfterAlice, uint256(int256(feesOwed.amount0())), tolerance);
             assertApproxEqAbs(balance1BeforeAlice - balance1AfterAlice, uint256(int256(feesOwed.amount1())), tolerance);
         }
 
         {
-            // bob collects his fees
+            // bob 收取他的手续费
             uint256 balance0BeforeBob = currency0.balanceOf(bob);
             uint256 balance1BeforeBob = currency1.balanceOf(bob);
             vm.startPrank(bob);
@@ -525,7 +525,7 @@ contract IncreaseLiquidityTest is Test, PosmTestSetup, Fuzzers {
     }
 
     function test_increaseLiquidity_slippage_revertAmount0() public {
-        // increasing liquidity with strict slippage parameters (amount0) will revert
+        // 使用严格的滑点参数（amount0）增加流动性会回滚（revert）
         uint256 tokenId = lpm.nextTokenId();
         mint(config, 100e18, ActionConstants.MSG_SENDER, ZERO_BYTES);
 
@@ -536,14 +536,14 @@ contract IncreaseLiquidityTest is Test, PosmTestSetup, Fuzzers {
             TickMath.getSqrtPriceAtTick(config.tickUpper),
             newLiquidity
         );
-        // revert since amount0Max is too low
+        // 因 amount0Max 过低而回滚（revert）
         bytes memory calls = getIncreaseEncoded(tokenId, config, newLiquidity, 1 wei, type(uint128).max, ZERO_BYTES);
         vm.expectRevert(abi.encodeWithSelector(SlippageCheck.MaximumAmountExceeded.selector, 1 wei, amount0 + 1));
         lpm.modifyLiquidities(calls, _deadline);
     }
 
     function test_increaseLiquidity_slippage_revertAmount1() public {
-        // increasing liquidity with strict slippage parameters (amount1) will revert
+        // 使用严格的滑点参数（amount1）增加流动性会回滚（revert）
         uint256 tokenId = lpm.nextTokenId();
         mint(config, 100e18, ActionConstants.MSG_SENDER, ZERO_BYTES);
 
@@ -554,14 +554,14 @@ contract IncreaseLiquidityTest is Test, PosmTestSetup, Fuzzers {
             TickMath.getSqrtPriceAtTick(config.tickUpper),
             newLiquidity
         );
-        // revert since amount1Max is too low
+        // 因 amount1Max 过低而回滚（revert）
         bytes memory calls = getIncreaseEncoded(tokenId, config, newLiquidity, type(uint128).max, 1 wei, ZERO_BYTES);
         vm.expectRevert(abi.encodeWithSelector(SlippageCheck.MaximumAmountExceeded.selector, 1 wei, amount1 + 1));
         lpm.modifyLiquidities(calls, _deadline);
     }
 
     function test_increaseLiquidity_slippage_exactDoesNotRevert() public {
-        // increasing liquidity with perfect slippage parameters does not revert
+        // 使用恰好合适的滑点参数增加流动性不会回滚（revert）
         uint256 tokenId = lpm.nextTokenId();
         mint(config, 100e18, ActionConstants.MSG_SENDER, ZERO_BYTES);
 
@@ -572,21 +572,21 @@ contract IncreaseLiquidityTest is Test, PosmTestSetup, Fuzzers {
             TickMath.getSqrtPriceAtTick(config.tickUpper),
             newLiquidity
         );
-        assertEq(amount0, amount1); // symmetric liquidity addition
+        assertEq(amount0, amount1); // 对称地添加流动性
         uint128 slippage = uint128(amount0) + 1;
 
         bytes memory calls = getIncreaseEncoded(tokenId, config, newLiquidity, slippage, slippage, ZERO_BYTES);
         lpm.modifyLiquidities(calls, _deadline);
         BalanceDelta delta = getLastDelta();
 
-        // confirm that delta == slippage tolerance
+        // 确认 delta == 滑点容限
         assertEq(-delta.amount0(), int128(slippage));
         assertEq(-delta.amount1(), int128(slippage));
     }
 
-    /// price movement from swaps will cause slippage reverts
+    /// 兑换（swap）引起的价格变动会导致滑点回滚（revert）
     function test_increaseLiquidity_slippage_revert_swap() public {
-        // increasing liquidity with perfect slippage parameters does not revert
+        // 使用恰好合适的滑点参数增加流动性不会回滚（revert）
         uint256 tokenId = lpm.nextTokenId();
         mint(config, 100e18, ActionConstants.MSG_SENDER, ZERO_BYTES);
 
@@ -597,10 +597,10 @@ contract IncreaseLiquidityTest is Test, PosmTestSetup, Fuzzers {
             TickMath.getSqrtPriceAtTick(config.tickUpper),
             newLiquidity
         );
-        assertEq(amount0, amount1); // symmetric liquidity addition
+        assertEq(amount0, amount1); // 对称地添加流动性
         uint128 slippage = uint128(amount0) + 1;
 
-        // swap to create slippage
+        // 通过兑换（swap）制造滑点
         swap(key, true, -10e18, ZERO_BYTES);
 
         bytes memory calls = getIncreaseEncoded(tokenId, config, newLiquidity, slippage, slippage, ZERO_BYTES);
@@ -629,7 +629,7 @@ contract IncreaseLiquidityTest is Test, PosmTestSetup, Fuzzers {
         );
         planner.add(Actions.SETTLE, abi.encode(currency0, ActionConstants.OPEN_DELTA, false));
         planner.add(Actions.SETTLE, abi.encode(currency1, ActionConstants.OPEN_DELTA, false));
-        // this test sweeps to the test contract, even though Alice is the caller of the transaction
+        // 本测试把余额 sweep 到测试合约，尽管 Alice 才是该交易的调用者
         planner.add(Actions.SWEEP, abi.encode(currency0, address(this)));
         planner.add(Actions.SWEEP, abi.encode(currency1, address(this)));
 
@@ -653,7 +653,7 @@ contract IncreaseLiquidityTest is Test, PosmTestSetup, Fuzzers {
         uint256 amount0 = uint128(-delta.amount0());
         uint256 amount1 = uint128(-delta.amount1());
 
-        // The balances were swept back to this address.
+        // 余额已被 sweep 回本地址。
         assertEq(IERC20(Currency.unwrap(currency0)).balanceOf(address(lpm)), 0);
         assertEq(IERC20(Currency.unwrap(currency1)).balanceOf(address(lpm)), 0);
 
@@ -701,7 +701,7 @@ contract IncreaseLiquidityTest is Test, PosmTestSetup, Fuzzers {
         uint256 amount0 = uint128(-delta.amount0());
         uint256 amount1 = uint128(-delta.amount1());
 
-        // alice's balance has increased by the seeded funds that werent used to pay for the mint
+        // alice 的余额增加了预存资金中未用于支付铸造的那部分
         assertEq(currency0.balanceOf(alice), balanceBefore0 + (seedAmount - amount0));
         assertEq(currency1.balanceOf(alice), balanceBefore1 + (seedAmount - amount1));
     }
@@ -709,7 +709,7 @@ contract IncreaseLiquidityTest is Test, PosmTestSetup, Fuzzers {
     function test_increaseLiquidity_settleWithBalance() public {
         uint256 liquidityAlice = 3_000e18;
 
-        // alice provides liquidity
+        // alice 提供流动性
         vm.prank(alice);
         mint(config, liquidityAlice, alice, ZERO_BYTES);
         uint256 tokenIdAlice = lpm.nextTokenId() - 1;
@@ -717,7 +717,7 @@ contract IncreaseLiquidityTest is Test, PosmTestSetup, Fuzzers {
         uint256 liquidity = lpm.getPositionLiquidity(tokenIdAlice);
         assertEq(liquidity, liquidityAlice);
 
-        // alice increases with the balance in the position manager
+        // alice 使用 PositionManager 中的余额增加流动性
         Plan memory planner = Planner.init();
         planner.add(
             Actions.INCREASE_LIQUIDITY,
@@ -725,7 +725,7 @@ contract IncreaseLiquidityTest is Test, PosmTestSetup, Fuzzers {
         );
         planner.add(Actions.SETTLE, abi.encode(currency0, ActionConstants.OPEN_DELTA, false));
         planner.add(Actions.SETTLE, abi.encode(currency1, ActionConstants.OPEN_DELTA, false));
-        // this test sweeps to the test contract, even though Alice is the caller of the transaction
+        // 本测试把余额 sweep 到测试合约，尽管 Alice 才是该交易的调用者
         planner.add(Actions.SWEEP, abi.encode(currency0, address(this)));
         planner.add(Actions.SWEEP, abi.encode(currency1, address(this)));
 
@@ -752,7 +752,7 @@ contract IncreaseLiquidityTest is Test, PosmTestSetup, Fuzzers {
         liquidity = lpm.getPositionLiquidity(tokenIdAlice);
         assertEq(liquidity, 2 * liquidityAlice);
 
-        // The balances were swept back to this address.
+        // 余额已被 sweep 回本地址。
         assertEq(IERC20(Currency.unwrap(currency0)).balanceOf(address(lpm)), 0);
         assertEq(IERC20(Currency.unwrap(currency1)).balanceOf(address(lpm)), 0);
 
@@ -760,18 +760,18 @@ contract IncreaseLiquidityTest is Test, PosmTestSetup, Fuzzers {
         assertEq(currency1.balanceOf(address(this)), balanceBefore1 - amount1);
     }
 
-    /// @dev if clearing exceeds the max amount, the amount is taken instead
+    /// @dev 如果要清除的数量超过最大值，则改为提取（take）该数量
     function test_increaseLiquidity_clearExceedsThenTake() public {
         uint256 tokenId = lpm.nextTokenId();
         mint(config, 1000e18, address(this), ZERO_BYTES);
 
-        // donate to create fee revenue
+        // 通过 donate 产生手续费收入
         uint256 amountToDonate = 0.2e18;
         donateRouter.donate(key, amountToDonate, amountToDonate, ZERO_BYTES);
 
-        // calculate the amount of liquidity to add, using half of the proceeds
+        // 计算要添加的流动性数量，使用一半的收益
         uint256 amountToReinvest = amountToDonate / 2;
-        uint256 amountToReclaim = amountToDonate / 2; // expect to reclaim the other half of the fee revenue
+        uint256 amountToReclaim = amountToDonate / 2; // 预期取回另一半手续费收入
         uint256 liquidityDelta = LiquidityAmounts.getLiquidityForAmounts(
             SQRT_PRICE_1_1,
             TickMath.getSqrtPriceAtTick(config.tickLower),
@@ -780,7 +780,7 @@ contract IncreaseLiquidityTest is Test, PosmTestSetup, Fuzzers {
             amountToReinvest
         );
 
-        // set the max-forfeit to less than the amount we expect to claim
+        // 把最大可放弃数量设为小于我们预期领取的数量
         uint256 maxClear = amountToReclaim - 2 wei;
 
         Plan memory planner = Planner.init();
@@ -795,23 +795,23 @@ contract IncreaseLiquidityTest is Test, PosmTestSetup, Fuzzers {
         uint256 balance0Before = currency0.balanceOf(address(this));
         uint256 balance1Before = currency1.balanceOf(address(this));
 
-        // expect to take the excess, as it exceeds the amount to clear
+        // 预期会提取（take）多出的部分，因为它超过了可清除的数量
         lpm.modifyLiquidities(calls, _deadline);
         BalanceDelta delta = getLastDelta();
 
-        assertEq(uint128(delta.amount0()), amountToReclaim - 1 wei); // imprecision
+        assertEq(uint128(delta.amount0()), amountToReclaim - 1 wei); // 精度误差
         assertEq(uint128(delta.amount1()), amountToReclaim - 1 wei);
 
         assertEq(currency0.balanceOf(address(this)), balance0Before + amountToReclaim - 1 wei);
         assertEq(currency1.balanceOf(address(this)), balance1Before + amountToReclaim - 1 wei);
     }
 
-    /// @dev clearing a negative delta reverts
+    /// @dev 清除负的 delta 会回滚（revert）
     function test_increaseLiquidity_clearNegative_revert() public {
         uint256 tokenId = lpm.nextTokenId();
         mint(config, 1000e18, address(this), ZERO_BYTES);
 
-        // increase liquidity with new tokens but try clearing the negative delta
+        // 用新代币增加流动性，但尝试清除负的 delta
         Plan memory planner = Planner.init();
         planner.add(
             Actions.INCREASE_LIQUIDITY,
@@ -821,7 +821,7 @@ contract IncreaseLiquidityTest is Test, PosmTestSetup, Fuzzers {
         planner.add(Actions.CLEAR_OR_TAKE, abi.encode(config.poolKey.currency1, type(uint256).max));
         bytes memory calls = planner.encode();
 
-        // revert since we're trying to clear a negative delta
+        // 因为我们试图清除负的 delta 而回滚（revert）
         vm.expectRevert(abi.encodeWithSelector(DeltaResolver.DeltaNotPositive.selector, currency0));
         lpm.modifyLiquidities(calls, _deadline);
     }

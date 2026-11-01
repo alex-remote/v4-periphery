@@ -157,7 +157,7 @@ contract UniswapV4DeployerCompetitionTest is Test {
     function test_deploy_reverts_InvalidBytecode() public {
         vm.expectRevert(IUniswapV4DeployerCompetition.InvalidBytecode.selector);
         vm.prank(deployer);
-        // set the owner as the winner not the correct owner
+        // 将 winner 设为所有者，而不是正确的所有者
         competition.deploy(abi.encodePacked(type(PoolManager).creationCode, uint256(uint160(winner))));
     }
 

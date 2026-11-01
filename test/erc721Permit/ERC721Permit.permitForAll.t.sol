@@ -27,7 +27,7 @@ contract ERC721PermitForAllTest is Test {
         erc721Permit = new MockERC721Permit(name, symbol);
     }
 
-    // --- Test the overriden setApprovalForAll ---
+    // --- 测试重写后的 setApprovalForAll ---
     function test_fuzz_setApprovalForAll(address operator) public {
         assertEq(erc721Permit.isApprovedForAll(address(this), operator), false);
 
@@ -48,7 +48,7 @@ contract ERC721PermitForAllTest is Test {
         assertEq(erc721Permit.isApprovedForAll(address(this), operator), false);
     }
 
-    // --- Test the signature-based approvals (permitForAll) ---
+    // --- 测试基于签名的授权（permitForAll）---
     function test_permitForAllTypeHash() public pure {
         assertEq(
             ERC721PermitHash.PERMIT_FOR_ALL_TYPEHASH,
@@ -62,7 +62,7 @@ contract ERC721PermitForAllTest is Test {
         assertEq(expectedHash, ERC721PermitHash.hashPermitForAll(operator, approved, nonce, deadline));
     }
 
-    /// @dev operator uses alice's signature to approve itself
+    /// @dev 操作者（operator）使用 alice 的签名为自己授权
     function test_fuzz_erc721permitForAll_operator(address operator) public {
         vm.assume(operator != alice);
         vm.prank(alice);
@@ -73,30 +73,30 @@ contract ERC721PermitForAllTest is Test {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(alicePK, digest);
         bytes memory signature = abi.encodePacked(r, s, v);
 
-        // no approvals existed
+        // 此前不存在任何授权
         assertEq(erc721Permit.getApproved(tokenId), address(0));
         assertEq(erc721Permit.isApprovedForAll(alice, operator), false);
 
-        // nonce was unspent
+        // nonce 尚未被使用
         (uint256 wordPos, uint256 bitPos) = _getBitmapFromNonce(nonce);
         assertEq(erc721Permit.nonces(alice, wordPos) & (1 << bitPos), 0);
 
-        // -- PermitForAll -- //
+        // -- 执行 PermitForAll -- //
         vm.startPrank(operator);
         vm.expectEmit(true, true, true, true, address(erc721Permit));
         emit IERC721.ApprovalForAll(alice, operator, true);
         erc721Permit.permitForAll(alice, operator, true, block.timestamp, nonce, signature);
         vm.stopPrank();
 
-        // approvals set
+        // 授权已设置
         assertEq(erc721Permit.getApproved(tokenId), address(0));
         assertEq(erc721Permit.isApprovedForAll(alice, operator), true);
 
-        // nonce was spent
+        // nonce 已被使用
         assertEq(erc721Permit.nonces(alice, wordPos) & (1 << bitPos), 2); // 2 = 0010
     }
 
-    /// @dev a third party caller uses alice's signature to give `operator` the approval
+    /// @dev 第三方调用者使用 alice 的签名向 `operator` 授权
     function test_fuzz_erc721permitForAll_caller(address caller, address operator) public {
         vm.assume(operator != alice);
         vm.prank(alice);
@@ -107,34 +107,34 @@ contract ERC721PermitForAllTest is Test {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(alicePK, digest);
         bytes memory signature = abi.encodePacked(r, s, v);
 
-        // no approvals existed
+        // 此前不存在任何授权
         assertEq(erc721Permit.getApproved(tokenId), address(0));
         assertEq(erc721Permit.isApprovedForAll(alice, operator), false);
 
-        // nonce was unspent
+        // nonce 尚未被使用
         (uint256 wordPos, uint256 bitPos) = _getBitmapFromNonce(nonce);
         assertEq(erc721Permit.nonces(alice, wordPos) & (1 << bitPos), 0);
 
-        // -- PermitForAll -- //
+        // -- 执行 PermitForAll -- //
         vm.startPrank(caller);
         vm.expectEmit(true, true, true, true, address(erc721Permit));
         emit IERC721.ApprovalForAll(alice, operator, true);
         erc721Permit.permitForAll(alice, operator, true, block.timestamp, nonce, signature);
         vm.stopPrank();
 
-        // approvals set
+        // 授权已设置
         assertEq(erc721Permit.getApproved(tokenId), address(0));
         assertEq(erc721Permit.isApprovedForAll(alice, operator), true);
 
-        // nonce was spent
+        // nonce 已被使用
         assertEq(erc721Permit.nonces(alice, wordPos) & (1 << bitPos), 2); // 2 = 0010
     }
 
     function test_fuzz_erc721permitForAll_nonceAlreadyUsed(uint256 nonce) public {
-        // alice gives bob operator permissions
+        // alice 授予 bob 操作者权限
         _permitForAll(alicePK, alice, bob, true, nonce);
 
-        // alice cannot reuse the nonce
+        // alice 不能重复使用该 nonce
         bytes32 digest = _getPermitForAllDigest(bob, true, nonce, block.timestamp);
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(alicePK, digest);
@@ -149,14 +149,14 @@ contract ERC721PermitForAllTest is Test {
     function test_fuzz_erc721permitForAll_invalidSigner(uint256 nonce) public {
         bytes32 digest = _getPermitForAllDigest(bob, true, nonce, block.timestamp);
 
-        // bob attempts signing an approval for himself
+        // bob 尝试为自己签署授权
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(bobPK, digest);
         bytes memory signature = abi.encodePacked(r, s, v);
 
-        // approvals unset
+        // 授权未设置
         assertEq(erc721Permit.isApprovedForAll(alice, bob), false);
 
-        // nonce was unspent
+        // nonce 尚未被使用
         (uint256 wordPos, uint256 bitPos) = _getBitmapFromNonce(nonce);
         assertEq(erc721Permit.nonces(alice, wordPos) & (1 << bitPos), 0);
 
@@ -165,10 +165,10 @@ contract ERC721PermitForAllTest is Test {
         erc721Permit.permitForAll(alice, bob, true, block.timestamp, nonce, signature);
         vm.stopPrank();
 
-        // approvals unset
+        // 授权未设置
         assertEq(erc721Permit.isApprovedForAll(alice, bob), false);
 
-        // nonce was unspent
+        // nonce 尚未被使用
         assertEq(erc721Permit.nonces(alice, wordPos) & (1 << bitPos), 0);
     }
 
@@ -179,30 +179,30 @@ contract ERC721PermitForAllTest is Test {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(alicePK, digest);
         bytes memory signature = abi.encodePacked(r, s, v);
 
-        // no approvals existed
+        // 此前不存在任何授权
         assertEq(erc721Permit.isApprovedForAll(alice, operator), false);
 
-        // nonce was unspent
+        // nonce 尚未被使用
         (uint256 wordPos, uint256 bitPos) = _getBitmapFromNonce(nonce);
         assertEq(erc721Permit.nonces(alice, wordPos) & (1 << bitPos), 0);
 
-        // fast forward to exceed deadline
+        // 时间快进以超过截止时间
         skip(1);
 
-        // -- PermitForAll but deadline expired -- //
+        // -- 执行 PermitForAll，但截止时间已过 -- //
         vm.startPrank(operator);
         vm.expectRevert(IERC721Permit_v4.SignatureDeadlineExpired.selector);
         erc721Permit.permitForAll(alice, operator, true, deadline, nonce, signature);
         vm.stopPrank();
 
-        // approvals unset
+        // 授权未设置
         assertEq(erc721Permit.isApprovedForAll(alice, operator), false);
 
-        // nonce was unspent
+        // nonce 尚未被使用
         assertEq(erc721Permit.nonces(alice, wordPos) & (1 << bitPos), 0);
     }
 
-    /// @dev a signature for permit() cannot be used for permitForAll()
+    /// @dev 用于 permit() 的签名不能用于 permitForAll()
     function test_fuzz_erc721Permit_invalidSignatureForAll(address operator) public {
         vm.prank(alice);
         uint256 tokenId = erc721Permit.mint();
@@ -211,31 +211,31 @@ contract ERC721PermitForAllTest is Test {
         uint256 deadline = block.timestamp;
         bytes32 digest = _getPermitDigest(operator, tokenId, nonce, deadline);
 
-        // alice signs a permit for operator
+        // alice 为 operator 签署 permit
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(alicePK, digest);
         bytes memory signature = abi.encodePacked(r, s, v);
 
-        // approvals unset
+        // 授权未设置
         assertEq(erc721Permit.isApprovedForAll(alice, bob), false);
 
-        // nonce was unspent
+        // nonce 尚未被使用
         (uint256 wordPos, uint256 bitPos) = _getBitmapFromNonce(nonce);
         assertEq(erc721Permit.nonces(alice, wordPos) & (1 << bitPos), 0);
 
-        // signature does not work with permitForAll
+        // 该签名对 permitForAll 无效
         vm.startPrank(bob);
         vm.expectRevert(SignatureVerification.InvalidSigner.selector);
         erc721Permit.permitForAll(alice, bob, true, deadline, nonce, signature);
         vm.stopPrank();
 
-        // approvals unset
+        // 授权未设置
         assertEq(erc721Permit.isApprovedForAll(alice, bob), false);
 
-        // nonce was unspent
+        // nonce 尚未被使用
         assertEq(erc721Permit.nonces(alice, wordPos) & (1 << bitPos), 0);
     }
 
-    /// @dev a signature for permitForAll() cannot be used for permit()
+    /// @dev 用于 permitForAll() 的签名不能用于 permit()
     function test_fuzz_erc721PermitForAll_invalidSignatureForPermit(address operator) public {
         vm.prank(alice);
         uint256 tokenId = erc721Permit.mint();
@@ -244,79 +244,79 @@ contract ERC721PermitForAllTest is Test {
         uint256 deadline = block.timestamp;
         bytes32 digest = _getPermitForAllDigest(operator, true, nonce, deadline);
 
-        // alice signs a permit for operator
+        // alice 为 operator 签署 permit
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(alicePK, digest);
         bytes memory signature = abi.encodePacked(r, s, v);
 
-        // approvals unset
+        // 授权未设置
         assertEq(erc721Permit.getApproved(tokenId), address(0));
 
-        // nonce was unspent
+        // nonce 尚未被使用
         (uint256 wordPos, uint256 bitPos) = _getBitmapFromNonce(nonce);
         assertEq(erc721Permit.nonces(alice, wordPos) & (1 << bitPos), 0);
 
-        // signature does not work with permit
+        // 该签名对 permit 无效
         vm.startPrank(bob);
         vm.expectRevert(SignatureVerification.InvalidSigner.selector);
         erc721Permit.permit(bob, tokenId, deadline, nonce, signature);
         vm.stopPrank();
 
-        // approvals unset
+        // 授权未设置
         assertEq(erc721Permit.getApproved(tokenId), address(0));
 
-        // nonce was unspent
+        // nonce 尚未被使用
         assertEq(erc721Permit.nonces(alice, wordPos) & (1 << bitPos), 0);
     }
 
-    /// @dev a nonce used in permit is unusable for permitForAll
+    /// @dev 已在 permit 中使用过的 nonce 不能再用于 permitForAll
     function test_fuzz_erc721PermitForAll_permitNonceUsed(uint256 nonce) public {
         vm.prank(alice);
         uint256 tokenId = erc721Permit.mint();
 
         uint256 deadline = block.timestamp;
         bytes32 digest = _getPermitDigest(bob, tokenId, nonce, deadline);
-        // alice signs a permit for bob
+        // alice 为 bob 签署 permit
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(alicePK, digest);
         bytes memory signature = abi.encodePacked(r, s, v);
 
-        // bob gives himself approval
+        // bob 为自己授权
         vm.prank(bob);
         erc721Permit.permit(bob, tokenId, deadline, nonce, signature);
         assertEq(erc721Permit.getApproved(tokenId), bob);
         assertEq(erc721Permit.isApprovedForAll(alice, bob), false);
 
-        // alice tries re-using the nonce for permitForAll
+        // alice 尝试将该 nonce 重复用于 permitForAll
         digest = _getPermitForAllDigest(bob, true, nonce, deadline);
         (v, r, s) = vm.sign(alicePK, digest);
         signature = abi.encodePacked(r, s, v);
 
-        // Nonce does not work with permitForAll
+        // 该 nonce 对 permitForAll 无效
         vm.startPrank(bob);
         vm.expectRevert(IUnorderedNonce.NonceAlreadyUsed.selector);
         erc721Permit.permitForAll(alice, bob, true, deadline, nonce, signature);
         vm.stopPrank();
     }
 
-    /// @notice revoking a nonce prevents it from being used in permitForAll()
+    /// @notice 撤销 nonce 后，该 nonce 无法再用于 permitForAll()
     function test_fuzz_erc721PermitForAll_revokedNonceUsed(uint256 nonce) public {
-        // alice revokes the nonce
+        // alice 撤销该 nonce
         vm.prank(alice);
         erc721Permit.revokeNonce(nonce);
 
         uint256 deadline = block.timestamp;
         bytes32 digest = _getPermitForAllDigest(bob, true, nonce, deadline);
-        // alice signs a permit for bob
+        // alice 为 bob 签署 permit
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(alicePK, digest);
         bytes memory signature = abi.encodePacked(r, s, v);
 
-        // Nonce does not work with permitForAll
+        // 该 nonce 对 permitForAll 无效
         vm.startPrank(bob);
         vm.expectRevert(IUnorderedNonce.NonceAlreadyUsed.selector);
         erc721Permit.permitForAll(alice, bob, true, deadline, nonce, signature);
         vm.stopPrank();
     }
 
-    // Helpers related to permitForAll
+    // 与 permitForAll 相关的辅助函数
     function _permitForAll(uint256 privateKey, address owner, address operator, bool approved, uint256 nonce) internal {
         bytes32 digest = _getPermitForAllDigest(operator, approved, nonce, block.timestamp);
 
@@ -355,7 +355,7 @@ contract ERC721PermitForAllTest is Test {
         );
     }
 
-    // copied the private function from UnorderedNonce.sol
+    // 复制自 UnorderedNonce.sol 中的 private 函数
     function _getBitmapFromNonce(uint256 nonce) private pure returns (uint256 wordPos, uint256 bitPos) {
         wordPos = uint248(nonce >> 8);
         bitPos = uint8(nonce);

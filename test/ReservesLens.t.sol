@@ -323,7 +323,7 @@ contract ReservesLensTest is Test, Deployers {
         assertTrue(done);
         _assertCoreEq(result, expected);
 
-        // a tick-spacing-one pool needs ~6.9k bitmap reads, so the 512-read default budget must page
+        // tick 间距为 1 的池需要约 6.9k 次 bitmap 读取，因此默认 512 次读取的预算必须分页
         PoolKey memory fine = PoolKey(currency0, currency1, 100, 1, IHooks(address(0)));
         manager.initialize(fine, SQRT_PRICE_1_1);
         (, bytes memory cursor, bool fineDone) = lens.getPoolTVLPaged(manager, fine, address(0), bytes(""), 0);
@@ -407,7 +407,7 @@ contract ReservesLensTest is Test, Deployers {
         MockSettableExtsloadManager mock = new MockSettableExtsloadManager();
         bytes32 stateSlot = StateLibrary._getPoolStateSlot(key.toId());
         mock.set(stateSlot, bytes32(uint256(1) << 96));
-        // bitmap claims tick 0 is initialized but the tick record is empty (liquidityGross == 0)
+        // bitmap 声称 tick 0 已初始化，但该 tick 的记录为空（liquidityGross == 0）
         mock.set(_bitmapSlot(stateSlot, 0), bytes32(uint256(1)));
         vm.expectRevert(abi.encodeWithSelector(IReservesLens.TickInvariantFailed.selector, key.toId(), int256(0)));
         lens.getPoolTVL(IPoolManager(address(mock)), key, address(0));
@@ -418,7 +418,7 @@ contract ReservesLensTest is Test, Deployers {
         bytes32 stateSlot = StateLibrary._getPoolStateSlot(key.toId());
         mock.set(stateSlot, bytes32(uint256(1) << 96));
         mock.set(_bitmapSlot(stateSlot, 0), bytes32(uint256(1)));
-        // a lone tick with liquidityNet = +1 can never sum back to zero across the scan
+        // 单个 liquidityNet = +1 的 tick 在整个扫描过程中永远无法累加回零
         mock.set(StateLibrary._getTickInfoSlot(key.toId(), 0), bytes32((uint256(1) << 128) | uint256(1)));
         vm.expectRevert(abi.encodeWithSelector(IReservesLens.LiquidityInvariantFailed.selector, key.toId()));
         lens.getPoolTVL(IPoolManager(address(mock)), key, address(0));

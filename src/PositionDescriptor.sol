@@ -13,12 +13,12 @@ import {Descriptor} from "./libraries/Descriptor.sol";
 import {CurrencyRatioSortOrder} from "./libraries/CurrencyRatioSortOrder.sol";
 import {SafeCurrencyMetadata} from "./libraries/SafeCurrencyMetadata.sol";
 
-/// @title Describes NFT token positions
-/// @notice Produces a string containing the data URI for a JSON metadata string
+/// @title 描述以 NFT 代币表示的头寸
+/// @notice 生成一个字符串，其中包含 JSON 元数据字符串的 data URI
 contract PositionDescriptor is IPositionDescriptor {
     using StateLibrary for IPoolManager;
 
-    // mainnet addresses
+    // 主网地址
     address private constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
     address private constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
     address private constant USDT = 0xdAC17F958D2ee523a2206206994597C13D831ec7;
@@ -36,7 +36,7 @@ contract PositionDescriptor is IPositionDescriptor {
         nativeCurrencyLabelBytes = _nativeCurrencyLabelBytes;
     }
 
-    /// @notice Returns the native currency label as a string
+    /// @notice 以字符串形式返回原生代币标签
     function nativeCurrencyLabel() public view returns (string memory) {
         uint256 len = 0;
         while (len < 32 && nativeCurrencyLabelBytes[len] != 0) {
@@ -65,12 +65,12 @@ contract PositionDescriptor is IPositionDescriptor {
         address currency0 = Currency.unwrap(poolKey.currency0);
         address currency1 = Currency.unwrap(poolKey.currency1);
 
-        // If possible, flip currencies to get the larger currency as the base currency, so that the price (quote/base) is more readable
-        // flip if currency0 priority is greater than currency1 priority
+        // 如有可能，翻转两种代币，让较大的代币作为基础代币（base），使价格（quote/base）更易读
+        // 若 currency0 的优先级高于 currency1 的优先级，则翻转
         bool _flipRatio = flipRatio(currency0, currency1);
 
-        // If not flipped, quote currency is currency1, base currency is currency0
-        // If flipped, quote currency is currency0, base currency is currency1
+        // 若未翻转，计价代币（quote）为 currency1，基础代币（base）为 currency0
+        // 若已翻转，计价代币（quote）为 currency0，基础代币（base）为 currency1
         address quoteCurrency = !_flipRatio ? currency1 : currency0;
         address baseCurrency = !_flipRatio ? currency0 : currency1;
 
@@ -102,10 +102,10 @@ contract PositionDescriptor is IPositionDescriptor {
 
     /// @inheritdoc IPositionDescriptor
     function currencyRatioPriority(address currency) public view returns (int256) {
-        // Currencies in order of priority on mainnet: USDC, USDT, DAI, (ETH, WETH), TBTC, WBTC
-        // wrapped native is different address on different chains. passed in constructor
+        // 主网上各代币按优先级排序：USDC、USDT、DAI、(ETH、WETH)、TBTC、WBTC
+        // 包装后的原生代币在不同链上地址不同，因此通过构造函数传入
 
-        // native currency
+        // 原生代币
         if (currency == address(0) || currency == wrappedNative) {
             return CurrencyRatioSortOrder.DENOMINATOR;
         }

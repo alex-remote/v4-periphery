@@ -23,16 +23,16 @@ contract MockToken is ERC20 {
 }
 
 contract MockPermissionedToken is MockToken {
-    // this mapping is the allow list for permissioned pools
+    // 该 mapping 是许可池的白名单
     mapping(address account => PermissionFlag permissions) public accountPermissions;
-    // this mapping represents if the account is allowed to interact with the token
+    // 该 mapping 表示账户是否被允许与该代币交互
     mapping(address account => bool isAllowed) public isAllowed;
 
     error Unauthorized();
 
     function setAllowlist(address account, PermissionFlag permissions) public {
         accountPermissions[account] = permissions;
-        // allowed to transfer the token
+        // 允许转移该代币
         isAllowed[account] = true;
     }
 

@@ -12,8 +12,8 @@ contract DeployReservesLens is Script {
 
     function setUp() public {}
 
-    /// @notice Deploys through the cross-chain deterministic deployment proxy.
-    /// @dev Example: forge script --broadcast --sig 'run(bytes32)' --rpc-url <RPC_URL>
+    /// @notice 通过跨链确定性部署代理（deterministic deployment proxy）进行部署。
+    /// @dev 示例：forge script --broadcast --sig 'run(bytes32)' --rpc-url <RPC_URL>
     ///      --private-key <PRIV_KEY> script/DeployReservesLens.s.sol:DeployReservesLens <SALT>
     function run(bytes32 salt) public returns (IReservesLens lens) {
         bytes memory initcode = type(ReservesLens).creationCode;

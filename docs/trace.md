@@ -25,21 +25,21 @@
 
 ## 总体进度
 
-**已完成：0 / 179**
+**已完成：20 / 179**
 
 ## 分组明细
 
-### G01（9 个文件，534 行，注释 33 行）· 进度 0/9
+### G01（9 个文件，534 行，注释 33 行）· 进度 9/9 ✅
 
-- [ ] `script/01_PoolManager.s.sol` — 21 行｜注释 0 行（无英文注释，仅需确认）
-- [ ] `script/02_PoolModifyLiquidityTest.s.sol` — 18 行｜注释 0 行（无英文注释，仅需确认）
-- [ ] `script/03_PoolSwapTest.s.sol` — 18 行｜注释 0 行（无英文注释，仅需确认）
-- [ ] `script/DeployPosm.s.sol` — 34 行｜注释 0 行（无英文注释，仅需确认）
-- [ ] `script/DeployReservesLens.s.sol` — 40 行｜注释 3 行
-- [ ] `script/DeployStateView.s.sol` — 22 行｜注释 1 行
-- [ ] `script/DeployV4Quoter.s.sol` — 22 行｜注释 1 行
-- [ ] `scripts/reserves-lens-reference.ts` — 232 行｜注释 14 行
-- [ ] `src/PositionDescriptor.sol` — 127 行｜注释 14 行
+- [x] `script/01_PoolManager.s.sol` — 21 行｜注释 0 行（无英文注释，仅需确认）
+- [x] `script/02_PoolModifyLiquidityTest.s.sol` — 18 行｜注释 0 行（无英文注释，仅需确认）
+- [x] `script/03_PoolSwapTest.s.sol` — 18 行｜注释 0 行（无英文注释，仅需确认）
+- [x] `script/DeployPosm.s.sol` — 34 行｜注释 0 行（无英文注释，仅需确认）
+- [x] `script/DeployReservesLens.s.sol` — 40 行｜注释 3 行
+- [x] `script/DeployStateView.s.sol` — 22 行｜注释 1 行
+- [x] `script/DeployV4Quoter.s.sol` — 22 行｜注释 1 行
+- [x] `scripts/reserves-lens-reference.ts` — 232 行｜注释 14 行
+- [x] `src/PositionDescriptor.sol` — 127 行｜注释 14 行
 
 ### G02（2 个文件，659 行，注释 146 行）· 进度 0/2
 
@@ -152,21 +152,21 @@
 - [ ] `test/ReservesLens.hooks.t.sol` — 217 行｜注释 13 行
 - [ ] `test/ReservesLens.invariant.t.sol` — 86 行｜注释 0 行（无英文注释，仅需确认）
 
-### G13（7 个文件，1948 行，注释 74 行）· 进度 0/7
+### G13（7 个文件，1948 行，注释 74 行）· 进度 7/7 ✅
 
-- [ ] `test/ReservesLens.t.sol` — 466 行｜注释 4 行
-- [ ] `test/SafeCallback.t.sol` — 34 行｜注释 0 行（无英文注释，仅需确认）
-- [ ] `test/StateViewTest.t.sol` — 488 行｜注释 35 行
-- [ ] `test/UniswapV4DeployerCompetition.t.sol` — 178 行｜注释 1 行
-- [ ] `test/UnorderedNonce.t.sol` — 122 行｜注释 5 行
-- [ ] `test/V4Quoter.t.sol` — 586 行｜注释 15 行
-- [ ] `test/base64.sol` — 74 行｜注释 14 行
+- [x] `test/ReservesLens.t.sol` — 466 行｜注释 4 行
+- [x] `test/SafeCallback.t.sol` — 34 行｜注释 0 行（无英文注释，仅需确认）
+- [x] `test/StateViewTest.t.sol` — 488 行｜注释 35 行
+- [x] `test/UniswapV4DeployerCompetition.t.sol` — 178 行｜注释 1 行
+- [x] `test/UnorderedNonce.t.sol` — 122 行｜注释 5 行
+- [x] `test/V4Quoter.t.sol` — 586 行｜注释 15 行
+- [x] `test/base64.sol` — 74 行｜注释 14 行
 
-### G14（3 个文件，723 行，注释 90 行）· 进度 0/3
+### G14（3 个文件，723 行，注释 90 行）· 进度 3/3 ✅
 
-- [ ] `test/erc721Permit/ERC721Permit.permit.t.sol` — 297 行｜注释 33 行
-- [ ] `test/erc721Permit/ERC721Permit.permitForAll.t.sol` — 363 行｜注释 54 行
-- [ ] `test/hooks/permissionedPools/PermissionedPoolsBase.sol` — 63 行｜注释 3 行
+- [x] `test/erc721Permit/ERC721Permit.permit.t.sol` — 297 行｜注释 33 行
+- [x] `test/erc721Permit/ERC721Permit.permitForAll.t.sol` — 363 行｜注释 54 行
+- [x] `test/hooks/permissionedPools/PermissionedPoolsBase.sol` — 63 行｜注释 3 行
 
 ### G15（1 个文件，2714 行，注释 293 行）· 进度 0/1
 
@@ -228,9 +228,9 @@
 - [ ] `test/position-managers/Execute.t.sol` — 273 行｜注释 27 行
 - [ ] `test/position-managers/FeeCollection.t.sol` — 350 行｜注释 42 行
 
-### G20（1 个文件，828 行，注释 109 行）· 进度 0/1
+### G20（1 个文件，828 行，注释 109 行）· 进度 1/1 ✅
 
-- [ ] `test/position-managers/IncreaseLiquidity.t.sol` — 828 行｜注释 109 行
+- [x] `test/position-managers/IncreaseLiquidity.t.sol` — 828 行｜注释 109 行
 
 ### G21（3 个文件，1167 行，注释 131 行）· 进度 0/3
 

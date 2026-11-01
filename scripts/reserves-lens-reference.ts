@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 
 /**
- * Dependency-free offchain reference for ReservesLens core amounts.
+ * ReservesLens 核心数量（core amounts）的无依赖链下参考实现。
  *
- * Usage:
+ * 用法：
  *   node scripts/reserves-lens-reference.ts \
  *     <rpc-url> <state-view> <pool-id> <tick-spacing> [block-tag]
  *
- * Node 22+ runs this TypeScript directly. Reads go through the canonical StateView
- * ABI, deliberately independent of ReservesLens' raw-storage implementation.
+ * Node 22+ 可直接运行此 TypeScript 文件。读取操作通过标准（canonical）的 StateView
+ * ABI 进行，刻意独立于 ReservesLens 基于原始存储（raw storage）的实现。
  */
 
 const [, , rpcUrl, stateView, poolId, spacingArg, blockTagArg = "latest"] = process.argv;
@@ -33,14 +33,14 @@ async function rpcRequest(method: string, params: unknown[]): Promise<unknown> {
   return value.result;
 }
 
-// Pin floating tags ("latest", "safe", "finalized") to one concrete block. The reads below span thousands of
-// sequential eth_call batches; a new block arriving mid-run would tear the snapshot across blocks, producing
-// either spurious invariant failures or a silently inconsistent reference value.
+// 将浮动区块标签（"latest"、"safe"、"finalized"）固定到某一个具体区块。下面的读取操作跨越数千个
+// 顺序执行的 eth_call 批次；若运行中途有新区块到来，快照就会被撕裂到多个区块上，从而导致
+// 虚假的不变量检查失败，或者产生一个悄无声息地不一致的参考值。
 const blockTag = /^0x[0-9a-fA-F]+$/.test(blockTagArg)
   ? blockTagArg
   : ((await rpcRequest("eth_getBlockByNumber", [blockTagArg, false])) as { number: string }).number;
 
-// A valid eth_call result is one or more 32-byte words; bare "0x" means no contract code at the target.
+// 有效的 eth_call 结果由一个或多个 32 字节的字（word）组成；仅有 "0x" 表示目标地址上没有合约代码。
 const isCallResult = (value: unknown): value is string =>
   typeof value === "string" && value.startsWith("0x") && value.length > 2 && (value.length - 2) % 64 === 0;
 

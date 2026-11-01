@@ -77,13 +77,13 @@ contract UnorderedNonceTest is Test {
 
     function test_fuzz_InvalidateNonzeroWord(uint256 word, uint256 nonce) public {
         word = bound(word, 0, 1000e18);
-        // spend the entirety of a word
-        // word = 0, bits [0, 256)
-        // word = 1, bits [256, 512)
-        // word = 2, bits [512, 768), etc
+        // 用掉一整个 word
+        // word = 0，位 [0, 256)
+        // word = 1，位 [256, 512)
+        // word = 2，位 [512, 768)，以此类推
         unorderedNonce.batchSpendNonces(word, 2 ** 256 - 1);
 
-        // bound the nonce to be from 0 to 256 bits after the word
+        // 将 nonce 限定在 0 到该 word 之后 256 位的范围内
         nonce = bound(nonce, 0, (word + 2) * 256);
 
         if ((word * 256) <= nonce && nonce < ((word + 1) * 256)) {

@@ -30,9 +30,9 @@ contract QuoterTest is Test, Deployers {
     using SafeCast for *;
     using StateLibrary for IPoolManager;
 
-    // Min tick for full range with tick spacing of 60
+    // tick 间距为 60 时全区间的最小 tick
     int24 internal constant MIN_TICK = -887220;
-    // Max tick for full range with tick spacing of 60
+    // tick 间距为 60 时全区间的最大 tick
     int24 internal constant MAX_TICK = -MIN_TICK;
 
     uint160 internal constant SQRT_PRICE_100_102 = 78447570448055484695608110440;
@@ -60,7 +60,7 @@ contract QuoterTest is Test, Deployers {
         quoter = Deploy.v4Quoter(address(manager), hex"00");
         positionManager = new PoolModifyLiquidityTest(manager);
 
-        // salts are chosen so that address(token0) < address(token1) && address(token1) < address(token2)
+        // salt 的选取使得 address(token0) < address(token1) && address(token1) < address(token2)
         token0 = new MockERC20("Test0", "0", 18);
         vm.etch(address(0x1111), address(token0).code);
         token0 = MockERC20(address(0x1111));
@@ -74,7 +74,7 @@ contract QuoterTest is Test, Deployers {
         token2 = MockERC20(address(0x3333));
         token2.mint(address(this), 2 ** 128);
 
-        // deploy a hook that reads msgSender
+        // 部署一个读取 msgSender 的 hook
         MockMsgSenderHook msgSenderHook = new MockMsgSenderHook();
         address mockMsgSenderHookAddr = address(uint160(Hooks.BEFORE_SWAP_FLAG | Hooks.AFTER_SWAP_FLAG));
         vm.etch(mockMsgSenderHookAddr, address(msgSenderHook).code);
@@ -137,8 +137,8 @@ contract QuoterTest is Test, Deployers {
         tokenPath.push(token0);
         tokenPath.push(token2);
 
-        // The swap amount is set such that the active tick after the swap is -120.
-        // -120 is an initialized tick for this pool. We check that we don't count it.
+        // 兑换（swap）数量的设定使得兑换后的活跃 tick 为 -120。
+        // -120 是该池中已初始化的 tick。我们检查不会将其计入。
         IV4Quoter.QuoteExactParams memory params = getExactInputParams(tokenPath, 6200);
 
         (uint256 amountOut, uint256 gasEstimate) = quoter.quoteExactInput(params);
@@ -152,8 +152,8 @@ contract QuoterTest is Test, Deployers {
         tokenPath.push(token0);
         tokenPath.push(token2);
 
-        // The swap amount is set such that the active tick after the swap is -60.
-        // -60 is an initialized tick for this pool. We check that we don't count it.
+        // 兑换（swap）数量的设定使得兑换后的活跃 tick 为 -60。
+        // -60 是该池中已初始化的 tick。我们检查不会将其计入。
         IV4Quoter.QuoteExactParams memory params = getExactInputParams(tokenPath, 4000);
 
         (uint256 amountOut, uint256 gasEstimate) = quoter.quoteExactInput(params);
@@ -206,8 +206,8 @@ contract QuoterTest is Test, Deployers {
         tokenPath.push(token2);
         tokenPath.push(token0);
 
-        // The swap amount is set such that the active tick after the swap is 120.
-        // 120 is an initialized tick for this pool. We check that we don't count it.
+        // 兑换（swap）数量的设定使得兑换后的活跃 tick 为 120。
+        // 120 是该池中已初始化的 tick。我们检查不会将其计入。
         IV4Quoter.QuoteExactParams memory params = getExactInputParams(tokenPath, 6250);
 
         (uint256 amountOut, uint256 gasEstimate) = quoter.quoteExactInput(params);
@@ -225,7 +225,7 @@ contract QuoterTest is Test, Deployers {
         tokenPath.push(token0);
         IV4Quoter.QuoteExactParams memory params = getExactInputParams(tokenPath, 200);
 
-        // Tick 0 initialized. Tick after = 1
+        // Tick 0 已初始化。之后的 tick = 1
         (uint256 amountOut, uint256 gasEstimate) = quoter.quoteExactInput(params);
 
         vm.snapshotGasLastCall("Quoter_quoteExactInput_oneHop_startingInitialized");
@@ -235,7 +235,7 @@ contract QuoterTest is Test, Deployers {
         assertEq(amountOut, 198);
     }
 
-    // 2->0 starting not initialized
+    // 2->0，起始时未初始化
     function testQuoter_quoteExactInput_2to0_0TickLoaded_startingNotInitialized() public {
         tokenPath.push(token2);
         tokenPath.push(token0);
@@ -350,7 +350,7 @@ contract QuoterTest is Test, Deployers {
 
         IV4Quoter.QuoteExactParams memory params = getExactOutputParams(tokenPath, 100);
 
-        // Tick 0 initialized. Tick after = 1
+        // Tick 0 已初始化。之后的 tick = 1
         (uint256 amountIn, uint256 gasEstimate) = quoter.quoteExactOutput(params);
         vm.snapshotGasLastCall("Quoter_quoteExactOutput_oneHop_startingInitialized");
 
