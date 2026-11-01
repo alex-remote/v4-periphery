@@ -14,14 +14,14 @@ contract DeployPoolManagerTest is Test {
 
     function test_run_poolManager() public {
         IPoolManager manager = deployer.run();
-        // Foundry sets a default sender in scripts.
+        // Foundry 会在脚本中设置一个默认的 sender。
         address defaultSender = 0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f;
-        // Deployer is the owner.
+        // 部署者即为所有者。
         assertEq(_getOwner(manager), defaultSender);
     }
 
     function _getOwner(IPoolManager manager) public view returns (address owner) {
-        // owner is at slot 0
+        // 所有者（owner）存储在 slot 0
         owner = address(uint160(uint256(manager.extsload(0))));
     }
 }

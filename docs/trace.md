@@ -25,7 +25,7 @@
 
 ## 总体进度
 
-**已完成：168 / 179**
+**已完成：178 / 179**
 
 ## 分组明细
 
@@ -258,18 +258,18 @@
 - [x] `test/router/Payments.t.sol` — 189 行｜注释 9 行
 - [x] `test/router/V4Router.gas.t.sol` — 375 行｜注释 12 行
 
-### G26（10 个文件，1730 行，注释 140 行）· 进度 0/10
+### G26（10 个文件，1730 行，注释 140 行）· 进度 10/10 ✅
 
-- [ ] `test/router/V4Router.t.sol` — 1142 行｜注释 50 行
-- [ ] `test/router/V4RouterExactOutputUnfilled.t.sol` — 111 行｜注释 19 行
-- [ ] `test/script/DeployPoolManager.t.sol` — 27 行｜注释 3 行
-- [ ] `test/script/DeployPoolMofifyLiquidityTest.t.sol` — 26 行｜注释 1 行
-- [ ] `test/script/DeployPoolSwapTest.t.sol` — 26 行｜注释 1 行
-- [ ] `test/shared/Deploy.sol` — 113 行｜注释 0 行（无英文注释，仅需确认）
-- [ ] `test/shared/FeeMath.sol` — 63 行｜注释 4 行
-- [ ] `test/shared/HookMiner.sol` — 57 行｜注释 20 行
-- [ ] `test/shared/HookMinerCreate3.sol` — 82 行｜注释 28 行
-- [ ] `test/shared/HookModifyLiquidities.sol` — 83 行｜注释 14 行
+- [x] `test/router/V4Router.t.sol` — 1142 行｜注释 50 行
+- [x] `test/router/V4RouterExactOutputUnfilled.t.sol` — 111 行｜注释 19 行
+- [x] `test/script/DeployPoolManager.t.sol` — 27 行｜注释 3 行
+- [x] `test/script/DeployPoolMofifyLiquidityTest.t.sol` — 26 行｜注释 1 行
+- [x] `test/script/DeployPoolSwapTest.t.sol` — 26 行｜注释 1 行
+- [x] `test/shared/Deploy.sol` — 113 行｜注释 0 行（无英文注释，仅需确认）
+- [x] `test/shared/FeeMath.sol` — 63 行｜注释 4 行
+- [x] `test/shared/HookMiner.sol` — 57 行｜注释 20 行
+- [x] `test/shared/HookMinerCreate3.sol` — 82 行｜注释 28 行
+- [x] `test/shared/HookModifyLiquidities.sol` — 83 行｜注释 14 行
 
 ### G27（9 个文件，1016 行，注释 37 行）· 进度 9/9 ✅
 

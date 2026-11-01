@@ -23,14 +23,14 @@ contract V4RouterTest is RoutingTestHelpers {
     }
 
     /*//////////////////////////////////////////////////////////////
-                        ERC20 -> ERC20 EXACT INPUT
+                        ERC20 -> ERC20 精确输入
     //////////////////////////////////////////////////////////////*/
 
     function test_swapExactInputSingle_revertsForAmountOut() public {
         uint256 amountIn = 1 ether;
         uint256 expectedAmountOut = 992054607780215625;
 
-        // min amount out of 1 higher than the actual amount out
+        // 最小输出数量比实际输出数量高 1
         IV4Router.ExactInputSingleParams memory params = IV4Router.ExactInputSingleParams(
             key0, true, uint128(amountIn), uint128(expectedAmountOut + 1), 0, bytes("")
         );
@@ -111,7 +111,7 @@ contract V4RouterTest is RoutingTestHelpers {
 
         uint256 aliceOutputBalanceBefore = key0.currency1.balanceOf(alice);
 
-        // swap with alice as the take recipient
+        // 以 alice 作为提取（take）的接收者进行兑换
         (
             uint256 inputBalanceBefore,
             uint256 outputBalanceBefore,
@@ -125,13 +125,13 @@ contract V4RouterTest is RoutingTestHelpers {
         assertEq(currency1.balanceOf(address(router)), 0);
 
         assertEq(inputBalanceBefore - inputBalanceAfter, amountIn);
-        // this contract's output balance has not changed because funds went to alice
+        // 本合约的输出余额没有变化，因为资金转给了 alice
         assertEq(outputBalanceAfter, outputBalanceBefore);
         assertEq(aliceOutputBalanceAfter - aliceOutputBalanceBefore, expectedAmountOut);
     }
 
-    // This is not a real use-case in isolation, but will be used in the UniversalRouter if a v4
-    // swap is before another swap on v2/v3
+    // 单独来看这并不是真实的使用场景，但在 UniversalRouter 中，若一次 v4
+    // 兑换（swap）之后紧接着在 v2/v3 上进行另一次兑换，就会用到它
     function test_swapExactInputSingle_zeroForOne_takeAllToRouter() public {
         uint256 amountIn = 1 ether;
         uint256 expectedAmountOut = 992054607780215625;
@@ -141,11 +141,11 @@ contract V4RouterTest is RoutingTestHelpers {
 
         plan = plan.add(Actions.SWAP_EXACT_IN_SINGLE, abi.encode(params));
 
-        // the router holds no funds before
+        // 执行前路由器不持有任何资金
         assertEq(currency0.balanceOf(address(router)), 0);
         assertEq(currency1.balanceOf(address(router)), 0);
 
-        // swap with the router as the take recipient
+        // 以路由器作为提取（take）的接收者进行兑换
         (
             uint256 inputBalanceBefore,
             uint256 outputBalanceBefore,
@@ -153,17 +153,17 @@ contract V4RouterTest is RoutingTestHelpers {
             uint256 outputBalanceAfter
         ) = _finalizeAndExecuteSwap(key0.currency0, key0.currency1, amountIn, ActionConstants.ADDRESS_THIS);
 
-        // the output tokens have been left in the router
+        // 输出代币留在了路由器中
         assertEq(currency0.balanceOf(address(router)), 0);
         assertEq(currency1.balanceOf(address(router)), expectedAmountOut);
 
         assertEq(inputBalanceBefore - inputBalanceAfter, amountIn);
-        // this contract's output balance has not changed because funds went to the router
+        // 本合约的输出余额没有变化，因为资金转给了路由器
         assertEq(outputBalanceAfter, outputBalanceBefore);
     }
 
-    // This is not a real use-case in isolation, but will be used in the UniversalRouter if a v4
-    // swap is before another swap on v2/v3
+    // 单独来看这并不是真实的使用场景，但在 UniversalRouter 中，若一次 v4
+    // 兑换（swap）之后紧接着在 v2/v3 上进行另一次兑换，就会用到它
     function test_swapExactInputSingle_zeroForOne_takeToRouter() public {
         uint256 amountIn = 1 ether;
         uint256 expectedAmountOut = 992054607780215625;
@@ -173,13 +173,13 @@ contract V4RouterTest is RoutingTestHelpers {
 
         plan = plan.add(Actions.SWAP_EXACT_IN_SINGLE, abi.encode(params));
         plan = plan.add(Actions.SETTLE_ALL, abi.encode(key0.currency0, expectedAmountOut * 12 / 10));
-        // take the entire open delta to the router's address
+        // 将全部未结算的 delta 提取到路由器地址
         plan = plan.add(
             Actions.TAKE, abi.encode(key0.currency1, ActionConstants.ADDRESS_THIS, ActionConstants.OPEN_DELTA)
         );
         bytes memory data = plan.encode();
 
-        // the router holds no funds before
+        // 执行前路由器不持有任何资金
         assertEq(currency0.balanceOf(address(router)), 0);
         assertEq(currency1.balanceOf(address(router)), 0);
         uint256 inputBalanceBefore = key0.currency0.balanceOfSelf();
@@ -187,14 +187,14 @@ contract V4RouterTest is RoutingTestHelpers {
 
         router.executeActions(data);
 
-        // the output tokens have been left in the router
+        // 输出代币留在了路由器中
         assertEq(currency0.balanceOf(address(router)), 0);
         assertEq(currency1.balanceOf(address(router)), expectedAmountOut);
         uint256 inputBalanceAfter = key0.currency0.balanceOfSelf();
         uint256 outputBalanceAfter = key0.currency1.balanceOfSelf();
 
         assertEq(inputBalanceBefore - inputBalanceAfter, amountIn);
-        // this contract's output balance has not changed because funds went to the router
+        // 本合约的输出余额没有变化，因为资金转给了路由器
         assertEq(outputBalanceAfter, outputBalanceBefore);
     }
 
@@ -281,9 +281,9 @@ contract V4RouterTest is RoutingTestHelpers {
         router.executeActions(data);
     }
 
-    // Regression test: with PRECISION = 1e18, the price truncates to 0 for extreme ratios, disabling the check.
+    // 回归测试：当 PRECISION = 1e18 时，极端比例下价格会被截断为 0，导致该检查失效。
     function test_swapExactInput_extremeRatioPerHopSlippage() public {
-        // Create a pool at extreme price: ~1e22 token1 per token0 (simulates WBTC/PEPE-like ratio)
+        // 以极端价格创建池：每个 token0 约对应 1e22 个 token1（模拟类似 WBTC/PEPE 的比例）
         int24 extremeTick = 506520;
         uint160 extremeSqrtPrice = TickMath.getSqrtPriceAtTick(extremeTick);
 
@@ -308,16 +308,16 @@ contract V4RouterTest is RoutingTestHelpers {
             extremeKey, ModifyLiquidityParams(extremeTick - 600, extremeTick + 600, 100 ether, 0), "0x"
         );
 
-        // Swap currB -> currA (token1 -> token0): output is tiny relative to input at this extreme tick.
+        // 兑换 currB -> currA（token1 -> token0）：在该极端 tick 下，输出相对于输入极小。
         uint256 amountIn = 1e26;
         Currency[] memory path = new Currency[](2);
         path[0] = currB;
         path[1] = currA;
 
-        // Snapshot state so the first swap doesn't drain liquidity for the second
+        // 对状态做快照，避免第一次兑换耗尽第二次兑换所需的流动性
         uint256 snap = vm.snapshotState();
 
-        // First swap without per-hop slippage to discover actual amountOut
+        // 第一次兑换不设逐跳滑点，用于得到实际的 amountOut
         IV4Router.ExactInputParams memory params = _getExactInputParams(path, amountIn);
         plan = Planner.init();
         plan = plan.add(Actions.SWAP_EXACT_IN, abi.encode(params));
@@ -327,16 +327,16 @@ contract V4RouterTest is RoutingTestHelpers {
         router.executeActions(data);
         uint256 actualAmountOut = currA.balanceOfSelf() - outputBefore;
 
-        // With 1e18 precision, the price truncates to 0 for this extreme ratio.
+        // 使用 1e18 精度时，该极端比例下价格会被截断为 0。
         assertEq(actualAmountOut * 1e18 / amountIn, 0, "1e18 precision should truncate to zero");
-        // 1e36 precision preserves enough resolution.
+        // 1e36 精度能保留足够的分辨率。
         uint256 expectedPrice = actualAmountOut * PRECISION / amountIn;
         assertGt(expectedPrice, 0, "price should be non-zero");
 
-        // Restore state for the slippage test
+        // 为滑点测试恢复状态
         vm.revertToState(snap);
 
-        // Verify the per-hop slippage check fires for extreme ratio pairs
+        // 验证逐跳滑点检查在极端比例的交易对上会触发
         uint256[] memory minPricesX36 = new uint256[](1);
         minPricesX36[0] = expectedPrice + 1;
 
@@ -419,7 +419,7 @@ contract V4RouterTest is RoutingTestHelpers {
             uint256 outputBalanceAfter
         ) = _finalizeAndExecuteSwap(currency0, currency2, amountIn);
 
-        // check intermediate token balances
+        // 检查中间代币余额
         assertEq(intermediateBalanceBefore, currency1.balanceOfSelf());
         assertEq(currency0.balanceOf(address(router)), 0);
         assertEq(currency1.balanceOf(address(router)), 0);
@@ -448,7 +448,7 @@ contract V4RouterTest is RoutingTestHelpers {
             uint256 outputBalanceAfter
         ) = _finalizeAndExecuteSwap(currency0, currency3, amountIn);
 
-        // check intermediate tokens werent left in the router
+        // 检查中间代币没有残留在路由器中
         assertEq(currency0.balanceOf(address(router)), 0);
         assertEq(currency1.balanceOf(address(router)), 0);
         assertEq(currency2.balanceOf(address(router)), 0);
@@ -464,7 +464,7 @@ contract V4RouterTest is RoutingTestHelpers {
 
         key0.currency0.transfer(address(router), amountIn);
 
-        // amount in of 0 to show it should use the open delta
+        // 输入数量设为 0，表示应使用未结算的 delta
         IV4Router.ExactInputSingleParams memory params =
             IV4Router.ExactInputSingleParams(key0, true, ActionConstants.OPEN_DELTA, 0, 0, bytes(""));
 
@@ -483,14 +483,14 @@ contract V4RouterTest is RoutingTestHelpers {
         uint256 routerInputAfter = key0.currency0.balanceOf(address(router));
         uint256 callerOutputAfter = key0.currency1.balanceOfSelf();
 
-        // caller didnt pay, router paid, caller received the output
+        // 调用者未付款，由路由器付款，调用者收到了输出
         assertEq(callerInputBefore, callerInputAfter);
         assertEq(routerInputBefore - amountIn, routerInputAfter);
         assertEq(callerOutputBefore + expectedAmountOut, callerOutputAfter);
     }
 
     /*//////////////////////////////////////////////////////////////
-                ETH -> ERC20 and ERC20 -> ETH EXACT INPUT
+                ETH -> ERC20 及 ERC20 -> ETH 精确输入
     //////////////////////////////////////////////////////////////*/
 
     function test_nativeIn_swapExactInputSingle() public {
@@ -520,7 +520,7 @@ contract V4RouterTest is RoutingTestHelpers {
         uint256 amountIn = 1 ether;
         uint256 expectedAmountOut = 992054607780215625;
 
-        // native output means we need !zeroForOne
+        // 输出原生代币意味着需要 !zeroForOne
         IV4Router.ExactInputSingleParams memory params =
             IV4Router.ExactInputSingleParams(nativeKey, false, uint128(amountIn), 0, 0, bytes(""));
 
@@ -591,7 +591,7 @@ contract V4RouterTest is RoutingTestHelpers {
         uint256 amountIn = 1 ether;
         uint256 expectedAmountOut = 984211133872795298;
 
-        // the initialized nativeKey is (native, currency0)
+        // 已初始化的 nativeKey 为 (native, currency0)
         tokenPath.push(CurrencyLibrary.ADDRESS_ZERO);
         tokenPath.push(currency0);
         tokenPath.push(currency1);
@@ -608,7 +608,7 @@ contract V4RouterTest is RoutingTestHelpers {
             uint256 outputBalanceAfter
         ) = _finalizeAndExecuteSwap(CurrencyLibrary.ADDRESS_ZERO, currency1, amountIn);
 
-        // check intermediate token balances
+        // 检查中间代币余额
         assertEq(intermediateBalanceBefore, currency0.balanceOfSelf());
 
         assertEq(nativeKey.currency0.balanceOf(address(router)), 0);
@@ -623,7 +623,7 @@ contract V4RouterTest is RoutingTestHelpers {
         uint256 amountIn = 1 ether;
         uint256 expectedAmountOut = 984211133872795298;
 
-        // the initialized nativeKey is (native, currency0)
+        // 已初始化的 nativeKey 为 (native, currency0)
         tokenPath.push(currency1);
         tokenPath.push(currency0);
         tokenPath.push(CurrencyLibrary.ADDRESS_ZERO);
@@ -640,7 +640,7 @@ contract V4RouterTest is RoutingTestHelpers {
             uint256 outputBalanceAfter
         ) = _finalizeAndExecuteSwap(currency1, CurrencyLibrary.ADDRESS_ZERO, amountIn);
 
-        // check intermediate token balances
+        // 检查中间代币余额
         assertEq(intermediateBalanceBefore, currency0.balanceOfSelf());
         assertEq(nativeKey.currency0.balanceOf(address(router)), 0);
         assertEq(nativeKey.currency1.balanceOf(address(router)), 0);
@@ -656,7 +656,7 @@ contract V4RouterTest is RoutingTestHelpers {
 
         nativeKey.currency0.transfer(address(router), amountIn);
 
-        // amount in of 0 to show it should use the open delta
+        // 输入数量设为 0，表示应使用未结算的 delta
         IV4Router.ExactInputSingleParams memory params =
             IV4Router.ExactInputSingleParams(nativeKey, true, ActionConstants.OPEN_DELTA, 0, 0, bytes(""));
 
@@ -675,14 +675,14 @@ contract V4RouterTest is RoutingTestHelpers {
         uint256 routerInputAfter = nativeKey.currency0.balanceOf(address(router));
         uint256 callerOutputAfter = nativeKey.currency1.balanceOfSelf();
 
-        // caller didnt pay, router paid, caller received the output
+        // 调用者未付款，由路由器付款，调用者收到了输出
         assertEq(callerInputBefore, callerInputAfter);
         assertEq(routerInputBefore - amountIn, routerInputAfter);
         assertEq(callerOutputBefore + expectedAmountOut, callerOutputAfter);
     }
 
     /*//////////////////////////////////////////////////////////////å
-                        ERC20 -> ERC20 EXACT OUTPUT
+                        ERC20 -> ERC20 精确输出
     //////////////////////////////////////////////////////////////*/
 
     function test_swapExactOutputSingle_revertsForAmountIn() public {
@@ -808,7 +808,7 @@ contract V4RouterTest is RoutingTestHelpers {
         uint256 routerInputAfter = key0.currency1.balanceOfSelf();
         uint256 callerOutputAfter = key0.currency1.balanceOfSelf();
 
-        // caller paid
+        // 调用者已付款
         assertEq(callerInputBefore - expectedAmountIn, callerInputAfter);
         assertEq(routerInputBefore, routerInputAfter);
         assertEq(callerOutputBefore, callerOutputAfter);
@@ -1002,14 +1002,14 @@ contract V4RouterTest is RoutingTestHelpers {
         uint256 routerInputAfter = key0.currency1.balanceOfSelf();
         uint256 callerOutputAfter = key0.currency1.balanceOfSelf();
 
-        // caller paid
+        // 调用者已付款
         assertEq(callerInputBefore - expectedAmountIn, callerInputAfter);
         assertEq(routerInputBefore, routerInputAfter);
         assertEq(callerOutputBefore, callerOutputAfter);
     }
 
     /*//////////////////////////////////////////////////////////////
-                ETH -> ERC20 and ERC20 -> ETH EXACT OUTPUT
+                ETH -> ERC20 及 ERC20 -> ETH 精确输出
     //////////////////////////////////////////////////////////////*/
 
     function test_nativeIn_swapExactOutputSingle_sweepExcessETH() public {
@@ -1114,7 +1114,7 @@ contract V4RouterTest is RoutingTestHelpers {
         uint256 amountOut = 1 ether;
         uint256 expectedAmountIn = 1016204441757464409;
 
-        // the initialized nativeKey is (native, currency0)
+        // 已初始化的 nativeKey 为 (native, currency0)
         tokenPath.push(CurrencyLibrary.ADDRESS_ZERO);
         tokenPath.push(currency0);
         tokenPath.push(currency1);

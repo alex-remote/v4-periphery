@@ -18,7 +18,7 @@ library FeeMath {
     using SafeCast for uint256;
     using StateLibrary for IPoolManager;
 
-    /// @notice Calculates the fees accrued to a position. Used for testing purposes.
+    /// @notice 计算头寸累积的手续费。仅用于测试。
     function getFeesOwed(IPositionManager posm, IPoolManager manager, PositionConfig memory config, uint256 tokenId)
         internal
         view
@@ -27,8 +27,8 @@ library FeeMath {
         PoolId poolId = config.poolKey.toId();
 
         // getPositionInfo(poolId, owner, tL, tU, salt)
-        // owner is the position manager
-        // salt is the tokenId
+        // owner 为 PositionManager
+        // salt 为 tokenId
         (uint128 liquidity, uint256 feeGrowthInside0LastX128, uint256 feeGrowthInside1LastX128) =
             manager.getPositionInfo(poolId, address(posm), config.tickLower, config.tickUpper, bytes32(tokenId));
 

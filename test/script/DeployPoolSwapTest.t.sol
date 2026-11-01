@@ -7,7 +7,7 @@ import {PoolManager} from "@uniswap/v4-core/src/PoolManager.sol";
 import {Test} from "forge-std/Test.sol";
 import {PoolSwapTest} from "@uniswap/v4-core/src/test/PoolSwapTest.sol";
 
-// Test of a Test contract (lol)
+// 对一个 Test 合约的测试（笑）
 contract DeployPoolSwapTestTest is Test {
     DeployPoolSwapTest deployer;
 
