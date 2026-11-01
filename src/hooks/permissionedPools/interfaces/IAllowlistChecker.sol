@@ -5,9 +5,9 @@ import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {PermissionFlag} from "../libraries/PermissionFlags.sol";
 
 interface IAllowlistChecker is IERC165 {
-    /// @notice Returns the permission flags for `account` with respect to `tokenAddress`
-    /// @param account The account whose allowlist status is being checked
-    /// @param tokenAddress The permissioned token the check is being made for
-    /// @dev `tokenAddress` lets a single allowlist checker serve multiple assets without an extra round-trip into the adapter
+    /// @notice 返回 `account` 针对 `tokenAddress` 的权限标志
+    /// @param account 被检查白名单状态的账户
+    /// @param tokenAddress 本次检查所针对的许可代币
+    /// @dev `tokenAddress` 使单个白名单检查器可以服务多种资产，而无需额外往返调用适配器
     function checkAllowlist(address account, address tokenAddress) external view returns (PermissionFlag);
 }

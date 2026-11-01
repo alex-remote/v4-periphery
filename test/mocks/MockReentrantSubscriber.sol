@@ -6,10 +6,10 @@ import {INotifier} from "../../src/interfaces/INotifier.sol";
 import {BalanceDelta} from "@uniswap/v4-core/src/types/BalanceDelta.sol";
 import {PositionInfo} from "../../src/libraries/PositionInfoLibrary.sol";
 
-/// @notice On `notifyUnsubscribe`, re-attaches a fresh subscriber via `posm.subscribe(...)`.
-///         `unwindPosition` unsubscribes with the manager locked, so `subscribe`'s
-///         `onlyIfPoolManagerLocked` guard passes and the re-attach succeeds; used to verify that
-///         `unwindPosition`'s force-clear removes the re-attached subscriber before the burn.
+/// @notice 在 `notifyUnsubscribe` 时，通过 `posm.subscribe(...)` 重新挂接一个新的订阅者。
+///         `unwindPosition` 在 manager 锁定状态下取消订阅，因此 `subscribe` 的
+///         `onlyIfPoolManagerLocked` 守卫会通过，重新挂接成功；用于验证
+///         `unwindPosition` 的强制清除会在销毁之前移除重新挂接的订阅者。
 contract MockReentrantSubscriber is ISubscriber {
     INotifier public immutable posm;
     address public immutable reentrantTarget;
@@ -22,8 +22,8 @@ contract MockReentrantSubscriber is ISubscriber {
     function notifySubscribe(uint256, bytes memory) external pure {}
 
     function notifyUnsubscribe(uint256 tokenId) external {
-        // The manager is locked here, so subscribe's onlyIfPoolManagerLocked guard passes and this
-        // re-attach succeeds; unwindPosition's force-clear removes it before BURN_POSITION.
+        // 此处 manager 处于锁定状态，因此 subscribe 的 onlyIfPoolManagerLocked 守卫会通过，
+        // 本次重新挂接成功；unwindPosition 的强制清除会在 BURN_POSITION 之前将其移除。
         posm.subscribe(tokenId, reentrantTarget, "");
     }
 

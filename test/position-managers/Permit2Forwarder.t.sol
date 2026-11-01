@@ -15,7 +15,7 @@ contract Permit2ForwarderTest is Test, PosmTestSetup, Permit2SignatureHelpers {
     Permit2Forwarder permit2Forwarder;
 
     uint160 amount0 = 10e18;
-    // the expiration of the allowance is large
+    // 授权额度（allowance）的过期时间设置得很大
     uint48 expiration = uint48(block.timestamp + 10e18);
     uint48 nonce = 0;
 
@@ -27,7 +27,7 @@ contract Permit2ForwarderTest is Test, PosmTestSetup, Permit2SignatureHelpers {
     function setUp() public {
         deployFreshManagerAndRouters();
         (currency0, currency1) = deployAndMint2Currencies();
-        // also deploys permit2
+        // 同时也会部署 permit2
         deployPosm(manager);
         permit2Forwarder = new Permit2Forwarder(permit2);
         PERMIT2_DOMAIN_SEPARATOR = permit2.DOMAIN_SEPARATOR();
@@ -47,7 +47,7 @@ contract Permit2ForwarderTest is Test, PosmTestSetup, Permit2SignatureHelpers {
             permit2.allowance(alice, Currency.unwrap(currency0), address(this));
         assertEq(_amount, amount0);
         assertEq(_expiration, expiration);
-        assertEq(_nonce, nonce + 1); // the nonce was incremented
+        assertEq(_nonce, nonce + 1); // nonce 已递增
     }
 
     function test_permit_batch_succeeds() public {

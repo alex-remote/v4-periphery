@@ -3,7 +3,7 @@ pragma solidity ^0.8.20;
 
 import "../../src/base/Multicall_v4.sol";
 
-/// @dev If MockMulticall is to PositionManager, then RevertContract is to PoolManager
+/// @dev 如果说 MockMulticall 对应 PositionManager，那么 RevertContract 就对应 PoolManager
 contract RevertContract {
     error Error1();
     error Error2(uint256 a, uint256 b);
@@ -22,10 +22,10 @@ contract RevertContract {
 }
 
 contract MockMulticall is Multicall_v4 {
-    error Error4Bytes(); // 4 bytes of selector
-    error Error36Bytes(uint8 a); // 32 bytes + 4 bytes of selector
-    error Error68Bytes(uint256 a, uint256 b); // 64 bytes + 4 bytes of selector
-    error ErrorBytes(bytes data); // arbitrary byte length
+    error Error4Bytes(); // 4 字节的 selector
+    error Error36Bytes(uint8 a); // 32 字节 + 4 字节的 selector
+    error Error68Bytes(uint256 a, uint256 b); // 64 字节 + 4 字节的 selector
+    error ErrorBytes(bytes data); // 任意字节长度
 
     struct Tuple {
         uint256 a;

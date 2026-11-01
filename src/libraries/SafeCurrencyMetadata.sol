@@ -5,22 +5,22 @@ import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/exten
 import {AddressStringUtil} from "./AddressStringUtil.sol";
 
 /// @title SafeCurrencyMetadata
-/// @notice can produce symbols and decimals from inconsistent or absent ERC20 implementations
-/// @dev Reference: https://github.com/Uniswap/solidity-lib/blob/master/contracts/libraries/SafeERC20Namer.sol
+/// @notice 能够从不规范或缺失的 ERC20 实现中获取代币符号（symbol）和精度（decimals）
+/// @dev 参考：https://github.com/Uniswap/solidity-lib/blob/master/contracts/libraries/SafeERC20Namer.sol
 library SafeCurrencyMetadata {
     uint8 constant MAX_SYMBOL_LENGTH = 12;
 
-    /// @notice attempts to extract the currency symbol. if it does not implement symbol, returns a symbol derived from the address
-    /// @param currency The currency address
-    /// @param nativeLabel The native label
-    /// @return the currency symbol
+    /// @notice 尝试获取代币符号。若代币未实现 symbol，则返回由其地址派生的符号
+    /// @param currency 代币地址
+    /// @param nativeLabel 原生代币的标签
+    /// @return 代币符号
     function currencySymbol(address currency, string memory nativeLabel) internal view returns (string memory) {
         if (currency == address(0)) {
             return nativeLabel;
         }
         string memory symbol = callAndParseStringReturn(currency, IERC20Metadata.symbol.selector);
         if (bytes(symbol).length == 0) {
-            // fallback to 6 uppercase hex of address
+            // 回退为地址的 6 位大写十六进制字符
             return addressToSymbol(currency);
         }
         if (bytes(symbol).length > MAX_SYMBOL_LENGTH) {
@@ -29,9 +29,9 @@ library SafeCurrencyMetadata {
         return symbol;
     }
 
-    /// @notice attempts to extract the token decimals, returns 0 if not implemented or not a uint8
-    /// @param currency The currency address
-    /// @return the currency decimals
+    /// @notice 尝试获取代币精度（decimals），若未实现或返回值不是 uint8 则返回 0
+    /// @param currency 代币地址
+    /// @return 代币精度（decimals）
     function currencyDecimals(address currency) internal view returns (uint8) {
         if (currency == address(0)) {
             return 18;
@@ -66,24 +66,24 @@ library SafeCurrencyMetadata {
         return string(bytesStringTrimmed);
     }
 
-    /// @notice produces a symbol from the address - the first 6 hex of the address string in upper case
-    /// @param currencyAddress the address of the currency
-    /// @return the symbol
+    /// @notice 根据地址生成符号——取地址字符串的前 6 位十六进制字符并转为大写
+    /// @param currencyAddress 代币地址
+    /// @return 生成的符号
     function addressToSymbol(address currencyAddress) private pure returns (string memory) {
         return AddressStringUtil.toAsciiString(currencyAddress, 6);
     }
 
-    /// @notice calls an external view contract method that returns a symbol, and parses the output into a string
-    /// @param currencyAddress the address of the currency
-    /// @param selector the selector of the symbol method
-    /// @return the symbol
+    /// @notice 调用外部合约中返回符号的 view 方法，并将输出解析为字符串
+    /// @param currencyAddress 代币地址
+    /// @param selector symbol 方法的函数选择器
+    /// @return 解析得到的符号
     function callAndParseStringReturn(address currencyAddress, bytes4 selector) private view returns (string memory) {
         (bool success, bytes memory data) = currencyAddress.staticcall(abi.encodeWithSelector(selector));
-        // if not implemented, return empty string
+        // 若未实现，则返回空字符串
         if (!success) {
             return "";
         }
-        // bytes32 data always has length 32
+        // bytes32 类型的数据长度总是 32
         if (data.length == 32) {
             bytes32 decoded = abi.decode(data, (bytes32));
             return bytes32ToString(decoded);
@@ -93,10 +93,10 @@ library SafeCurrencyMetadata {
         return "";
     }
 
-    /// @notice truncates the symbol to the MAX_SYMBOL_LENGTH
-    /// @dev assumes the string is already longer than MAX_SYMBOL_LENGTH (or the same)
-    /// @param str the symbol
-    /// @return the truncated symbol
+    /// @notice 将符号截断为 MAX_SYMBOL_LENGTH 长度
+    /// @dev 假定该字符串的长度已大于（或等于）MAX_SYMBOL_LENGTH
+    /// @param str 符号
+    /// @return 截断后的符号
     function truncateSymbol(string memory str) internal pure returns (string memory) {
         bytes memory strBytes = bytes(str);
         bytes memory truncatedBytes = new bytes(MAX_SYMBOL_LENGTH);

@@ -9,15 +9,15 @@ import {SignatureVerification} from "permit2/src/libraries/SignatureVerification
 import {IERC721Permit_v4} from "../interfaces/IERC721Permit_v4.sol";
 import {UnorderedNonce} from "./UnorderedNonce.sol";
 
-/// @title ERC721 with permit
-/// @notice Nonfungible tokens that support an approve via signature, i.e. permit
+/// @title 支持 permit 的 ERC721
+/// @notice 支持通过签名进行授权（即 permit）的非同质化代币
 abstract contract ERC721Permit_v4 is ERC721, IERC721Permit_v4, EIP712_v4, UnorderedNonce {
     using SignatureVerification for bytes;
 
-    /// @notice Computes the nameHash and versionHash
+    /// @notice 计算 nameHash 和 versionHash
     constructor(string memory name_, string memory symbol_) ERC721(name_, symbol_) EIP712_v4(name_) {}
 
-    /// @notice Checks if the block's timestamp is before a signature's deadline
+    /// @notice 检查区块时间戳是否早于签名的截止时间
     modifier checkSignatureDeadline(uint256 deadline) {
         if (block.timestamp > deadline) revert SignatureDeadlineExpired();
         _;
@@ -29,7 +29,7 @@ abstract contract ERC721Permit_v4 is ERC721, IERC721Permit_v4, EIP712_v4, Unorde
         payable
         checkSignatureDeadline(deadline)
     {
-        // the .verify function checks the owner is non-0
+        // .verify 函数会检查 owner 不为 0 地址
         address owner = _ownerOf[tokenId];
 
         bytes32 digest = ERC721PermitHash.hashPermit(spender, tokenId, nonce, deadline);
@@ -55,13 +55,13 @@ abstract contract ERC721Permit_v4 is ERC721, IERC721Permit_v4, EIP712_v4, Unorde
         _approveForAll(owner, operator, approved);
     }
 
-    /// @notice Enable or disable approval for a third party ("operator") to manage
-    /// all of `msg.sender`'s assets
-    /// @dev Emits the ApprovalForAll event. The contract MUST allow
-    /// multiple operators per owner.
-    /// @dev Override Solmate's ERC721 setApprovalForAll so setApprovalForAll() and permit() share the _approveForAll method
-    /// @param operator Address to add to the set of authorized operators
-    /// @param approved True if the operator is approved, false to revoke approval
+    /// @notice 启用或禁用第三方（“操作者”，operator）管理
+    /// `msg.sender` 全部资产的授权
+    /// @dev 触发 ApprovalForAll 事件。合约必须（MUST）允许
+    /// 每个所有者拥有多个操作者。
+    /// @dev 重写 Solmate ERC721 的 setApprovalForAll，使 setApprovalForAll() 与 permit() 共用 _approveForAll 方法
+    /// @param operator 要加入已授权操作者集合的地址
+    /// @param approved 为 true 表示授权该操作者，为 false 表示撤销授权
     function setApprovalForAll(address operator, bool approved) public override {
         _approveForAll(msg.sender, operator, approved);
     }
@@ -71,13 +71,13 @@ abstract contract ERC721Permit_v4 is ERC721, IERC721Permit_v4, EIP712_v4, Unorde
         emit ApprovalForAll(owner, operator, approved);
     }
 
-    /// @notice Change or reaffirm the approved address for an NFT
-    /// @dev override Solmate's ERC721 approve so approve() and permit() share the _approve method
-    /// Passing a spender address of zero can be used to remove any outstanding approvals
-    /// Throws error unless `msg.sender` is the current NFT owner,
-    /// or an authorized operator of the current owner.
-    /// @param spender The new approved NFT controller
-    /// @param id The tokenId of the NFT to approve
+    /// @notice 更改或重新确认某个 NFT 的被授权地址
+    /// @dev 重写 Solmate ERC721 的 approve，使 approve() 与 permit() 共用 _approve 方法
+    /// 传入零地址作为 spender 可用于移除所有现存的授权
+    /// 除非 `msg.sender` 是该 NFT 当前的所有者，
+    /// 或当前所有者的已授权操作者，否则抛出错误。
+    /// @param spender 新的被授权 NFT 控制者
+    /// @param id 要授权的 NFT 的 tokenId
     function approve(address spender, uint256 id) public override {
         address owner = _ownerOf[id];
 

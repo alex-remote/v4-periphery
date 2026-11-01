@@ -88,7 +88,7 @@ contract MulticallTest is Test {
     }
 
     function test_multicall_unpayableRevert() public {
-        // first call is payable, second is not which causes a revert
+        // 第一个调用是 payable 的，第二个不是，因而会导致回滚（revert）
         bytes[] memory calls = new bytes[](2);
         calls[0] = abi.encodeWithSelector(MockMulticall(multicall).payableStoresMsgValue.selector);
         calls[1] = abi.encodeWithSelector(MockMulticall(multicall).functionThatReturnsTuple.selector, 10, 20);
@@ -98,7 +98,7 @@ contract MulticallTest is Test {
     }
 
     function test_multicall_bothPayable() public {
-        // msg.value is provided to both calls
+        // msg.value 会同时提供给两个调用
         bytes[] memory calls = new bytes[](2);
         calls[0] = abi.encodeWithSelector(MockMulticall(multicall).payableStoresMsgValue.selector);
         calls[1] = abi.encodeWithSelector(MockMulticall(multicall).payableStoresMsgValueDouble.selector);
@@ -109,7 +109,7 @@ contract MulticallTest is Test {
         assertEq(multicall.msgValueDouble(), 200);
     }
 
-    // revert bubbling
+    // 回滚（revert）冒泡
     function test_multicall_bubbleRevert_string() public {
         bytes[] memory calls = new bytes[](1);
         calls[0] =
@@ -123,11 +123,11 @@ contract MulticallTest is Test {
         bytes[] memory calls = new bytes[](1);
         calls[0] = abi.encodeWithSelector(MockMulticall(multicall).revertWith4Bytes.selector);
 
-        // revert is caught
+        // 回滚（revert）被捕获
         vm.expectRevert(MockMulticall.Error4Bytes.selector);
         multicall.multicall(calls);
 
-        // confirm expected length of the revert
+        // 确认回滚数据的预期长度
         try multicall.revertWith4Bytes() {}
         catch (bytes memory reason) {
             assertEq(reason.length, 4);
@@ -138,11 +138,11 @@ contract MulticallTest is Test {
         bytes[] memory calls = new bytes[](1);
         calls[0] = abi.encodeWithSelector(MockMulticall(multicall).revertWith36Bytes.selector, num);
 
-        // revert is caught
+        // 回滚（revert）被捕获
         vm.expectRevert(abi.encodeWithSelector(MockMulticall.Error36Bytes.selector, num));
         multicall.multicall(calls);
 
-        // confirm expected length of the revert
+        // 确认回滚数据的预期长度
         try multicall.revertWith36Bytes(num) {}
         catch (bytes memory reason) {
             assertEq(reason.length, 36);
@@ -153,11 +153,11 @@ contract MulticallTest is Test {
         bytes[] memory calls = new bytes[](1);
         calls[0] = abi.encodeWithSelector(MockMulticall(multicall).revertWith68Bytes.selector, a, b);
 
-        // revert is caught
+        // 回滚（revert）被捕获
         vm.expectRevert(abi.encodeWithSelector(MockMulticall.Error68Bytes.selector, a, b));
         multicall.multicall(calls);
 
-        // confirm expected length of the revert
+        // 确认回滚数据的预期长度
         try multicall.revertWith68Bytes(a, b) {}
         catch (bytes memory reason) {
             assertEq(reason.length, 68);
@@ -174,19 +174,19 @@ contract MulticallTest is Test {
         bytes[] memory calls = new bytes[](1);
         calls[0] = abi.encodeWithSelector(MockMulticall(multicall).revertWithBytes.selector, data);
 
-        // revert is caught
+        // 回滚（revert）被捕获
         vm.expectRevert(abi.encodeWithSelector(MockMulticall.ErrorBytes.selector, data));
         multicall.multicall(calls);
 
-        // confirm expected length of the revert
+        // 确认回滚数据的预期长度
         try multicall.revertWithBytes(data) {}
         catch (bytes memory reason) {
-            // errors with 0 bytes are by default 64 bytes of data (length & pointer?) + 4 bytes of selector
+            // 0 字节的错误默认包含 64 字节数据（长度和指针？）+ 4 字节选择器
             if (length == 0) {
                 assertEq(reason.length, 68);
             } else {
-                uint256 expectedLength = 64 + 4; // default length + selector
-                // 32 bytes added to the reason for each 32 bytes of data
+                uint256 expectedLength = 64 + 4; // 默认长度 + 选择器
+                // 每 32 字节数据会使 reason 增加 32 字节
                 expectedLength += (((data.length - 1) / 32) + 1) * 32;
                 assertEq(reason.length, expectedLength);
             }

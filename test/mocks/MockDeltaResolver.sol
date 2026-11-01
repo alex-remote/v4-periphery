@@ -42,6 +42,6 @@ contract MockDeltaResolver is Test, DeltaResolver, IUnlockCallback {
         payCallCount++;
     }
 
-    // needs to receive native tokens from the `take` call
+    // 需要接收来自 `take` 调用的原生代币
     receive() external payable {}
 }

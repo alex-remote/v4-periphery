@@ -95,8 +95,8 @@ import {IWETH9} from "./interfaces/external/IWETH9.sol";
 //                                     44444444444444444444444444444444444444444
 //                                              4444444444444444444
 
-/// @notice The PositionManager (PosM) contract is responsible for creating liquidity positions on v4.
-/// PosM mints and manages ERC721 tokens associated with each position.
+/// @notice PositionManager（PosM）合约负责在 v4 上创建流动性头寸。
+/// PosM 铸造并管理与每个头寸相关联的 ERC721 代币。
 contract PositionManager is
     IPositionManager,
     ERC721Permit_v4,
@@ -117,7 +117,7 @@ contract PositionManager is
     using SlippageCheck for BalanceDelta;
 
     /// @inheritdoc IPositionManager
-    /// @dev The ID of the next token that will be minted. Skips 0
+    /// @dev 下一个将被铸造的代币 ID。跳过 0
     uint256 public nextTokenId = 1;
 
     IPositionDescriptor public immutable tokenDescriptor;
@@ -141,24 +141,24 @@ contract PositionManager is
         tokenDescriptor = _tokenDescriptor;
     }
 
-    /// @notice Reverts if the deadline has passed
-    /// @param deadline The timestamp at which the call is no longer valid, passed in by the caller
+    /// @notice 若已超过截止时间则回滚（revert）
+    /// @param deadline 调用失效的时间戳，由调用者传入
     modifier checkDeadline(uint256 deadline) {
         if (block.timestamp > deadline) revert DeadlinePassed(deadline);
         _;
     }
 
-    /// @notice Reverts if the caller is not the owner or approved for the ERC721 token
-    /// @param caller The address of the caller
-    /// @param tokenId the unique identifier of the ERC721 token
-    /// @dev either msg.sender or msgSender() is passed in as the caller
-    /// msgSender() should ONLY be used if this is called from within the unlockCallback, unless the codepath has reentrancy protection
+    /// @notice 若调用者既不是该 ERC721 代币的所有者、也未获得其授权，则回滚（revert）
+    /// @param caller 调用者的地址
+    /// @param tokenId 该 ERC721 代币的唯一标识符
+    /// @dev 传入的 caller 为 msg.sender 或 msgSender() 二者之一
+    /// 仅当在 unlockCallback 内部调用时才应使用 msgSender()，除非该代码路径具有重入保护
     modifier onlyIfApproved(address caller, uint256 tokenId) override {
         if (!_isApprovedOrOwner(caller, tokenId)) revert NotApproved(caller);
         _;
     }
 
-    /// @notice Enforces that the PoolManager is locked.
+    /// @notice 强制要求 PoolManager 处于锁定状态。
     modifier onlyIfPoolManagerLocked() override {
         if (poolManager.isUnlocked()) revert PoolManagerMustBeLocked();
         _;
@@ -200,7 +200,7 @@ contract PositionManager is
                 _increase(tokenId, liquidity, amount0Max, amount1Max, hookData);
                 return;
             } else if (action == Actions.INCREASE_LIQUIDITY_FROM_DELTAS) {
-                // DEPRECATED - vulnerable to sandwich attacks, do not use. See _increaseFromDeltas().
+                // DEPRECATED - 已弃用：易受三明治攻击，请勿使用。参见 _increaseFromDeltas()。
                 (uint256 tokenId, uint128 amount0Max, uint128 amount1Max, bytes calldata hookData) =
                     params.decodeIncreaseLiquidityFromDeltasParams();
                 _increaseFromDeltas(tokenId, amount0Max, amount1Max, hookData);
@@ -224,7 +224,7 @@ contract PositionManager is
                 _mint(poolKey, tickLower, tickUpper, liquidity, amount0Max, amount1Max, _mapRecipient(owner), hookData);
                 return;
             } else if (action == Actions.MINT_POSITION_FROM_DELTAS) {
-                // DEPRECATED - vulnerable to sandwich attacks, do not use. See _mintFromDeltas().
+                // DEPRECATED - 已弃用：易受三明治攻击，请勿使用。参见 _mintFromDeltas()。
                 (
                     PoolKey calldata poolKey,
                     int24 tickLower,
@@ -237,7 +237,7 @@ contract PositionManager is
                 _mintFromDeltas(poolKey, tickLower, tickUpper, amount0Max, amount1Max, _mapRecipient(owner), hookData);
                 return;
             } else if (action == Actions.BURN_POSITION) {
-                // Will automatically decrease liquidity to 0 if the position is not already empty.
+                // 若头寸尚未清空，会自动将流动性减少至 0。
                 (uint256 tokenId, uint128 amount0Min, uint128 amount1Min, bytes calldata hookData) =
                     params.decodeBurnParams();
                 _burn(tokenId, amount0Min, amount1Min, hookData);
@@ -285,7 +285,7 @@ contract PositionManager is
         revert UnsupportedAction(action);
     }
 
-    /// @dev Calling increase with 0 liquidity will credit the caller with any underlying fees of the position
+    /// @dev 以 0 流动性调用 increase，会将该头寸的全部底层手续费记入调用者名下（credit）
     function _increase(
         uint256 tokenId,
         uint256 liquidity,
@@ -295,16 +295,16 @@ contract PositionManager is
     ) internal virtual onlyIfApproved(msgSender(), tokenId) {
         (PoolKey memory poolKey, PositionInfo info) = getPoolAndPositionInfo(tokenId);
 
-        // Note: The tokenId is used as the salt for this position, so every minted position has unique storage in the pool manager.
+        // 注意：tokenId 被用作该头寸的 salt，因此每个铸造出的头寸在 PoolManager 中都有唯一的存储。
         (BalanceDelta liquidityDelta, BalanceDelta feesAccrued) =
             _modifyLiquidity(info, poolKey, liquidity.toInt256(), bytes32(tokenId), hookData);
-        // Slippage checks should be done on the principal liquidityDelta which is the liquidityDelta - feesAccrued
+        // 滑点检查应基于本金部分的 liquidityDelta，即 liquidityDelta - feesAccrued
         (liquidityDelta - feesAccrued).validateMaxIn(amount0Max, amount1Max);
     }
 
-    /// @notice DEPRECATED: Vulnerable to sandwich attacks - do not use this function.
-    /// @dev Same issue as _mintFromDeltas -- the delta-based approach provides no minimum
-    /// liquidity protection. Use _increase() instead.
+    /// @notice DEPRECATED（已弃用）：易受三明治攻击——请勿使用此函数。
+    /// @dev 与 _mintFromDeltas 存在相同问题——这种基于 delta 的方式不提供最小
+    /// 流动性保护。请改用 _increase()。
     function _increaseFromDeltas(uint256 tokenId, uint128 amount0Max, uint128 amount1Max, bytes calldata hookData)
         internal
         virtual
@@ -316,7 +316,7 @@ contract PositionManager is
         {
             (uint160 sqrtPriceX96,,,) = poolManager.getSlot0(poolKey.toId());
 
-            // Use the credit on the pool manager as the amounts for the mint.
+            // 使用 PoolManager 上的 credit 作为本次铸造的数量。
             liquidity = LiquidityAmounts.getLiquidityForAmounts(
                 sqrtPriceX96,
                 TickMath.getSqrtPriceAtTick(info.tickLower()),
@@ -326,14 +326,14 @@ contract PositionManager is
             );
         }
 
-        // Note: The tokenId is used as the salt for this position, so every minted position has unique storage in the pool manager.
+        // 注意：tokenId 被用作该头寸的 salt，因此每个铸造出的头寸在 PoolManager 中都有唯一的存储。
         (BalanceDelta liquidityDelta, BalanceDelta feesAccrued) =
             _modifyLiquidity(info, poolKey, liquidity.toInt256(), bytes32(tokenId), hookData);
-        // Slippage checks should be done on the principal liquidityDelta which is the liquidityDelta - feesAccrued
+        // 滑点检查应基于本金部分的 liquidityDelta，即 liquidityDelta - feesAccrued
         (liquidityDelta - feesAccrued).validateMaxIn(amount0Max, amount1Max);
     }
 
-    /// @dev Calling decrease with 0 liquidity will credit the caller with any underlying fees of the position
+    /// @dev 以 0 流动性调用 decrease，会将该头寸的全部底层手续费记入调用者名下（credit）
     function _decrease(
         uint256 tokenId,
         uint256 liquidity,
@@ -343,10 +343,10 @@ contract PositionManager is
     ) internal onlyIfApproved(msgSender(), tokenId) {
         (PoolKey memory poolKey, PositionInfo info) = getPoolAndPositionInfo(tokenId);
 
-        // Note: the tokenId is used as the salt.
+        // 注意：tokenId 被用作 salt。
         (BalanceDelta liquidityDelta, BalanceDelta feesAccrued) =
             _modifyLiquidity(info, poolKey, -(liquidity.toInt256()), bytes32(tokenId), hookData);
-        // Slippage checks should be done on the principal liquidityDelta which is the liquidityDelta - feesAccrued
+        // 滑点检查应基于本金部分的 liquidityDelta，即 liquidityDelta - feesAccrued
         (liquidityDelta - feesAccrued).validateMinOut(amount0Min, amount1Min);
     }
 
@@ -360,37 +360,37 @@ contract PositionManager is
         address owner,
         bytes calldata hookData
     ) internal virtual {
-        // mint receipt token
+        // 铸造凭证代币
         uint256 tokenId;
-        // tokenId is assigned to current nextTokenId before incrementing it
+        // 先将当前的 nextTokenId 赋给 tokenId，再将其递增
         unchecked {
             tokenId = nextTokenId++;
         }
         _mint(owner, tokenId);
 
-        // Initialize the position info
+        // 初始化头寸信息
         PositionInfo info = PositionInfoLibrary.initialize(poolKey, tickLower, tickUpper);
         positionInfo[tokenId] = info;
 
-        // Store the poolKey if it is not already stored.
-        // On UniswapV4, the minimum tick spacing is 1, which means that if the tick spacing is 0, the pool key has not been set.
+        // 若 poolKey 尚未存储，则将其存储。
+        // 在 UniswapV4 中，最小 tick 间距为 1，这意味着如果 tick 间距为 0，则说明该池的 poolKey 尚未被设置。
         bytes25 poolId = info.poolId();
         if (poolKeys[poolId].tickSpacing == 0) {
             poolKeys[poolId] = poolKey;
         }
 
-        // fee delta can be ignored as this is a new position
+        // 由于这是新头寸，手续费 delta 可以忽略
         (BalanceDelta liquidityDelta,) =
             _modifyLiquidity(info, poolKey, liquidity.toInt256(), bytes32(tokenId), hookData);
         liquidityDelta.validateMaxIn(amount0Max, amount1Max);
     }
 
-    /// @notice DEPRECATED: Vulnerable to sandwich attacks - do not use this function.
-    /// @dev The amount0Max/amount1Max parameters are redundant because settled amounts already
-    /// act as an upper bound. There is no lower bound on liquidity received.
-    /// If the price is manipulated, fewer tokens are used (the rest are swept back),
-    /// less liquidity is minted, and the max check never triggers.
-    /// Use _mint() instead, which takes an explicit liquidity amount with proper slippage protection.
+    /// @notice DEPRECATED（已弃用）：易受三明治攻击——请勿使用此函数。
+    /// @dev amount0Max/amount1Max 参数是多余的，因为已结算的数量本身已经
+    /// 充当了上限。而获得的流动性却没有下限。
+    /// 如果价格被操纵，实际使用的代币会更少（其余部分会被 sweep 退回），
+    /// 铸造出的流动性也更少，而最大值检查永远不会触发。
+    /// 请改用 _mint()，它接收明确的流动性数量，并具备适当的滑点保护。
     function _mintFromDeltas(
         PoolKey calldata poolKey,
         int24 tickLower,
@@ -402,7 +402,7 @@ contract PositionManager is
     ) internal {
         (uint160 sqrtPriceX96,,,) = poolManager.getSlot0(poolKey.toId());
 
-        // Use the credit on the pool manager as the amounts for the mint.
+        // 使用 PoolManager 上的 credit 作为本次铸造的数量。
         uint256 liquidity = LiquidityAmounts.getLiquidityForAmounts(
             sqrtPriceX96,
             TickMath.getSqrtPriceAtTick(tickLower),
@@ -414,7 +414,7 @@ contract PositionManager is
         _mint(poolKey, tickLower, tickUpper, liquidity, amount0Max, amount1Max, owner, hookData);
     }
 
-    /// @dev this is overloaded with ERC721Permit_v4._burn
+    /// @dev 此函数与 ERC721Permit_v4._burn 构成重载
     function _burn(uint256 tokenId, uint128 amount0Min, uint128 amount1Min, bytes calldata hookData)
         internal
         onlyIfApproved(msgSender(), tokenId)
@@ -425,16 +425,16 @@ contract PositionManager is
 
         address owner = ownerOf(tokenId);
 
-        // Clear the position info.
+        // 清除头寸信息。
         positionInfo[tokenId] = PositionInfoLibrary.EMPTY_POSITION_INFO;
-        // Burn the token.
+        // 销毁该代币。
         _burn(tokenId);
 
-        // Can only call modify if there is non zero liquidity.
+        // 只有在流动性非零时才能调用 modify。
         BalanceDelta feesAccrued;
         if (liquidity > 0) {
             BalanceDelta liquidityDelta;
-            // do not use _modifyLiquidity as we do not need to notify on modification for burns.
+            // 不使用 _modifyLiquidity，因为销毁时无需对此次修改发出通知。
             ModifyLiquidityParams memory params = ModifyLiquidityParams({
                 tickLower: info.tickLower(),
                 tickUpper: info.tickUpper(),
@@ -445,16 +445,16 @@ contract PositionManager is
             emit ModifyPosition(
                 poolKey.toId(), msgSender(), params.tickLower, params.tickUpper, params.liquidityDelta, params.salt
             );
-            // Slippage checks should be done on the principal liquidityDelta which is the liquidityDelta - feesAccrued
+            // 滑点检查应基于本金部分的 liquidityDelta，即 liquidityDelta - feesAccrued
             (liquidityDelta - feesAccrued).validateMinOut(amount0Min, amount1Min);
         }
 
-        // deletes then notifies the subscriber
+        // 先删除，再通知订阅者
         if (info.hasSubscriber()) _removeSubscriberAndNotifyBurn(tokenId, owner, info, liquidity, feesAccrued);
     }
 
     function _settlePair(Currency currency0, Currency currency1) internal {
-        // the locker is the payer when settling
+        // 结算时，锁定者即为付款方
         address caller = msgSender();
         _settle(currency0, caller, _getFullDebt(currency0));
         _settle(currency1, caller, _getFullDebt(currency1));
@@ -466,28 +466,28 @@ contract PositionManager is
     }
 
     function _close(Currency currency) internal {
-        // this address has applied all deltas on behalf of the user/owner
-        // it is safe to close this entire delta because of slippage checks throughout the batched calls.
+        // 本合约地址已代表用户/所有者应用了所有 delta
+        // 由于整个批量调用过程中都有滑点检查，关闭（close）这整个 delta 是安全的。
         int256 currencyDelta = poolManager.currencyDelta(address(this), currency);
 
-        // the locker is the payer or receiver
+        // 锁定者即为付款方或接收方
         address caller = msgSender();
         if (currencyDelta < 0) {
-            // Casting is safe due to limits on the total supply of a pool
+            // 由于池的总供应量存在上限，此处的类型转换是安全的
             _settle(currency, caller, uint256(-currencyDelta));
         } else {
             _take(currency, caller, uint256(currencyDelta));
         }
     }
 
-    /// @dev integrators may elect to forfeit positive deltas with clear
-    /// if the forfeit amount exceeds the user-specified max, the amount is taken instead
-    /// if there is no credit, no call is made.
+    /// @dev 集成方可以选择通过 clear 放弃正的 delta
+    /// 如果放弃的数量超过用户指定的最大值，则改为提取该数量
+    /// 如果没有 credit，则不进行任何调用。
     function _clearOrTake(Currency currency, uint256 amountMax) internal {
         uint256 delta = _getFullCredit(currency);
         if (delta == 0) return;
 
-        // forfeit the delta if its less than or equal to the user-specified limit
+        // 如果 delta 小于或等于用户指定的上限，则放弃该 delta
         if (delta <= amountMax) {
             poolManager.clear(currency, delta);
         } else {
@@ -495,13 +495,13 @@ contract PositionManager is
         }
     }
 
-    /// @notice Sweeps the entire contract balance of specified currency to the recipient
+    /// @notice 将本合约中指定代币的全部余额清扫（sweep）给接收者
     function _sweep(Currency currency, address to) internal virtual {
         uint256 balance = currency.balanceOfSelf();
         if (balance > 0) currency.transfer(to, balance);
     }
 
-    /// @dev if there is a subscriber attached to the position, this function will notify the subscriber
+    /// @dev 如果该头寸绑定了订阅者，此函数会通知该订阅者
     function _modifyLiquidity(
         PositionInfo info,
         PoolKey memory poolKey,
@@ -524,28 +524,28 @@ contract PositionManager is
         }
     }
 
-    // implementation of abstract function DeltaResolver._pay
+    // 抽象函数 DeltaResolver._pay 的实现
     function _pay(Currency currency, address payer, uint256 amount) internal virtual override {
         if (payer == address(this)) {
             currency.transfer(address(poolManager), amount);
         } else {
-            // Casting from uint256 to uint160 is safe due to limits on the total supply of a pool
+            // 由于池的总供应量存在上限，从 uint256 转换为 uint160 是安全的
             permit2.transferFrom(payer, address(poolManager), uint160(amount), Currency.unwrap(currency));
         }
     }
 
-    /// @notice an internal helper used by Notifier
+    /// @notice 供 Notifier 使用的内部辅助函数
     function _setSubscribed(uint256 tokenId) internal override {
         positionInfo[tokenId] = positionInfo[tokenId].setSubscribe();
     }
 
-    /// @notice an internal helper used by Notifier
+    /// @notice 供 Notifier 使用的内部辅助函数
     function _setUnsubscribed(uint256 tokenId) internal override {
         positionInfo[tokenId] = positionInfo[tokenId].setUnsubscribe();
     }
 
-    /// @dev overrides solmate transferFrom in case a notification to subscribers is needed
-    /// @dev will revert if pool manager is locked
+    /// @dev 重写 solmate 的 transferFrom，以便在需要时通知订阅者
+    /// @dev 若 PoolManager 处于锁定状态则会回滚（revert）
     function transferFrom(address from, address to, uint256 id) public virtual override onlyIfPoolManagerLocked {
         super.transferFrom(from, to, id);
         if (positionInfo[id].hasSubscriber()) _unsubscribe(id);

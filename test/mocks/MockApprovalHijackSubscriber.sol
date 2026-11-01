@@ -7,18 +7,18 @@ import {INotifier} from "../../src/interfaces/INotifier.sol";
 import {BalanceDelta} from "@uniswap/v4-core/src/types/BalanceDelta.sol";
 import {PositionInfo} from "../../src/libraries/PositionInfoLibrary.sol";
 
-/// @notice Subscriber that overwrites `getApproved[tokenId]` during `notifyUnsubscribe`.
-/// @dev `approve` carries no `onlyIfPoolManagerLocked` guard, so the write lands even from inside an
-///      active unlock callback. Two attacker shapes both satisfy `ERC721Permit_v4.approve`'s auth check:
-///      the subscriber IS the owner (a contract LP subscribing itself), or it holds `setApprovalForAll`.
-///      Must return cleanly — `_unsubscribe` wraps the callback in try/catch, so reverting would roll the
-///      hijacking SSTORE back. Set `approveTarget` to the admin to write the same value back, isolating the
-///      written value rather than the act of reentering, and `approveDuringCallback = false` for a
-///      behaviourally benign control.
+/// @notice 在 `notifyUnsubscribe` 期间覆写 `getApproved[tokenId]` 的订阅者。
+/// @dev `approve` 没有 `onlyIfPoolManagerLocked` 守卫，因此即使在活跃的 unlock 回调内部，
+///      该写入也会生效。两种攻击者形态都能通过 `ERC721Permit_v4.approve` 的权限检查：
+///      订阅者本身就是所有者（合约 LP 为自己订阅），或者它持有 `setApprovalForAll`。
+///      必须正常返回 —— `_unsubscribe` 用 try/catch 包裹回调，因此回滚（revert）会把
+///      劫持用的 SSTORE 一并撤销。将 `approveTarget` 设为 admin 可写回相同的值，从而单独考察
+///      写入的值本身而非重入这一行为；设置 `approveDuringCallback = false` 则作为
+///      行为上无害的对照组。
 contract MockApprovalHijackSubscriber is ISubscriber {
     IERC721 public immutable posm;
     bool public immutable approveDuringCallback;
-    /// @dev `address(0)` is a sentinel meaning "approve myself".
+    /// @dev `address(0)` 是哨兵值，表示“授权给自己”。
     address public immutable approveTarget;
 
     uint256 public notifyUnsubscribeCount;
@@ -30,7 +30,7 @@ contract MockApprovalHijackSubscriber is ISubscriber {
         approveTarget = _approveTarget;
     }
 
-    /// @notice Used by the contract-LP shape, where the subscriber is itself the position owner.
+    /// @notice 供合约 LP 形态使用，此时订阅者自身就是头寸所有者。
     function subscribeSelf(uint256 tokenId) external {
         INotifier(address(posm)).subscribe(tokenId, address(this), "");
     }

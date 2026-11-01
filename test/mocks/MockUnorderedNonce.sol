@@ -8,7 +8,7 @@ contract MockUnorderedNonce is UnorderedNonce {
         _useUnorderedNonce(owner, nonce);
     }
 
-    /// @dev Bulk-spend nonces on a single word. FOR TESTING ONLY
+    /// @dev 在单个字（word）上批量消耗 nonce。仅限测试使用
     function batchSpendNonces(uint256 wordPos, uint256 mask) external {
         nonces[msg.sender][wordPos] |= mask;
     }

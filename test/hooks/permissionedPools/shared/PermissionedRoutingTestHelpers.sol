@@ -30,12 +30,12 @@ import {ActionConstants} from "../../../../src/libraries/ActionConstants.sol";
 import {PermissionedDeployers} from "./PermissionedDeployers.sol";
 import {PermissionFlags} from "../../../../src/hooks/permissionedPools/libraries/PermissionFlags.sol";
 
-/// @notice A shared test contract that wraps the v4-core deployers contract and exposes basic helpers for swapping with the permissioned router.
+/// @notice 共享测试合约：封装 v4-core 的 deployers 合约，并对外提供通过许可路由器进行兑换（swap）的基础辅助函数。
 contract PermissionedRoutingTestHelpers is PermissionedDeployers, DeployPermit2 {
     uint256 public constant MAX_SETTLE_AMOUNT = type(uint256).max;
     uint256 public constant MIN_TAKE_AMOUNT = 0;
 
-    // Permissioned components
+    // 许可相关组件
     MockPermissionedRouter public permissionedRouter;
     IAllowanceTransfer public permit2;
     MockAllowlistChecker public mockAllowlistChecker;
@@ -43,14 +43,14 @@ contract PermissionedRoutingTestHelpers is PermissionedDeployers, DeployPermit2 
     IPositionDescriptor public tokenDescriptor;
     IWETH9 public weth9;
 
-    // nativeKey is already defined in Deployers.sol
+    // nativeKey 已在 Deployers.sol 中定义
     PoolKey public key0;
     PoolKey public key1;
     PoolKey public key2;
     PoolKey public key3;
     PoolKey public insecureKey;
 
-    // currency0 and currency1 are defined in Deployers.sol
+    // currency0 和 currency1 已在 Deployers.sol 中定义
     Currency public currency2;
     Currency public currency3;
     Currency public currency4;
@@ -62,9 +62,9 @@ contract PermissionedRoutingTestHelpers is PermissionedDeployers, DeployPermit2 
     Plan public plan;
 
     address public positionManager;
-    /// @dev Plain (non-permissioned) PositionManager used to mint liquidity into ordinary
-    ///      ERC-20/ERC-20 pools (e.g. `key2`) for routing tests. The PermissionedPositionManager
-    ///      now rejects mints where neither side is a verified permissions adapter.
+    /// @dev 普通（非许可）PositionManager，用于在路由测试中向普通的
+    ///      ERC-20/ERC-20 池（例如 `key2`）铸造流动性。PermissionedPositionManager
+    ///      现在会拒绝两侧都不是已验证权限适配器（permissions adapter）的铸造。
     address public ordinaryPositionManager;
 
     mapping(Currency permissionsAdapter => Currency permissionedCurrency) public adapterToPermissioned;
@@ -136,7 +136,7 @@ contract PermissionedRoutingTestHelpers is PermissionedDeployers, DeployPermit2 
         MockPermissionedToken(Currency.unwrap(currency1))
             .setAllowlist(address(permissionsAdapter1), PermissionFlags.ALL_ALLOWED);
 
-        // Deposit some underlying tokens into the permissions adapter for verification
+        // 向权限适配器（permissions adapter）存入少量底层代币以完成验证
         IERC20(Currency.unwrap(currency0)).approve(address(permissionsAdapter0), 1);
         permissionsAdapter0.depositForVerification(1);
         IERC20(Currency.unwrap(currency1)).approve(address(permissionsAdapter1), 1);
@@ -178,8 +178,8 @@ contract PermissionedRoutingTestHelpers is PermissionedDeployers, DeployPermit2 
         _key = PoolKey(currencyA, currencyB, 3000, 60, IHooks(hookAddr));
         manager.initialize(_key, SQRT_PRICE_1_1);
 
-        // Pools where neither side is a verified permissions adapter must use the plain PositionManager —
-        // PermissionedPositionManager rejects mints into those pools (positions would be untransferable).
+        // 两侧都不是已验证权限适配器的池必须使用普通 PositionManager ——
+        // PermissionedPositionManager 会拒绝向这些池铸造（否则头寸将无法转移）。
         bool currency0Verified =
             permissionsAdapterFactory.verifiedPermissionsAdapterOf(Currency.unwrap(currencyA)) != address(0);
         bool currency1Verified =
@@ -209,7 +209,7 @@ contract PermissionedRoutingTestHelpers is PermissionedDeployers, DeployPermit2 
             "PermitSingle(PermitDetails details,address spender,uint256 sigDeadline)PermitDetails(address token,uint160 amount,uint48 expiration,uint48 nonce)"
         );
 
-        // Hash the permit details
+        // 对许可（permit）详情进行哈希
         bytes32 permitDetailsHash = keccak256(
             abi.encode(
                 keccak256("PermitDetails(address token,uint160 amount,uint48 expiration,uint48 nonce)"),
@@ -220,12 +220,12 @@ contract PermissionedRoutingTestHelpers is PermissionedDeployers, DeployPermit2 
             )
         );
 
-        // Hash the permit single data
+        // 对 PermitSingle 数据进行哈希
         bytes32 permitSingleHash = keccak256(
             abi.encode(PERMIT_SINGLE_TYPEHASH, permitDetailsHash, permitSingle.spender, permitSingle.sigDeadline)
         );
 
-        // Create the final digest
+        // 生成最终的摘要（digest）
         return keccak256(abi.encodePacked("\x19\x01", domainSeparator, permitSingleHash));
     }
 
@@ -313,18 +313,18 @@ contract PermissionedRoutingTestHelpers is PermissionedDeployers, DeployPermit2 
         bytes memory hookData,
         uint256 value
     ) public {
-        // Create a plan with the mint position action
+        // 创建一个包含铸造头寸操作（action）的 plan
         plan = Planner.init();
         plan = plan.add(
             Actions.MINT_POSITION,
             abi.encode(key, params.tickLower, params.tickUpper, 20000, 100000, 100000, msg.sender, hookData)
         );
 
-        // Finalize the plan with proper settlement
+        // 以正确的结算方式完成 plan
         bytes memory unlockData = plan.finalizeModifyLiquidityWithSettlePair(key);
         uint256 deadline = block.timestamp + 3600;
 
-        // Call modifyLiquidities with the properly encoded data
+        // 使用正确编码的数据调用 modifyLiquidities
         IPositionManager(posm).modifyLiquidities{value: value}(unlockData, deadline);
     }
 
@@ -367,7 +367,7 @@ contract PermissionedRoutingTestHelpers is PermissionedDeployers, DeployPermit2 
         return _finalizeAndExecuteSwap(inputCurrency, outputCurrency, amountIn, ActionConstants.MSG_SENDER);
     }
 
-    // ===== PRIVATE HELPER FUNCTIONS =====
+    // ===== 私有辅助函数 =====
 
     function _deployFreshManager() private {
         deployFreshManager();
@@ -423,7 +423,7 @@ contract PermissionedRoutingTestHelpers is PermissionedDeployers, DeployPermit2 
         );
         positionManager = Deploy.create2(posmBytecode, keccak256("permissionedPosm"));
 
-        // Plain PositionManager — used to mint liquidity into ordinary pools (no verified adapter).
+        // 普通 PositionManager —— 用于向普通池（无已验证适配器）铸造流动性。
         ordinaryPositionManager = address(
             Deploy.positionManager(
                 address(manager),

@@ -19,9 +19,9 @@ import {BipsLibrary} from "./libraries/BipsLibrary.sol";
 import {SwapParams} from "@uniswap/v4-core/src/types/PoolOperation.sol";
 
 /// @title UniswapV4Router
-/// @notice Abstract contract that contains all internal logic needed for routing through Uniswap v4 pools
-/// @dev the entry point to executing actions in this contract is calling `BaseActionsRouter._executeActions`
-/// An inheriting contract should call _executeActions at the point that they wish actions to be executed
+/// @notice 抽象合约，包含通过 Uniswap v4 池进行路由所需的全部内部逻辑
+/// @dev 在本合约中执行操作（action）的入口是调用 `BaseActionsRouter._executeActions`
+/// 继承合约应在希望执行这些操作的时点调用 _executeActions
 abstract contract V4Router is IV4Router, BaseActionsRouter, DeltaResolver {
     using SafeCast for *;
     using CalldataDecoder for bytes;
@@ -32,7 +32,7 @@ abstract contract V4Router is IV4Router, BaseActionsRouter, DeltaResolver {
     constructor(IPoolManager _poolManager) BaseActionsRouter(_poolManager) {}
 
     function _handleAction(uint256 action, bytes calldata params) internal override {
-        // swap actions and payment actions in different blocks for gas efficiency
+        // 兑换（swap）操作与支付操作分放在不同的代码块中，以提高 gas 效率
         if (action < Actions.SETTLE) {
             if (action == Actions.SWAP_EXACT_IN) {
                 IV4Router.ExactInputParams calldata swapParams = params.decodeSwapExactInParams();
@@ -101,7 +101,7 @@ abstract contract V4Router is IV4Router, BaseActionsRouter, DeltaResolver {
 
     function _swapExactInput(IV4Router.ExactInputParams calldata params) private {
         unchecked {
-            // Caching for gas savings
+            // 缓存变量以节省 gas
             uint256 pathLength = params.path.length;
             uint128 amountOut;
             Currency currencyIn = params.currencyIn;
@@ -115,7 +115,7 @@ abstract contract V4Router is IV4Router, BaseActionsRouter, DeltaResolver {
             for (uint256 i = 0; i < pathLength; i++) {
                 pathKey = params.path[i];
                 (PoolKey memory poolKey, bool zeroForOne) = pathKey.getPoolAndSwapDirection(currencyIn);
-                // The output delta will always be positive, except for when interacting with certain hook pools
+                // 输出 delta 总是为正，除非与某些带 hook 的池交互
                 amountOut =
                     _swapOutput(_swap(poolKey, zeroForOne, -int256(uint256(amountIn)), pathKey.hookData), zeroForOne);
 
@@ -140,9 +140,9 @@ abstract contract V4Router is IV4Router, BaseActionsRouter, DeltaResolver {
                 _getFullDebt(params.zeroForOne ? params.poolKey.currency1 : params.poolKey.currency0).toUint128();
         }
         BalanceDelta delta = _swap(params.poolKey, params.zeroForOne, int256(uint256(amountOut)), params.hookData);
-        // exact output is all-or-nothing: a pool can deliver less than requested if it runs out of
-        // liquidity before the price limit. Reverting on a shortfall keeps "exact output" exact;
-        // over-delivery (possible only via hook pools) is allowed.
+        // 精确输出是“全有或全无”的：如果池在到达价格限制之前流动性耗尽，
+        // 实际交付的数量可能少于请求数量。数量不足时回滚（revert）可确保“精确输出”名副其实；
+        // 允许超额交付（仅可能通过带 hook 的池发生）。
         uint128 amountOutActual = _swapOutput(delta, params.zeroForOne);
         if (amountOutActual < amountOut) revert V4ExactOutputUnfilled(amountOut, amountOutActual);
         uint128 amountIn = _swapInput(delta, params.zeroForOne);
@@ -157,7 +157,7 @@ abstract contract V4Router is IV4Router, BaseActionsRouter, DeltaResolver {
 
     function _swapExactOutput(IV4Router.ExactOutputParams calldata params) private {
         unchecked {
-            // Caching for gas savings
+            // 缓存变量以节省 gas
             uint256 pathLength = params.path.length;
             uint128 amountIn;
             uint128 amountOut = params.amountOut;
@@ -174,12 +174,12 @@ abstract contract V4Router is IV4Router, BaseActionsRouter, DeltaResolver {
             for (uint256 i = pathLength; i > 0; i--) {
                 pathKey = params.path[i - 1];
                 (PoolKey memory poolKey, bool oneForZero) = pathKey.getPoolAndSwapDirection(currencyOut);
-                // The output delta will always be positive, except for when interacting with certain hook pools
+                // 输出 delta 总是为正，除非与某些带 hook 的池交互
                 BalanceDelta delta = _swap(poolKey, !oneForZero, int256(uint256(amountOut)), pathKey.hookData);
                 uint128 amountOutActual = _swapOutput(delta, !oneForZero);
-                // Every hop must fill. PoolManager nets one delta per currency across the whole unlock,
-                // so an intermediate shortfall can be absorbed by same-currency credit and settle
-                // silently rather than reverting.
+                // 每一跳都必须完全成交。PoolManager 在整个解锁周期内对每种代币只记录一个净 delta，
+                // 因此中间跳的数量不足可能被同一代币的贷记（credit）抵消，从而被静默结算，
+                // 而不会回滚（revert）。
                 if (amountOutActual < amountOut) {
                     revert V4ExactOutputUnfilled(amountOut, amountOutActual);
                 }
@@ -197,9 +197,9 @@ abstract contract V4Router is IV4Router, BaseActionsRouter, DeltaResolver {
         }
     }
 
-    /// @notice Validates a pool before swapping through it
-    /// @dev No-op by default. Called once per swap, i.e. for every hop of a multi-hop route.
-    ///      Inheriting routers override this to reject pools they must not trade in.
+    /// @notice 在通过某个池进行兑换（swap）之前对其进行校验
+    /// @dev 默认不执行任何操作。每次兑换调用一次，即多跳路由中的每一跳都会调用。
+    ///      继承的路由器可重写此函数，以拒绝其不得交易的池。
     function _validatePoolKey(PoolKey memory poolKey) internal view virtual {}
 
     function _swap(PoolKey memory poolKey, bool zeroForOne, int256 amountSpecified, bytes calldata hookData)
@@ -208,7 +208,7 @@ abstract contract V4Router is IV4Router, BaseActionsRouter, DeltaResolver {
     {
         _validatePoolKey(poolKey);
 
-        // for protection of exactOut swaps, sqrtPriceLimit is not exposed as a feature in this contract
+        // 为保护 exactOut 兑换，本合约不对外提供 sqrtPriceLimit 功能
         delta = poolManager.swap(
             poolKey,
             SwapParams(
@@ -218,15 +218,15 @@ abstract contract V4Router is IV4Router, BaseActionsRouter, DeltaResolver {
         );
     }
 
-    /// @notice The positive input amount a swap consumed, derived from its balance delta.
-    /// @dev The spent currency's delta is negative (owed to the pool), so negate it to a positive amount.
+    /// @notice 一次兑换所消耗的正输入数量，由其余额 delta 推导得出。
+    /// @dev 被花费代币的 delta 为负（欠池的），因此取反得到正数量。
     function _swapInput(BalanceDelta delta, bool zeroForOne) private pure returns (uint128) {
         return (uint256(-int256(zeroForOne ? delta.amount0() : delta.amount1()))).toUint128();
     }
 
-    /// @notice The positive output amount a swap produced, derived from its balance delta. For an
-    ///         exact-output swap this is the REALIZED output, which can be less than the requested
-    ///         amount when the pool lacks the liquidity to fill it before the price limit.
+    /// @notice 一次兑换所产出的正输出数量，由其余额 delta 推导得出。对于
+    ///         精确输出兑换，这是“实际实现”（REALIZED）的输出数量；当池在到达价格限制之前
+    ///         缺乏足够流动性完成成交时，该值可能小于请求的数量。
     function _swapOutput(BalanceDelta delta, bool zeroForOne) private pure returns (uint128) {
         return (zeroForOne ? delta.amount1() : delta.amount0()).toUint128();
     }

@@ -38,7 +38,7 @@ contract PermissionsAdapterFactory is IPermissionsAdapterFactory {
         if (verifiedPermissionsAdapterOf[permissionsAdapter] != address(0)) {
             revert PermissionsAdapterAlreadyVerified(permissionsAdapter);
         }
-        // this requires that the verifier has some control or ownership of the permissioned token
+        // 这要求验证者对许可代币拥有一定的控制权或所有权
         if (permissionedToken.balanceOf(permissionsAdapter) == 0) {
             revert PermissionsAdapterNotVerified(permissionsAdapter);
         }

@@ -5,36 +5,36 @@ import "./IPositionManager.sol";
 import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
 
 /// @title IPositionDescriptor
-/// @notice Interface for the PositionDescriptor contract
+/// @notice PositionDescriptor 合约的接口
 interface IPositionDescriptor {
     error InvalidTokenId(uint256 tokenId);
 
-    /// @notice Produces the URI describing a particular token ID
-    /// @dev Note this URI may be a data: URI with the JSON contents directly inlined
-    /// @param positionManager The position manager for which to describe the token
-    /// @param tokenId The ID of the token for which to produce a description, which may not be valid
-    /// @return The URI of the ERC721-compliant metadata
+    /// @notice 生成描述指定 token ID 的 URI
+    /// @dev 注意：该 URI 可能是直接内联了 JSON 内容的 data: URI
+    /// @param positionManager 待描述代币所属的 PositionManager
+    /// @param tokenId 要生成描述的代币 ID，该 ID 可能无效
+    /// @return 符合 ERC721 标准的元数据 URI
     function tokenURI(IPositionManager positionManager, uint256 tokenId) external view returns (string memory);
 
-    /// @notice Returns true if currency0 has higher priority than currency1
-    /// @param currency0 The first currency address
-    /// @param currency1 The second currency address
-    /// @return True if currency0 has higher priority than currency1
+    /// @notice 若 currency0 的优先级高于 currency1，则返回 true
+    /// @param currency0 第一个代币地址
+    /// @param currency1 第二个代币地址
+    /// @return 若 currency0 的优先级高于 currency1，则为 true
     function flipRatio(address currency0, address currency1) external view returns (bool);
 
-    /// @notice Returns the priority of a currency.
-    /// For certain currencies on mainnet, the smaller the currency, the higher the priority
-    /// And those with the higher priority values (more positive values) will be in the numerator of the price ratio
-    /// @param currency The currency address
-    /// @return The priority of the currency
+    /// @notice 返回某个代币的优先级。
+    /// 对于主网上的某些代币，币值越小，优先级越高
+    /// 而优先级值越高（正值越大）的代币，将位于价格比率的分子位置
+    /// @param currency 代币地址
+    /// @return 该代币的优先级
     function currencyRatioPriority(address currency) external view returns (int256);
 
-    /// @return The wrapped native token for this descriptor
+    /// @return 该描述器对应的包装原生代币（wrapped native token）
     function wrappedNative() external view returns (address);
 
-    /// @return The native currency label for this descriptor
+    /// @return 该描述器对应的原生代币标签
     function nativeCurrencyLabel() external view returns (string memory);
 
-    /// @return The pool manager for this descriptor
+    /// @return 该描述器对应的 PoolManager
     function poolManager() external view returns (IPoolManager);
 }

@@ -36,8 +36,8 @@ contract MockHookStats is IHookStats {
         return MODE == Mode.WRONG_HOOK ? address(0xdead) : REPORTED_HOOK;
     }
 
-    /// @notice Consumes nearly the entire forwarded stipend before answering, to exercise the caller's
-    ///         worst-case gas accounting with responses that are still fully valid
+    /// @notice 在应答前消耗掉几乎全部转发过来的 gas 额度，以便在响应仍完全有效的情况下，
+    ///         测试调用方在最坏情况下的 gas 计算
     function _burnMostForwardedGas() private view {
         while (gasleft() > 30_000) {}
     }

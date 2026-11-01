@@ -96,7 +96,7 @@ contract PositionDescriptorTest is Test, PosmTestSetup {
 
     function test_flipRatio_succeeds() public {
         vm.chainId(1);
-        // bc price = token1/token0
+        // 因为 price = token1/token0
         assertTrue(proxyAsImplementation.flipRatio(USDC, WETH9));
         assertFalse(proxyAsImplementation.flipRatio(DAI, USDC));
         assertFalse(proxyAsImplementation.flipRatio(WBTC, WETH9));
@@ -123,30 +123,30 @@ contract PositionDescriptorTest is Test, PosmTestSetup {
             PositionConfig memory config = PositionConfig({poolKey: key, tickLower: tickLower, tickUpper: tickUpper});
             mint(config, liquidityToAdd, ActionConstants.MSG_SENDER, ZERO_BYTES);
 
-            // The prefix length is calculated by converting the string to bytes and finding its length
+            // 前缀长度的计算方式：将字符串转换为 bytes 并取其长度
             uint256 prefixLength = bytes("data:application/json;base64,").length;
 
             string memory uri = proxyAsImplementation.tokenURI(lpm, tokenId);
-            // Convert the uri to bytes
+            // 将 uri 转换为 bytes
             bytes memory uriBytes = bytes(uri);
 
-            // Slice the uri to get only the base64-encoded part
+            // 截取 uri，仅保留 base64 编码的部分
             bytes memory base64Part = new bytes(uriBytes.length - prefixLength);
 
             for (uint256 i = 0; i < base64Part.length; i++) {
                 base64Part[i] = uriBytes[i + prefixLength];
             }
 
-            // Decode the base64-encoded part
+            // 解码 base64 编码的部分
             bytes memory decoded = Base64.decode(string(base64Part));
             string memory json = string(decoded);
 
-            // decode json
+            // 解析 json
             bytes memory data = vm.parseJson(json);
             token = abi.decode(data, (Token));
         }
 
-        // quote is currency1, base is currency0
+        // 报价币（quote）为 currency1，基础币（base）为 currency0
         assertFalse(proxyAsImplementation.flipRatio(Currency.unwrap(key.currency0), Currency.unwrap(key.currency1)));
 
         string memory symbol0 = SafeCurrencyMetadata.currencySymbol(Currency.unwrap(currency0), nativeCurrencyLabel);
@@ -242,30 +242,30 @@ contract PositionDescriptorTest is Test, PosmTestSetup {
             PositionConfig memory config =
                 PositionConfig({poolKey: nativeKey, tickLower: tickLower, tickUpper: tickUpper});
             mintWithNative(SQRT_PRICE_1_1, config, liquidityToAdd, ActionConstants.MSG_SENDER, ZERO_BYTES);
-            // The prefix length is calculated by converting the string to bytes and finding its length
+            // 前缀长度的计算方式：将字符串转换为 bytes 并取其长度
             uint256 prefixLength = bytes("data:application/json;base64,").length;
 
             string memory uri = proxyAsImplementation.tokenURI(lpm, tokenId);
-            // Convert the uri to bytes
+            // 将 uri 转换为 bytes
             bytes memory uriBytes = bytes(uri);
 
-            // Slice the uri to get only the base64-encoded part
+            // 截取 uri，仅保留 base64 编码的部分
             bytes memory base64Part = new bytes(uriBytes.length - prefixLength);
 
             for (uint256 i = 0; i < base64Part.length; i++) {
                 base64Part[i] = uriBytes[i + prefixLength];
             }
 
-            // Decode the base64-encoded part
+            // 解码 base64 编码的部分
             bytes memory decoded = Base64.decode(string(base64Part));
             string memory json = string(decoded);
 
-            // decode json
+            // 解析 json
             bytes memory data = vm.parseJson(json);
             token = abi.decode(data, (Token));
         }
 
-        // quote is currency1, base is currency0
+        // 报价币（quote）为 currency1，基础币（base）为 currency0
         assertFalse(
             proxyAsImplementation.flipRatio(Currency.unwrap(nativeKey.currency0), Currency.unwrap(nativeKey.currency1))
         );
@@ -371,19 +371,19 @@ contract PositionDescriptorTest is Test, PosmTestSetup {
         proxyAsImplementation.tokenURI(lpm, tokenId + 1);
     }
 
-    // Helper functions for testing purposes
+    // 测试用的辅助函数
     function toHexString(address account) internal pure returns (string memory) {
         return toHexString(uint256(uint160(account)), 20);
     }
 
-    // different from AddressStringUtil.toHexString. this one is all lowercase hex and includes the 0x prefix
+    // 与 AddressStringUtil.toHexString 不同：此函数输出全小写的十六进制，并包含 0x 前缀
     function toHexString(uint256 value, uint256 length) internal pure returns (string memory) {
         bytes memory buffer = new bytes(2 * length + 2);
         buffer[0] = "0";
         buffer[1] = "x";
         for (uint256 i = 2 * length + 1; i > 1; --i) {
             uint8 digit = uint8(value & 0xf);
-            buffer[i] = digit < 10 ? bytes1(digit + 48) : bytes1(digit + 87); // Lowercase hex (0x61 is 'a' in ASCII)
+            buffer[i] = digit < 10 ? bytes1(digit + 48) : bytes1(digit + 87); // 小写十六进制（ASCII 中 0x61 为 'a'）
             value >>= 4;
         }
         require(value == 0, "Hex length insufficient");

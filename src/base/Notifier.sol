@@ -7,7 +7,7 @@ import {CustomRevert} from "@uniswap/v4-core/src/libraries/CustomRevert.sol";
 import {BalanceDelta} from "@uniswap/v4-core/src/types/BalanceDelta.sol";
 import {PositionInfo} from "../libraries/PositionInfoLibrary.sol";
 
-/// @notice Notifier is used to opt in to sending updates to external contracts about position modifications or transfers
+/// @notice Notifier 用于选择启用：在头寸被修改或转移时，向外部合约发送更新通知
 abstract contract Notifier is INotifier {
     using CustomRevert for *;
 
@@ -23,13 +23,13 @@ abstract contract Notifier is INotifier {
         unsubscribeGasLimit = _unsubscribeGasLimit;
     }
 
-    /// @notice Only allow callers that are approved as spenders or operators of the tokenId
-    /// @dev to be implemented by the parent contract (PositionManager)
-    /// @param caller the address of the caller
-    /// @param tokenId the tokenId of the position
+    /// @notice 仅允许已被授权为该 tokenId 的被授权者或操作者的调用者
+    /// @dev 由父合约（PositionManager）实现
+    /// @param caller 调用者地址
+    /// @param tokenId 头寸的 tokenId
     modifier onlyIfApproved(address caller, uint256 tokenId) virtual;
 
-    /// @notice Enforces that the PoolManager is locked.
+    /// @notice 强制要求 PoolManager 处于锁定状态。
     modifier onlyIfPoolManagerLocked() virtual;
 
     function _setUnsubscribed(uint256 tokenId) internal virtual;
@@ -73,9 +73,9 @@ abstract contract Notifier is INotifier {
         delete subscriber[tokenId];
 
         if (address(_subscriber).code.length > 0) {
-            // require that the remaining gas is sufficient to notify the subscriber
-            // otherwise, users can select a gas limit where .notifyUnsubscribe hits OutOfGas yet the
-            // transaction/unsubscription can still succeed
+            // 要求剩余 gas 足以通知订阅者
+            // 否则，用户可以选择一个 gas 上限，使 .notifyUnsubscribe 发生 OutOfGas，但
+            // 交易/取消订阅仍然能够成功
             if (gasleft() < unsubscribeGasLimit) GasLimitTooLow.selector.revertWith();
             try _subscriber.notifyUnsubscribe{gas: unsubscribeGasLimit}(tokenId) {} catch {}
         }
@@ -83,7 +83,7 @@ abstract contract Notifier is INotifier {
         emit Unsubscription(tokenId, address(_subscriber));
     }
 
-    /// @dev note this function also deletes the subscriber address from the mapping
+    /// @dev 注意：此函数还会从 mapping 中删除订阅者地址
     function _removeSubscriberAndNotifyBurn(
         uint256 tokenId,
         address owner,
@@ -93,7 +93,7 @@ abstract contract Notifier is INotifier {
     ) internal {
         address _subscriber = address(subscriber[tokenId]);
 
-        // remove the subscriber
+        // 移除订阅者
         delete subscriber[tokenId];
 
         bool success =

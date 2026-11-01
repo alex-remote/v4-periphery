@@ -5,16 +5,16 @@ import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
 import {FixedPoint96} from "@uniswap/v4-core/src/libraries/FixedPoint96.sol";
 import {SafeCast} from "@uniswap/v4-core/src/libraries/SafeCast.sol";
 
-/// @notice Provides functions for computing liquidity amounts from token amounts and prices
+/// @notice 提供根据代币数量和价格计算流动性数量的函数
 library LiquidityAmounts {
     using SafeCast for uint256;
 
-    /// @notice Computes the amount of liquidity received for a given amount of token0 and price range
-    /// @dev Calculates amount0 * (sqrt(upper) * sqrt(lower)) / (sqrt(upper) - sqrt(lower))
-    /// @param sqrtPriceAX96 A sqrt price representing the first tick boundary
-    /// @param sqrtPriceBX96 A sqrt price representing the second tick boundary
-    /// @param amount0 The amount0 being sent in
-    /// @return liquidity The amount of returned liquidity
+    /// @notice 计算给定 token0 数量和价格区间可获得的流动性数量
+    /// @dev 计算 amount0 * (sqrt(upper) * sqrt(lower)) / (sqrt(upper) - sqrt(lower))
+    /// @param sqrtPriceAX96 表示第一个 tick 边界的 sqrt 价格
+    /// @param sqrtPriceBX96 表示第二个 tick 边界的 sqrt 价格
+    /// @param amount0 转入的 amount0
+    /// @return liquidity 返回的流动性数量
     function getLiquidityForAmount0(uint160 sqrtPriceAX96, uint160 sqrtPriceBX96, uint256 amount0)
         internal
         pure
@@ -27,12 +27,12 @@ library LiquidityAmounts {
         }
     }
 
-    /// @notice Computes the amount of liquidity received for a given amount of token1 and price range
-    /// @dev Calculates amount1 / (sqrt(upper) - sqrt(lower)).
-    /// @param sqrtPriceAX96 A sqrt price representing the first tick boundary
-    /// @param sqrtPriceBX96 A sqrt price representing the second tick boundary
-    /// @param amount1 The amount1 being sent in
-    /// @return liquidity The amount of returned liquidity
+    /// @notice 计算给定 token1 数量和价格区间可获得的流动性数量
+    /// @dev 计算 amount1 / (sqrt(upper) - sqrt(lower))。
+    /// @param sqrtPriceAX96 表示第一个 tick 边界的 sqrt 价格
+    /// @param sqrtPriceBX96 表示第二个 tick 边界的 sqrt 价格
+    /// @param amount1 转入的 amount1
+    /// @return liquidity 返回的流动性数量
     function getLiquidityForAmount1(uint160 sqrtPriceAX96, uint160 sqrtPriceBX96, uint256 amount1)
         internal
         pure
@@ -44,14 +44,14 @@ library LiquidityAmounts {
         }
     }
 
-    /// @notice Computes the maximum amount of liquidity received for a given amount of token0, token1, the current
-    /// pool prices and the prices at the tick boundaries
-    /// @param sqrtPriceX96 A sqrt price representing the current pool prices
-    /// @param sqrtPriceAX96 A sqrt price representing the first tick boundary
-    /// @param sqrtPriceBX96 A sqrt price representing the second tick boundary
-    /// @param amount0 The amount of token0 being sent in
-    /// @param amount1 The amount of token1 being sent in
-    /// @return liquidity The maximum amount of liquidity received
+    /// @notice 根据给定的 token0 数量、token1 数量、当前
+    /// 池价格以及各 tick 边界处的价格，计算可获得的最大流动性数量
+    /// @param sqrtPriceX96 表示当前池价格的 sqrt 价格
+    /// @param sqrtPriceAX96 表示第一个 tick 边界的 sqrt 价格
+    /// @param sqrtPriceBX96 表示第二个 tick 边界的 sqrt 价格
+    /// @param amount0 转入的 token0 数量
+    /// @param amount1 转入的 token1 数量
+    /// @return liquidity 可获得的最大流动性数量
     function getLiquidityForAmounts(
         uint160 sqrtPriceX96,
         uint160 sqrtPriceAX96,

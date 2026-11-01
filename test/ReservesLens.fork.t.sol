@@ -14,8 +14,8 @@ import {IReservesLens} from "../src/interfaces/IReservesLens.sol";
 import {IStateView} from "../src/interfaces/IStateView.sol";
 import {ReservesLens} from "../src/lens/ReservesLens.sol";
 
-/// @notice Pinned real-pool comparisons against the independently deployed StateView read path.
-/// @dev Set BASE_RPC_URL and/or ROBINHOOD_RPC_URL to run.
+/// @notice 在固定区块上针对真实池，与独立部署的 StateView 读取路径进行比对。
+/// @dev 设置 BASE_RPC_URL 和/或 ROBINHOOD_RPC_URL 后即可运行。
 contract ReservesLensForkTest is Test {
     using PoolIdLibrary for PoolKey;
 
@@ -75,10 +75,10 @@ contract ReservesLensForkTest is Test {
         emit log_named_uint("single-shot gas", gasUsed);
     }
 
-    /// @dev Deliberately shares the interval math and core libraries with the lens: this reference validates the
-    ///      raw-extsload read path against the canonical StateView ABI on real pools. Algorithmic independence is
-    ///      provided by test/shared/ReservesReference.sol (position aggregation, no tick walking) and toolchain
-    ///      independence by scripts/reserves-lens-reference.ts.
+    /// @dev 有意与 lens 共用区间计算和核心库：该参考实现用于在真实池上以标准 StateView ABI 为基准，
+    ///      校验基于原始 extsload 的读取路径。算法层面的独立性由
+    ///      test/shared/ReservesReference.sol 提供（按头寸聚合，不遍历 tick），工具链层面的
+    ///      独立性则由 scripts/reserves-lens-reference.ts 提供。
     function _stateViewReference(IStateView stateView, PoolKey memory poolKey)
         private
         view

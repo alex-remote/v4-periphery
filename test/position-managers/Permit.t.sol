@@ -43,7 +43,7 @@ contract PermitTest is Test, PosmTestSetup {
 
         (key, poolId) = initPool(currency0, currency1, IHooks(address(0)), 3000, SQRT_PRICE_1_1);
 
-        // Requires currency0 and currency1 to be set in base Deployers contract.
+        // 要求在基础 Deployers 合约中已设置 currency0 和 currency1。
         deployAndApprovePosm(manager);
 
         seedBalance(alice);
@@ -52,7 +52,7 @@ contract PermitTest is Test, PosmTestSetup {
         approvePosmFor(alice);
         approvePosmFor(bob);
 
-        // define a reusable range
+        // 定义一个可复用的区间
         config = PositionConfig({poolKey: key, tickLower: -300, tickUpper: 300});
     }
 
@@ -62,7 +62,7 @@ contract PermitTest is Test, PosmTestSetup {
             keccak256(
                 abi.encode(
                     keccak256("EIP712Domain(string name,uint256 chainId,address verifyingContract)"),
-                    keccak256("Uniswap v4 Positions NFT"), // storage is private on EIP712.sol so we need to hardcode these
+                    keccak256("Uniswap v4 Positions NFT"), // EIP712.sol 中这些存储是 private 的，所以需要硬编码
                     block.chainid,
                     address(lpm)
                 )
@@ -76,16 +76,16 @@ contract PermitTest is Test, PosmTestSetup {
         vm.prank(alice);
         mint(config, liquidityAlice, alice, ZERO_BYTES);
 
-        // alice gives bob permissions
+        // alice 授予 bob 权限
         permit(alicePK, tokenIdAlice, bob, 1);
 
-        // bob can increase liquidity on alice's token
+        // bob 可以为 alice 的 token 增加流动性
         uint256 liquidityToAdd = 0.4444e18;
         vm.startPrank(bob);
         increaseLiquidity(tokenIdAlice, config, liquidityToAdd, ZERO_BYTES);
         vm.stopPrank();
 
-        // alice's position increased liquidity
+        // alice 的头寸流动性已增加
         uint256 liquidity = lpm.getPositionLiquidity(tokenIdAlice);
 
         assertEq(liquidity, liquidityAlice + liquidityToAdd);
@@ -97,16 +97,16 @@ contract PermitTest is Test, PosmTestSetup {
         mint(config, liquidityAlice, alice, ZERO_BYTES);
         uint256 tokenIdAlice = lpm.nextTokenId() - 1;
 
-        // alice gives bob operator permissions
+        // alice 授予 bob 操作者权限
         permit(alicePK, tokenIdAlice, bob, 1);
 
-        // bob can decrease liquidity on alice's token
+        // bob 可以为 alice 的 token 减少流动性
         uint256 liquidityToRemove = 0.4444e18;
         vm.startPrank(bob);
         decreaseLiquidity(tokenIdAlice, config, liquidityToRemove, ZERO_BYTES);
         vm.stopPrank();
 
-        // alice's position decreased liquidity
+        // alice 的头寸流动性已减少
         uint256 liquidity = lpm.getPositionLiquidity(tokenIdAlice);
 
         assertEq(liquidity, liquidityAlice - liquidityToRemove);
@@ -118,17 +118,17 @@ contract PermitTest is Test, PosmTestSetup {
         mint(config, liquidityAlice, alice, ZERO_BYTES);
         uint256 tokenIdAlice = lpm.nextTokenId() - 1;
 
-        // donate to create fee revenue
+        // 捐赠（donate）以产生手续费收入
         uint256 currency0Revenue = 0.4444e18;
         uint256 currency1Revenue = 0.2222e18;
         donateRouter.donate(key, currency0Revenue, currency1Revenue, ZERO_BYTES);
 
-        // alice gives bob operator permissions
+        // alice 授予 bob 操作者权限
         permit(alicePK, tokenIdAlice, bob, 1);
 
-        // TODO: test collection to recipient with a permissioned operator
+        // TODO: 测试由获得许可的操作者收取到接收者
 
-        // bob collects fees to himself
+        // bob 将手续费收取给自己
         address recipient = bob;
         uint256 balance0BobBefore = currency0.balanceOf(bob);
         uint256 balance1BobBefore = currency1.balanceOf(bob);
@@ -140,16 +140,16 @@ contract PermitTest is Test, PosmTestSetup {
         assertApproxEqAbs(currency1.balanceOf(recipient), balance1BobBefore + currency1Revenue, 1 wei);
     }
 
-    // --- Fail Scenarios --- //
+    // --- 失败场景 --- //
     function test_permit_notOwnerRevert() public {
-        // calling permit on a token that is not owned will fail
+        // 对非自己所有的 token 调用 permit 会失败
 
         uint256 liquidityAlice = 1e18;
         vm.prank(alice);
         mint(config, liquidityAlice, alice, ZERO_BYTES);
         uint256 tokenIdAlice = lpm.nextTokenId() - 1;
 
-        // bob cannot permit himself on alice's token
+        // bob 不能为自己签发 alice 的 token 的许可（permit）
         uint256 nonce = 1;
         bytes32 digest = getDigest(bob, tokenIdAlice, nonce, block.timestamp + 1);
 
@@ -162,15 +162,15 @@ contract PermitTest is Test, PosmTestSetup {
         vm.stopPrank();
     }
 
-    /// @dev unapproved callers CANNOT increase others' positions
+    /// @dev 未经授权的调用者不能增加他人的头寸
     function test_noPermit_increaseLiquidityRevert() public {
-        // increase fails if the owner did not permit
+        // 若所有者未许可（permit），增加流动性会失败
         uint256 liquidityAlice = 1e18;
         vm.prank(alice);
         mint(config, liquidityAlice, alice, ZERO_BYTES);
         uint256 tokenIdAlice = lpm.nextTokenId() - 1;
 
-        // bob cannot increase liquidity on alice's token
+        // bob 不能为 alice 的 token 增加流动性
         uint256 liquidityToAdd = 0.4444e18;
         bytes memory decrease = getIncreaseEncoded(tokenIdAlice, config, liquidityToAdd, ZERO_BYTES);
         vm.startPrank(bob);
@@ -180,13 +180,13 @@ contract PermitTest is Test, PosmTestSetup {
     }
 
     function test_noPermit_decreaseLiquidityRevert() public {
-        // decreaseLiquidity fails if the owner did not permit
+        // 若所有者未许可（permit），decreaseLiquidity 会失败
         uint256 liquidityAlice = 1e18;
         vm.prank(alice);
         mint(config, liquidityAlice, alice, ZERO_BYTES);
         uint256 tokenIdAlice = lpm.nextTokenId() - 1;
 
-        // bob cannot decrease liquidity on alice's token
+        // bob 不能为 alice 的 token 减少流动性
         uint256 liquidityToRemove = 0.4444e18;
         bytes memory decrease = getDecreaseEncoded(tokenIdAlice, config, liquidityToRemove, ZERO_BYTES);
         vm.startPrank(bob);
@@ -196,18 +196,18 @@ contract PermitTest is Test, PosmTestSetup {
     }
 
     function test_noPermit_collectRevert() public {
-        // collect fails if the owner did not permit
+        // 若所有者未许可（permit），collect 会失败
         uint256 liquidityAlice = 1e18;
         vm.prank(alice);
         mint(config, liquidityAlice, alice, ZERO_BYTES);
         uint256 tokenIdAlice = lpm.nextTokenId() - 1;
 
-        // donate to create fee revenue
+        // 捐赠（donate）以产生手续费收入
         uint256 currency0Revenue = 0.4444e18;
         uint256 currency1Revenue = 0.2222e18;
         donateRouter.donate(key, currency0Revenue, currency1Revenue, ZERO_BYTES);
 
-        // bob cannot collect fees
+        // bob 不能收取手续费
         bytes memory collect = getCollectEncoded(tokenIdAlice, config, ZERO_BYTES);
         vm.startPrank(bob);
         vm.expectRevert(abi.encodeWithSelector(IPositionManager.NotApproved.selector, address(bob)));
@@ -215,18 +215,18 @@ contract PermitTest is Test, PosmTestSetup {
         vm.stopPrank();
     }
 
-    /// @notice revoking a nonce prevents it from being used in permit()
+    /// @notice 撤销某个 nonce 会使其无法再在 permit() 中使用
     function test_fuzz_noPermit_revokeRevert(uint256 nonce) public {
         uint256 liquidityAlice = 1e18;
         vm.prank(alice);
         mint(config, liquidityAlice, alice, ZERO_BYTES);
         uint256 tokenIdAlice = lpm.nextTokenId() - 1;
 
-        // alice revokes the nonce
+        // alice 撤销该 nonce
         vm.prank(alice);
         lpm.revokeNonce(nonce);
 
-        // alice gives bob spender permissions
+        // alice 授予 bob 被授权者权限
         bytes32 digest = getDigest(bob, tokenIdAlice, nonce, block.timestamp + 1);
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(alicePK, digest);
@@ -236,7 +236,7 @@ contract PermitTest is Test, PosmTestSetup {
         lpm.permit(bob, tokenIdAlice, block.timestamp + 1, nonce, signature);
     }
 
-    // Bob can use alice's signature to permit & decrease liquidity
+    // Bob 可以使用 alice 的签名进行许可（permit）并减少流动性
     function test_permit_operatorSelfPermit() public {
         uint256 liquidityAlice = 1e18;
         vm.startPrank(alice);
@@ -244,17 +244,17 @@ contract PermitTest is Test, PosmTestSetup {
         vm.stopPrank();
         uint256 tokenId = lpm.nextTokenId() - 1;
 
-        // Alice gives Bob permission to operate on her liquidity
+        // Alice 授予 Bob 操作其流动性的权限
         uint256 nonce = 1;
         bytes32 digest = getDigest(bob, tokenId, nonce, block.timestamp + 1);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(alicePK, digest);
         bytes memory signature = abi.encodePacked(r, s, v);
 
-        // bob gives himself permission
+        // bob 给自己授予权限
         vm.prank(bob);
         lpm.permit(bob, tokenId, block.timestamp + 1, nonce, signature);
 
-        // bob can decrease liquidity on alice's token
+        // bob 可以为 alice 的 token 减少流动性
         uint256 liquidityToRemove = 0.4444e18;
         vm.startPrank(bob);
         decreaseLiquidity(tokenId, config, liquidityToRemove, ZERO_BYTES);
@@ -264,7 +264,7 @@ contract PermitTest is Test, PosmTestSetup {
         assertEq(liquidity, liquidityAlice - liquidityToRemove);
     }
 
-    // Charlie uses Alice's signature to give permission to Bob
+    // Charlie 使用 Alice 的签名为 Bob 授予权限
     function test_permit_thirdParty() public {
         uint256 liquidityAlice = 1e18;
         vm.startPrank(alice);
@@ -272,18 +272,18 @@ contract PermitTest is Test, PosmTestSetup {
         vm.stopPrank();
         uint256 tokenId = lpm.nextTokenId() - 1;
 
-        // Alice gives Bob permission to operate on her liquidity
+        // Alice 授予 Bob 操作其流动性的权限
         uint256 nonce = 1;
         bytes32 digest = getDigest(bob, tokenId, nonce, block.timestamp + 1);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(alicePK, digest);
         bytes memory signature = abi.encodePacked(r, s, v);
 
-        // charlie gives Bob permission to operate on alice's token
+        // charlie 授予 Bob 操作 alice 的 token 的权限
         address charlie = makeAddr("CHARLIE");
         vm.prank(charlie);
         lpm.permit(bob, tokenId, block.timestamp + 1, nonce, signature);
 
-        // bob can decrease liquidity on alice's token
+        // bob 可以为 alice 的 token 减少流动性
         uint256 liquidityToRemove = 0.4444e18;
         vm.startPrank(bob);
         decreaseLiquidity(tokenId, config, liquidityToRemove, ZERO_BYTES);

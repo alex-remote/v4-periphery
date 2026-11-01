@@ -41,23 +41,23 @@ contract ExecuteTest is Test, PosmTestSetup, LiquidityFuzzers {
         deployFreshManagerAndRouters();
         deployMintAndApprove2Currencies();
 
-        // This is needed to receive return deltas from modifyLiquidity calls.
+        // 需要它来接收 modifyLiquidity 调用返回的 delta。
         deployPosmHookSavesDelta();
 
         (key, poolId) = initPool(currency0, currency1, IHooks(address(hook)), 3000, SQRT_PRICE_1_1);
 
-        // Requires currency0 and currency1 to be set in base Deployers contract.
+        // 要求 currency0 和 currency1 已在基础合约 Deployers 中设置好。
         deployAndApprovePosm(manager);
 
-        // Give tokens to Alice and Bob.
+        // 给 Alice 和 Bob 发放代币。
         seedBalance(alice);
         seedBalance(bob);
 
-        // Approve posm for Alice and bob.
+        // 为 Alice 和 Bob 授权 posm。
         approvePosmFor(alice);
         approvePosmFor(bob);
 
-        // define a reusable pool position
+        // 定义一个可复用的池头寸
         config = PositionConfig({poolKey: key, tickLower: -300, tickUpper: 300});
     }
 
@@ -134,12 +134,12 @@ contract ExecuteTest is Test, PosmTestSetup, LiquidityFuzzers {
         assertEq(liquidity, initialLiquidity + liquidityToAdd + liquidityToAdd2);
     }
 
-    // this case doesnt make sense in real world usage, so it doesnt have a cool name. but its a good test case
+    // 这种情况在实际使用中没有意义，所以没有起一个很酷的名字，但它是一个很好的测试用例
     function test_fuzz_execute_mintAndIncrease(uint256 initialLiquidity, uint256 liquidityToAdd) public {
         initialLiquidity = bound(initialLiquidity, 1e18, 1000e18);
         liquidityToAdd = bound(liquidityToAdd, 1e18, 1000e18);
 
-        uint256 tokenId = lpm.nextTokenId(); // assume that the .mint() produces tokenId=1, to be used in increaseLiquidity
+        uint256 tokenId = lpm.nextTokenId(); // 假设 .mint() 产生 tokenId=1，供 increaseLiquidity 使用
 
         Plan memory planner = Planner.init();
 
@@ -169,16 +169,16 @@ contract ExecuteTest is Test, PosmTestSetup, LiquidityFuzzers {
         assertEq(liquidity, initialLiquidity + liquidityToAdd);
     }
 
-    // rebalance: burn and mint
+    // rebalance（再平衡）：销毁并铸造
     function test_execute_rebalance_perfect() public {
         uint256 initialLiquidity = 100e18;
 
-        // mint a position on range [-300, 300]
+        // 在区间 [-300, 300] 上铸造一个头寸
         uint256 tokenId = lpm.nextTokenId();
         mint(config, initialLiquidity, ActionConstants.MSG_SENDER, ZERO_BYTES);
         BalanceDelta delta = getLastDelta();
 
-        // we'll burn and mint a new position on [-60, 60]; calculate the liquidity units for the new range
+        // 我们将销毁旧头寸并在 [-60, 60] 上铸造新头寸；计算新区间对应的流动性单位
         PositionConfig memory newConfig = PositionConfig({poolKey: config.poolKey, tickLower: -60, tickUpper: 60});
         uint128 newLiquidity = LiquidityAmounts.getLiquidityForAmounts(
             SQRT_PRICE_1_1,
@@ -191,7 +191,7 @@ contract ExecuteTest is Test, PosmTestSetup, LiquidityFuzzers {
         uint256 balance0Before = currency0.balanceOfSelf();
         uint256 balance1Before = currency1.balanceOfSelf();
 
-        hook.clearDeltas(); // clear the delta so that we can check the net delta for BURN & MINT
+        hook.clearDeltas(); // 清除 delta，以便检查 BURN & MINT 的净 delta
 
         Plan memory planner = Planner.init();
         planner.add(
@@ -220,54 +220,54 @@ contract ExecuteTest is Test, PosmTestSetup, LiquidityFuzzers {
             uint256 balance0After = currency0.balanceOfSelf();
             uint256 balance1After = currency1.balanceOfSelf();
 
-            // TODO: use clear so user does not pay 1 wei
+            // TODO: 使用 clear，使用户无需支付 1 wei
             assertEq(netDelta.amount0(), -1 wei);
             assertEq(netDelta.amount1(), -1 wei);
             assertApproxEqAbs(balance0Before - balance0After, 0, 1 wei);
             assertApproxEqAbs(balance1Before - balance1After, 0, 1 wei);
         }
 
-        // old position was burned
+        // 旧头寸已被销毁
         vm.expectRevert();
         IERC721(address(lpm)).ownerOf(tokenId);
 
         {
-            // old position has no liquidity
+            // 旧头寸没有流动性
             uint128 liquidity = lpm.getPositionLiquidity(tokenId);
             assertEq(liquidity, 0);
 
-            // new token was minted
+            // 新 token 已被铸造
             uint256 newTokenId = lpm.nextTokenId() - 1;
             assertEq(IERC721(address(lpm)).ownerOf(newTokenId), address(this));
 
-            // new token has expected liquidity
+            // 新 token 具有预期的流动性
 
             liquidity = lpm.getPositionLiquidity(newTokenId);
             assertEq(liquidity, newLiquidity);
         }
     }
 
-    // coalesce: burn and increase
+    // coalesce（合并）：销毁并增加流动性
     function test_execute_coalesce() public {}
-    // split: decrease and mint
+    // split（拆分）：减少流动性并铸造
     function test_execute_split() public {}
-    // shift: decrease and increase
+    // shift（平移）：减少并增加流动性
     function test_execute_shift() public {}
-    // shard: collect and mint
+    // shard（分片）：收取并铸造
     function test_execute_shard() public {}
-    // feed: collect and increase
+    // feed（注入）：收取并增加流动性
     function test_execute_feed() public {}
 
-    // transplant: burn and mint on different keys
+    // transplant（移植）：在不同的 key 上销毁并铸造
     function test_execute_transplant() public {}
-    // cross-coalesce: burn and increase on different keys
+    // cross-coalesce：在不同的 key 上销毁并增加流动性
     function test_execute_crossCoalesce() public {}
-    // cross-split: decrease and mint on different keys
+    // cross-split：在不同的 key 上减少流动性并铸造
     function test_execute_crossSplit() public {}
-    // cross-shift: decrease and increase on different keys
+    // cross-shift：在不同的 key 上减少并增加流动性
     function test_execute_crossShift() public {}
-    // cross-shard: collect and mint on different keys
+    // cross-shard：在不同的 key 上收取并铸造
     function test_execute_crossShard() public {}
-    // cross-feed: collect and increase on different keys
+    // cross-feed：在不同的 key 上收取并增加流动性
     function test_execute_crossFeed() public {}
 }

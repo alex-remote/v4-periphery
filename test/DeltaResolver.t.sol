@@ -22,19 +22,19 @@ contract DeltaResolverTest is Test, Deployers {
 
         resolver.executeTest(CurrencyLibrary.ADDRESS_ZERO, amount);
 
-        // check `pay` was not called
+        // 检查 `pay` 未被调用
         assertEq(resolver.payCallCount(), 0);
     }
 
     function test_settle_token_succeeds(uint256 amount) public {
         amount = bound(amount, 1, currency0.balanceOf(address(manager)));
 
-        // the tokens will be taken to this contract, so an approval is needed for the settle
+        // 代币会被提取到本合约，因此结算（settle）时需要授权
         ERC20(Currency.unwrap(currency0)).approve(address(resolver), type(uint256).max);
 
         resolver.executeTest(currency0, amount);
 
-        // check `pay` was called
+        // 检查 `pay` 已被调用
         assertEq(resolver.payCallCount(), 1);
     }
 }

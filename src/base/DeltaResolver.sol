@@ -7,34 +7,34 @@ import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
 import {ImmutableState} from "./ImmutableState.sol";
 import {ActionConstants} from "../libraries/ActionConstants.sol";
 
-/// @notice Abstract contract used to sync, send, and settle funds to the pool manager
-/// @dev Note that sync() is called before any erc-20 transfer in `settle`.
+/// @notice 用于向 PoolManager 同步、发送并结算资金的抽象合约
+/// @dev 注意：在 `settle` 中，任何 ERC-20 转账之前都会先调用 sync()。
 abstract contract DeltaResolver is ImmutableState {
     using TransientStateLibrary for IPoolManager;
 
-    /// @notice Emitted when unexpected negative delta is found.
+    /// @notice 当发现意外的负 delta 时抛出。
     error DeltaNotPositive(Currency currency);
-    /// @notice Emitted when unexpected positive delta is found.
+    /// @notice 当发现意外的正 delta 时抛出。
     error DeltaNotNegative(Currency currency);
-    /// @notice Emitted when the contract does not have enough balance to wrap or unwrap.
+    /// @notice 当合约余额不足以进行包装或解包时抛出。
     error InsufficientBalance();
 
-    /// @notice Take an amount of currency out of the PoolManager
-    /// @param currency Currency to take
-    /// @param recipient Address to receive the currency
-    /// @param amount Amount to take
-    /// @dev Returns early if the amount is 0
+    /// @notice 从 PoolManager 中提取一定数量的代币
+    /// @param currency 要提取的代币
+    /// @param recipient 接收代币的地址
+    /// @param amount 要提取的数量
+    /// @dev 若数量为 0 则提前返回
     function _take(Currency currency, address recipient, uint256 amount) internal virtual {
         if (amount == 0) return;
         poolManager.take(currency, recipient, amount);
     }
 
-    /// @notice Pay and settle a currency to the PoolManager
-    /// @dev The implementing contract must ensure that the `payer` is a secure address
-    /// @param currency Currency to settle
-    /// @param payer Address of the payer
-    /// @param amount Amount to send
-    /// @dev Returns early if the amount is 0
+    /// @notice 向 PoolManager 支付并结算某种代币
+    /// @dev 实现合约必须确保 `payer` 是安全的地址
+    /// @param currency 要结算的代币
+    /// @param payer 付款方地址
+    /// @param amount 要发送的数量
+    /// @dev 若数量为 0 则提前返回
     function _settle(Currency currency, address payer, uint256 amount) internal {
         if (amount == 0) return;
 
@@ -47,35 +47,35 @@ abstract contract DeltaResolver is ImmutableState {
         }
     }
 
-    /// @notice Abstract function for contracts to implement paying tokens to the poolManager
-    /// @dev The recipient of the payment should be the poolManager
-    /// @param token The token to settle. This is known not to be the native currency
-    /// @param payer The address who should pay tokens
-    /// @param amount The number of tokens to send
+    /// @notice 抽象函数，供合约实现向 poolManager 支付代币的逻辑
+    /// @dev 付款的接收者应为 poolManager
+    /// @param token 要结算的代币。已知它不是原生代币
+    /// @param payer 应支付代币的地址
+    /// @param amount 要发送的代币数量
     function _pay(Currency token, address payer, uint256 amount) internal virtual;
 
-    /// @notice Obtain the full amount owed by this contract (negative delta)
-    /// @param currency Currency to get the delta for
-    /// @return amount The amount owed by this contract as a uint256
+    /// @notice 获取本合约所欠的全部数量（负 delta）
+    /// @param currency 要查询 delta 的代币
+    /// @return amount 本合约所欠的数量，以 uint256 表示
     function _getFullDebt(Currency currency) internal view returns (uint256 amount) {
         int256 _amount = poolManager.currencyDelta(address(this), currency);
-        // If the amount is positive, it should be taken not settled.
+        // 如果数量为正，应当提取（take）而不是结算（settle）。
         if (_amount > 0) revert DeltaNotNegative(currency);
-        // Casting is safe due to limits on the total supply of a pool
+        // 由于池的总供应量存在上限，此类型转换是安全的
         amount = uint256(-_amount);
     }
 
-    /// @notice Obtain the full credit owed to this contract (positive delta)
-    /// @param currency Currency to get the delta for
-    /// @return amount The amount owed to this contract as a uint256
+    /// @notice 获取欠本合约的全部贷记数量（正 delta）
+    /// @param currency 要查询 delta 的代币
+    /// @return amount 欠本合约的数量，以 uint256 表示
     function _getFullCredit(Currency currency) internal view returns (uint256 amount) {
         int256 _amount = poolManager.currencyDelta(address(this), currency);
-        // If the amount is negative, it should be settled not taken.
+        // 如果数量为负，应当结算（settle）而不是提取（take）。
         if (_amount < 0) revert DeltaNotPositive(currency);
         amount = uint256(_amount);
     }
 
-    /// @notice Calculates the amount for a settle action
+    /// @notice 计算结算（settle）操作的数量
     function _mapSettleAmount(uint256 amount, Currency currency) internal view virtual returns (uint256) {
         if (amount == ActionConstants.CONTRACT_BALANCE) {
             return currency.balanceOfSelf();
@@ -86,7 +86,7 @@ abstract contract DeltaResolver is ImmutableState {
         }
     }
 
-    /// @notice Calculates the amount for a take action
+    /// @notice 计算提取（take）操作的数量
     function _mapTakeAmount(uint256 amount, Currency currency) internal view returns (uint256) {
         if (amount == ActionConstants.OPEN_DELTA) {
             return _getFullCredit(currency);
@@ -95,26 +95,26 @@ abstract contract DeltaResolver is ImmutableState {
         }
     }
 
-    /// @notice Calculates the sanitized amount before wrapping/unwrapping.
-    /// @param inputCurrency The currency, either native or wrapped native, that this contract holds
-    /// @param amount The amount to wrap or unwrap. Can be CONTRACT_BALANCE, OPEN_DELTA or a specific amount
-    /// @param outputCurrency The currency after the wrap/unwrap that the user may owe a balance in on the poolManager
+    /// @notice 在包装/解包之前计算经过规范化处理的数量。
+    /// @param inputCurrency 本合约持有的代币，可以是原生代币或包装后的原生代币
+    /// @param amount 要包装或解包的数量。可以是 CONTRACT_BALANCE、OPEN_DELTA 或具体数量
+    /// @param outputCurrency 包装/解包之后的代币，用户可能在 poolManager 上欠有该代币的余额
     function _mapWrapUnwrapAmount(Currency inputCurrency, uint256 amount, Currency outputCurrency)
         internal
         view
         returns (uint256)
     {
-        // if wrapping, the balance in this contract is in ETH
-        // if unwrapping, the balance in this contract is in WETH
+        // 若为包装，本合约中的余额为 ETH
+        // 若为解包，本合约中的余额为 WETH
         uint256 balance = inputCurrency.balanceOf(address(this));
         if (amount == ActionConstants.CONTRACT_BALANCE) {
-            // return early to avoid unnecessary balance check
+            // 提前返回，避免不必要的余额检查
             return balance;
         }
         if (amount == ActionConstants.OPEN_DELTA) {
-            // if wrapping, the open currency on the PoolManager is WETH.
-            // if unwrapping, the open currency on the PoolManager is ETH.
-            // note that we use the DEBT amount. Positive deltas can be taken and then wrapped.
+            // 若为包装，PoolManager 上未结清的代币为 WETH。
+            // 若为解包，PoolManager 上未结清的代币为 ETH。
+            // 注意这里使用的是债务（DEBT）数量。正的 delta 可以先提取再包装。
             amount = _getFullDebt(outputCurrency);
         }
         if (amount > balance) revert InsufficientBalance();

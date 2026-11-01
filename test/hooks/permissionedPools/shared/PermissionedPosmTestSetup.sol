@@ -34,7 +34,7 @@ struct BalanceInfo {
     uint256 balance1Manager;
 }
 
-/// @notice A shared test contract that wraps the v4-core deployers contract and exposes basic liquidity operations on posm.
+/// @notice 共享测试合约：封装 v4-core 的 deployers 合约，并对外提供 posm 上的基础流动性操作。
 contract PermissionedPosmTestSetup is Test, PermissionedDeployers, DeployPermit2, LiquidityOperations {
     uint256 private constant STARTING_USER_BALANCE = 10_000_000 ether;
     address public constant GOVERNANCE = address(0xABCD);
@@ -118,15 +118,15 @@ contract PermissionedPosmTestSetup is Test, PermissionedDeployers, DeployPermit2
     }
 
     function approvePosmCurrency(Currency currency) internal {
-        // Because POSM uses permit2, we must execute 2 permits/approvals.
-        // 1. First, the caller must approve permit2 on the token.
+        // 由于 POSM 使用 permit2，我们必须执行 2 次许可/授权。
+        // 1. 首先，调用者必须在代币上授权 permit2。
         IERC20(Currency.unwrap(currency)).approve(address(permit2), type(uint256).max);
-        // 2. Then, the caller must approve POSM as a spender of permit2.
+        // 2. 然后，调用者必须在 permit2 中将 POSM 授权为被授权者。
         permit2.approve(Currency.unwrap(currency), address(lpm), type(uint160).max, type(uint48).max);
     }
 
-    // Does the same approvals as approvePosm, but for a specific address.
-    /// @dev Should not be in a prank when calling this function
+    // 执行与 approvePosm 相同的授权，但针对指定地址。
+    /// @dev 调用此函数时不应处于 prank 状态
     function approvePosmFor(address addr) internal {
         vm.startPrank(addr);
         approvePosm();
@@ -163,7 +163,7 @@ contract PermissionedPosmTestSetup is Test, PermissionedDeployers, DeployPermit2
         assertEq(getPermissionedCurrency(key.currency1).balanceOf(address(lpm)), amount1ToTransfer);
     }
 
-    /// @dev This function is used to avoid stack-too-deep errors
+    /// @dev 此函数用于避免 stack-too-deep 错误
     function getBalanceInfoSelfAndManager(PoolKey memory key) internal view returns (BalanceInfo memory) {
         return BalanceInfo({
             balance0: getPermissionedCurrency(key.currency0).balanceOfSelf(),
@@ -173,7 +173,7 @@ contract PermissionedPosmTestSetup is Test, PermissionedDeployers, DeployPermit2
         });
     }
 
-    /// @dev This function is used to avoid stack-too-deep errors
+    /// @dev 此函数用于避免 stack-too-deep 错误
     function getBalanceInfo(PoolKey memory key) internal view returns (BalanceInfo memory) {
         return BalanceInfo({
             balance0: getPermissionedCurrency(key.currency0).balanceOf(address(lpm)),
@@ -210,7 +210,7 @@ contract PermissionedPosmTestSetup is Test, PermissionedDeployers, DeployPermit2
                 liquidityToAdd,
                 MAX_SLIPPAGE_INCREASE,
                 MAX_SLIPPAGE_INCREASE,
-                address(this), // recipient
+                address(this), // 接收者
                 ZERO_BYTES // hookData
             )
         );

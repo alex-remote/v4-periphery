@@ -117,7 +117,7 @@ contract CalldataDecoderTest is Test {
     }
 
     function test_decodeSwapExactInParams_minLengthBoundary() public {
-        // 0xdf = 0xe0 - 1, one byte below the minimum — should revert
+        // 0xdf = 0xe0 - 1，比最小长度少一个字节 —— 应当回滚（revert）
         bytes memory params = new bytes(0xdf);
         vm.expectRevert(CalldataDecoder.SliceOutOfBounds.selector);
         decoder.decodeSwapExactInParams(params);
@@ -150,7 +150,7 @@ contract CalldataDecoderTest is Test {
     }
 
     function test_decodeSwapExactOutParams_minLengthBoundary() public {
-        // 0xdf = 0xe0 - 1, one byte below the minimum — should revert
+        // 0xdf = 0xe0 - 1，比最小长度少一个字节 —— 应当回滚（revert）
         bytes memory params = new bytes(0xdf);
         vm.expectRevert(CalldataDecoder.SliceOutOfBounds.selector);
         decoder.decodeSwapExactOutParams(params);
@@ -220,7 +220,7 @@ contract CalldataDecoderTest is Test {
     }
 
     function test_decodeActionsRouterParams_sliceOutOfBounds() public {
-        // create actions and parameters
+        // 创建操作（action）及其参数
         bytes memory _actions = hex"12345678";
         bytes[] memory _actionParams = new bytes[](4);
         _actionParams[0] = hex"11111111";
@@ -239,7 +239,7 @@ contract CalldataDecoderTest is Test {
     }
 
     function test_decodeActionsRouterParams_emptyParams() public view {
-        // create actions and parameters
+        // 创建操作（action）及其参数
         bytes memory _actions = hex"";
         bytes[] memory _actionParams = new bytes[](0);
 
@@ -422,7 +422,7 @@ contract CalldataDecoderTest is Test {
 
     function _removeFinalByte(bytes memory params) internal pure returns (bytes memory result) {
         result = new bytes(params.length - 1);
-        // dont copy the final byte
+        // 不复制最后一个字节
         for (uint256 i = 0; i < params.length - 2; i++) {
             result[i] = params[i];
         }

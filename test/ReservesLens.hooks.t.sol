@@ -106,10 +106,10 @@ contract ReservesLensHookTest is Test, Deployers {
     function test_insufficientGasReportsStatusInsteadOfMisclassifying() public {
         key = _initializeHookPool(MockHookStats.Mode.VALID);
         IReservesLens.PoolTVL memory expected = lens.getPoolTVL(manager, key, address(0));
-        // Enough gas to complete the core scan, but not enough to guarantee the ERC165 probes and the
-        // three 500k hook-stats stipends after the EIP-150 63/64 reduction. Core amounts must come back
-        // intact with an honest INSUFFICIENT_GAS label instead of a revert or a CALL_FAILED
-        // misclassification of this healthy provider.
+        // gas 足以完成核心扫描，但在 EIP-150 的 63/64 削减之后，不足以保证 ERC165 探测以及
+        // 三次各 500k 的 hook-stats 调用 gas 配额（stipend）。核心数量必须完整返回，
+        // 并如实标记为 INSUFFICIENT_GAS，而不是回滚（revert），也不是把这个正常的提供者
+        // 误判为 CALL_FAILED。
         IReservesLens.PoolTVL memory result = lens.getPoolTVL{gas: 1_000_000}(manager, key, address(0));
         assertEq(uint8(result.statsStatus), uint8(IReservesLens.HookStatsStatus.INSUFFICIENT_GAS));
         assertEq(result.coreAmount0, expected.coreAmount0);
@@ -163,9 +163,9 @@ contract ReservesLensHookTest is Test, Deployers {
     function test_pagedFinalPageInsufficientGasKeepsCoreResult() public {
         key = _initializeHookPool(MockHookStats.Mode.VALID);
         IReservesLens.PoolTVL memory expected = lens.getPoolTVL(manager, key, address(0));
-        // The default 512-read budget covers this pool in a single page, and 1M gas completes the scan but
-        // cannot guarantee the hook-stats probe sequence: the page must come back done with intact core
-        // amounts and an honest INSUFFICIENT_GAS label.
+        // 默认 512 次读取的预算可在单页内覆盖该池，1M gas 能完成扫描，但
+        // 无法保证 hook-stats 探测流程能够完成：该页必须以 done 状态返回，核心数量完整，
+        // 并如实标记为 INSUFFICIENT_GAS。
         (IReservesLens.PoolTVL memory result,, bool done) =
             lens.getPoolTVLPaged{gas: 1_000_000}(manager, key, bytes(""));
         assertTrue(done);
@@ -181,17 +181,17 @@ contract ReservesLensHookTest is Test, Deployers {
         assertEq(uint8(result.statsStatus), uint8(IReservesLens.HookStatsStatus.INVALID_PROVIDER));
     }
 
-    /// @dev The hook-stats path must degrade to INSUFFICIENT_GAS at ANY gas budget, never revert away the core
-    ///      scan. The stipend-boundary check inside _boundedStaticcall is exercised by a provider that legally
-    ///      consumes nearly its full stipend on every call, so a caller landing between the up-front budget check
-    ///      and the per-call threshold degrades instead of reverting. Core amounts must be intact either way.
+    /// @dev 在任意 gas 预算下，hook-stats 路径都必须降级为 INSUFFICIENT_GAS，绝不能因回滚（revert）而丢失核心
+    ///      扫描结果。_boundedStaticcall 内部的 stipend 边界检查由这样一个提供者来触发：它每次调用都合法地
+    ///      几乎耗尽全部 stipend，因此 gas 恰好落在前置预算检查
+    ///      与单次调用阈值之间的调用者会降级而不是回滚。无论哪种情况，核心数量都必须保持完整。
     function testFuzz_hookStats_anyGasBudgetDegradesNeverReverts(uint32 rawGas) public {
         key = _initializeHookPool(MockHookStats.Mode.VALID_GAS_HEAVY);
         IReservesLens.PoolTVL memory expected = lens.getPoolTVL(manager, key, address(0));
         assertEq(uint8(expected.statsStatus), uint8(IReservesLens.HookStatsStatus.DIRECT));
 
-        // Lower bound comfortably covers the core scan so an out-of-gas in the scan itself (an ordinary OOG,
-        // not the guarantee under test) cannot trip the fuzz run; upper bound is well past the stats budget.
+        // 下界足以覆盖核心扫描，因此扫描本身的 out-of-gas（普通的 OOG，
+        // 而非本测试所验证的保证）不会导致模糊测试失败；上界则远超 stats 预算。
         uint256 gasBudget = bound(uint256(rawGas), 900_000, 3_000_000);
         IReservesLens.PoolTVL memory result = lens.getPoolTVL{gas: gasBudget}(manager, key, address(0));
 

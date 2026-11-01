@@ -6,7 +6,7 @@ import {IPositionManager} from "../../src/interfaces/IPositionManager.sol";
 import {BalanceDelta} from "@uniswap/v4-core/src/types/BalanceDelta.sol";
 import {PositionInfo} from "../../src/libraries/PositionInfoLibrary.sol";
 
-/// @notice A subscriber contract that ingests updates from the v4 position manager
+/// @notice 接收来自 v4 PositionManager 更新通知的订阅者合约
 contract MockSubscriber is ISubscriber {
     IPositionManager posm;
 

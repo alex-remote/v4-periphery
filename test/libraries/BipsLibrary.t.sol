@@ -7,7 +7,7 @@ import {BipsLibrary} from "../../src/libraries/BipsLibrary.sol";
 contract BipsLibraryTest is Test {
     using BipsLibrary for uint256;
 
-    // The block gas limit set in foundry config is 300_000_000 (300M) for testing purposes
+    // 出于测试目的，foundry 配置中设置的区块 gas 上限为 300_000_000（300M）
     uint256 BLOCK_GAS_LIMIT;
 
     function setUp() public {
@@ -40,14 +40,14 @@ contract BipsLibraryTest is Test {
     }
 
     function test_gasLimit_1_percent() public view {
-        // 100 bps = 1%
-        // 1% of 30M is 300K
+        // 100 个基点（bps）= 1%
+        // 30M 的 1% 是 300K
         assertEq(BLOCK_GAS_LIMIT / 100, block.gaslimit.calculatePortion(100));
     }
 
     function test_gasLimit_1BP() public view {
-        // 1bp is 0.01%
-        // 0.01% of 30M is 300
+        // 1 个基点（bp）是 0.01%
+        // 30M 的 0.01% 是 300
         assertEq(BLOCK_GAS_LIMIT / 10000, block.gaslimit.calculatePortion(1));
     }
 }

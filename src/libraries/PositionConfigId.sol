@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-/// @notice A configId is set per tokenId
-/// The lower 255 bits are used to store the truncated hash of the corresponding PositionConfig
-/// The upper bit is used to signal if the tokenId has a subscriber
+/// @notice configId 按 tokenId 逐个设置
+/// 低 255 位用于存储对应 PositionConfig 的截断哈希
+/// 最高位用于标记该 tokenId 是否有订阅者
 struct PositionConfigId {
     bytes32 id;
 }
@@ -12,12 +12,12 @@ library PositionConfigIdLibrary {
     bytes32 constant MASK_UPPER_BIT = 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF;
     bytes32 constant DIRTY_UPPER_BIT = 0x8000000000000000000000000000000000000000000000000000000000000000;
 
-    /// @notice returns the truncated hash of the PositionConfig for a given tokenId
+    /// @notice 返回给定 tokenId 对应的 PositionConfig 的截断哈希
     function getConfigId(PositionConfigId storage _configId) internal view returns (bytes32 configId) {
         configId = _configId.id & MASK_UPPER_BIT;
     }
 
-    /// @dev We only set the config on mint, guaranteeing that the most significant bit is unset, so we can just assign the entire 32 bytes to the id.
+    /// @dev 我们只在铸造时设置 config，这保证了最高有效位未被置位，因此可以直接把整个 32 字节赋值给 id。
     function setConfigId(PositionConfigId storage _configId, bytes32 configId) internal {
         _configId.id = configId;
     }

@@ -108,30 +108,30 @@ contract PermissionsAdapter is ERC20, Ownable2Step, IPermissionsAdapter {
         emit SwappingEnabledUpdated(enabled);
     }
 
-    /// @dev Overrides the ERC20._update function to add the following checks and logic:
-    /// - Before `settle` is called on the pool manager, the permissioned token is deposited and the permissions adapter is minted to the pool manager
-    /// - When `take` is called on the pool manager, the permissioned token is automatically released when the pool manager transfers the permissions adapter to the recipient
-    /// - Enforces that the pool manager is the only holder of the permissions adapter
+    /// @dev 重写 ERC20._update 函数，加入以下检查和逻辑：
+    /// - 在 PoolManager 上调用 `settle` 之前，先存入许可代币，并向 PoolManager 铸造权限适配器（代币）
+    /// - 在 PoolManager 上调用 `take` 时，PoolManager 将权限适配器（代币）转给接收者，此时许可代币会被自动释放
+    /// - 强制要求 PoolManager 是权限适配器（代币）的唯一持有者
     function _update(address from, address to, uint256 amount) internal override {
         if (to == address(0)) {
-            // prevents infinite loop when burning
+            // 防止销毁时出现无限循环
             super._update(from, to, amount);
             return;
         }
         if (from == address(0)) {
             assert(to == POOL_MANAGER);
-            // permissioned token is being deposited
+            // 正在存入许可代币
             super._update(from, to, amount);
             return;
         } else if (from != POOL_MANAGER) {
-            // if the pool manager is the sender, the permissioned token is automatically released, skip the checks
+            // 如果发送方是 PoolManager，许可代币会被自动释放，跳过这些检查
             revert InvalidTransfer(from, to);
         }
-        // reject self-transfer: would unwrap raw underlying into PoolManager
+        // 拒绝自我转账：否则会把原始底层代币解包到 PoolManager 中
         if (to == POOL_MANAGER) revert InvalidTransfer(from, to);
         super._update(from, to, amount);
         _unwrap(to, amount);
-        // the pool manager must always be the only holder of the permissions adapter
+        // PoolManager 必须始终是权限适配器（代币）的唯一持有者
         assert(balanceOf(POOL_MANAGER) == totalSupply());
     }
 
@@ -140,8 +140,8 @@ contract PermissionsAdapter is ERC20, Ownable2Step, IPermissionsAdapter {
         SafeERC20(address(PERMISSIONED_TOKEN)).safeTransfer(account, amount);
     }
 
-    /// @dev Low-level staticcall + ABI-layout validation. try/catch doesn't catch return-data decode failures,
-    /// so tokens returning bytes32 (MKR-style) or other non-string shapes must be checked explicitly.
+    /// @dev 底层 staticcall + ABI 布局校验。try/catch 无法捕获返回数据的解码失败，
+    /// 因此对于返回 bytes32（MKR 风格）或其它非 string 形式的代币，必须显式检查。
     function _readString(address token, bytes4 selector, string memory fallback_) private view returns (string memory) {
         (bool ok, bytes memory data) = token.staticcall(abi.encodeWithSelector(selector));
         if (!ok || data.length < 64) return fallback_;
@@ -177,13 +177,13 @@ contract PermissionsAdapter is ERC20, Ownable2Step, IPermissionsAdapter {
         return super.owner();
     }
 
-    /// @notice Disabled. The adapter must always have an owner.
-    /// @dev A zero owner would permanently disable the issuer's force-exit: `unwindPosition` authorizes
-    ///      against `_getOwner` for both pool currencies, and its per-currency fallback routes to that same
-    ///      owner. With no owner the force-exit reverts `Unauthorized` for every caller, and every failed
-    ///      unwind instead mints a freely transferable ERC-6909 claim on this adapter to the exited LP.
-    ///      `Ownable2Step` already prevents losing ownership via `transferOwnership`, which cannot complete
-    ///      without the new owner calling `acceptOwnership`; renouncing is the only remaining path to zero.
+    /// @notice 已禁用。适配器必须始终有所有者。
+    /// @dev 零地址所有者会永久禁用发行方的强制退出功能：`unwindPosition` 针对池的两种代币
+    ///      都以 `_getOwner` 作为授权依据，且其按代币的回退路径也会转到同一个
+    ///      所有者。没有所有者时，强制退出对任何调用者都会以 `Unauthorized` 回滚（revert），且每次失败的
+    ///      平仓（unwind）反而会向被退出的 LP 铸造一个可自由转让的、基于本适配器的 ERC-6909 凭证（claim）。
+    ///      `Ownable2Step` 已能防止经由 `transferOwnership` 丢失所有权，因为若新所有者不调用
+    ///      `acceptOwnership`，转移就无法完成；放弃所有权是唯一剩下的让所有者变为零地址的途径。
     function renounceOwnership() public pure override {
         revert RenounceDisabled();
     }

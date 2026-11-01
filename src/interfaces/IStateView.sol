@@ -8,28 +8,28 @@ import {Position} from "@uniswap/v4-core/src/libraries/Position.sol";
 import {IImmutableState} from "../interfaces/IImmutableState.sol";
 
 /// @title IStateView
-/// @notice Interface for the StateView contract
+/// @notice StateView 合约的接口
 interface IStateView is IImmutableState {
-    /// @notice Get Slot0 of the pool: sqrtPriceX96, tick, protocolFee, lpFee
-    /// @dev Corresponds to pools[poolId].slot0
-    /// @param poolId The ID of the pool.
-    /// @return sqrtPriceX96 The square root of the price of the pool, in Q96 precision.
-    /// @return tick The current tick of the pool.
-    /// @return protocolFee The protocol fee of the pool.
-    /// @return lpFee The swap fee of the pool.
+    /// @notice 获取池的 Slot0：sqrtPriceX96、tick、protocolFee、lpFee
+    /// @dev 对应 pools[poolId].slot0
+    /// @param poolId 池的 ID。
+    /// @return sqrtPriceX96 池价格的平方根，Q96 精度。
+    /// @return tick 池的当前 tick。
+    /// @return protocolFee 池的协议费。
+    /// @return lpFee 池的兑换（swap）手续费。
     function getSlot0(PoolId poolId)
         external
         view
         returns (uint160 sqrtPriceX96, int24 tick, uint24 protocolFee, uint24 lpFee);
 
-    /// @notice Retrieves the tick information of a pool at a specific tick.
-    /// @dev Corresponds to pools[poolId].ticks[tick]
-    /// @param poolId The ID of the pool.
-    /// @param tick The tick to retrieve information for.
-    /// @return liquidityGross The total position liquidity that references this tick
-    /// @return liquidityNet The amount of net liquidity added (subtracted) when tick is crossed from left to right (right to left)
-    /// @return feeGrowthOutside0X128 fee growth per unit of liquidity on the _other_ side of this tick (relative to the current tick)
-    /// @return feeGrowthOutside1X128 fee growth per unit of liquidity on the _other_ side of this tick (relative to the current tick)
+    /// @notice 获取池在指定 tick 处的 tick 信息。
+    /// @dev 对应 pools[poolId].ticks[tick]
+    /// @param poolId 池的 ID。
+    /// @param tick 要获取信息的 tick。
+    /// @return liquidityGross 引用该 tick 的头寸流动性总量
+    /// @return liquidityNet 从左向右（从右向左）穿越该 tick 时增加（减去）的净流动性数量
+    /// @return feeGrowthOutside0X128 该 tick _另一侧_（相对于当前 tick）每单位流动性的手续费增长
+    /// @return feeGrowthOutside1X128 该 tick _另一侧_（相对于当前 tick）每单位流动性的手续费增长
     function getTickInfo(PoolId poolId, int24 tick)
         external
         view
@@ -40,92 +40,92 @@ interface IStateView is IImmutableState {
             uint256 feeGrowthOutside1X128
         );
 
-    /// @notice Retrieves the liquidity information of a pool at a specific tick.
-    /// @dev Corresponds to pools[poolId].ticks[tick].liquidityGross and pools[poolId].ticks[tick].liquidityNet. A more gas efficient version of getTickInfo
-    /// @param poolId The ID of the pool.
-    /// @param tick The tick to retrieve liquidity for.
-    /// @return liquidityGross The total position liquidity that references this tick
-    /// @return liquidityNet The amount of net liquidity added (subtracted) when tick is crossed from left to right (right to left)
+    /// @notice 获取池在指定 tick 处的流动性信息。
+    /// @dev 对应 pools[poolId].ticks[tick].liquidityGross 和 pools[poolId].ticks[tick].liquidityNet。是 getTickInfo 更省 gas 的版本
+    /// @param poolId 池的 ID。
+    /// @param tick 要获取流动性的 tick。
+    /// @return liquidityGross 引用该 tick 的头寸流动性总量
+    /// @return liquidityNet 从左向右（从右向左）穿越该 tick 时增加（减去）的净流动性数量
     function getTickLiquidity(PoolId poolId, int24 tick)
         external
         view
         returns (uint128 liquidityGross, int128 liquidityNet);
 
-    /// @notice Retrieves the fee growth outside a tick range of a pool
-    /// @dev Corresponds to pools[poolId].ticks[tick].feeGrowthOutside0X128 and pools[poolId].ticks[tick].feeGrowthOutside1X128. A more gas efficient version of getTickInfo
-    /// @param poolId The ID of the pool.
-    /// @param tick The tick to retrieve fee growth for.
-    /// @return feeGrowthOutside0X128 fee growth per unit of liquidity on the _other_ side of this tick (relative to the current tick)
-    /// @return feeGrowthOutside1X128 fee growth per unit of liquidity on the _other_ side of this tick (relative to the current tick)
+    /// @notice 获取池在某个 tick 区间外侧的手续费增长
+    /// @dev 对应 pools[poolId].ticks[tick].feeGrowthOutside0X128 和 pools[poolId].ticks[tick].feeGrowthOutside1X128。是 getTickInfo 更省 gas 的版本
+    /// @param poolId 池的 ID。
+    /// @param tick 要获取手续费增长的 tick。
+    /// @return feeGrowthOutside0X128 该 tick _另一侧_（相对于当前 tick）每单位流动性的手续费增长
+    /// @return feeGrowthOutside1X128 该 tick _另一侧_（相对于当前 tick）每单位流动性的手续费增长
     function getTickFeeGrowthOutside(PoolId poolId, int24 tick)
         external
         view
         returns (uint256 feeGrowthOutside0X128, uint256 feeGrowthOutside1X128);
 
-    /// @notice Retrieves the global fee growth of a pool.
-    /// @dev Corresponds to pools[poolId].feeGrowthGlobal0X128 and pools[poolId].feeGrowthGlobal1X128
-    /// @param poolId The ID of the pool.
-    /// @return feeGrowthGlobal0 The global fee growth for token0.
-    /// @return feeGrowthGlobal1 The global fee growth for token1.
+    /// @notice 获取池的全局手续费增长。
+    /// @dev 对应 pools[poolId].feeGrowthGlobal0X128 和 pools[poolId].feeGrowthGlobal1X128
+    /// @param poolId 池的 ID。
+    /// @return feeGrowthGlobal0 token0 的全局手续费增长。
+    /// @return feeGrowthGlobal1 token1 的全局手续费增长。
     function getFeeGrowthGlobals(PoolId poolId)
         external
         view
         returns (uint256 feeGrowthGlobal0, uint256 feeGrowthGlobal1);
 
-    /// @notice Retrieves the total liquidity of a pool.
-    /// @dev Corresponds to pools[poolId].liquidity
-    /// @param poolId The ID of the pool.
-    /// @return liquidity The liquidity of the pool.
+    /// @notice 获取池的总流动性。
+    /// @dev 对应 pools[poolId].liquidity
+    /// @param poolId 池的 ID。
+    /// @return liquidity 池的流动性。
     function getLiquidity(PoolId poolId) external view returns (uint128 liquidity);
 
-    /// @notice Retrieves the tick bitmap of a pool at a specific tick.
-    /// @dev Corresponds to pools[poolId].tickBitmap[tick]
-    /// @param poolId The ID of the pool.
-    /// @param tick The tick to retrieve the bitmap for.
-    /// @return tickBitmap The bitmap of the tick.
+    /// @notice 获取池在指定 tick 处的 tick bitmap。
+    /// @dev 对应 pools[poolId].tickBitmap[tick]
+    /// @param poolId 池的 ID。
+    /// @param tick 要获取 bitmap 的 tick。
+    /// @return tickBitmap 该 tick 的 bitmap。
     function getTickBitmap(PoolId poolId, int16 tick) external view returns (uint256 tickBitmap);
 
-    /// @notice Retrieves the position info without needing to calculate the `positionId`.
-    /// @dev Corresponds to pools[poolId].positions[positionId]
-    /// @param poolId The ID of the pool.
-    /// @param owner The owner of the liquidity position.
-    /// @param tickLower The lower tick of the liquidity range.
-    /// @param tickUpper The upper tick of the liquidity range.
-    /// @param salt The bytes32 randomness to further distinguish position state.
-    /// @return liquidity The liquidity of the position.
-    /// @return feeGrowthInside0LastX128 The fee growth inside the position for token0.
-    /// @return feeGrowthInside1LastX128 The fee growth inside the position for token1.
+    /// @notice 获取头寸信息，无需自行计算 `positionId`。
+    /// @dev 对应 pools[poolId].positions[positionId]
+    /// @param poolId 池的 ID。
+    /// @param owner 流动性头寸的所有者。
+    /// @param tickLower 流动性区间的下边界 tick。
+    /// @param tickUpper 流动性区间的上边界 tick。
+    /// @param salt 用于进一步区分头寸状态的 bytes32 随机值。
+    /// @return liquidity 头寸的流动性。
+    /// @return feeGrowthInside0LastX128 头寸内 token0 的手续费增长。
+    /// @return feeGrowthInside1LastX128 头寸内 token1 的手续费增长。
     function getPositionInfo(PoolId poolId, address owner, int24 tickLower, int24 tickUpper, bytes32 salt)
         external
         view
         returns (uint128 liquidity, uint256 feeGrowthInside0LastX128, uint256 feeGrowthInside1LastX128);
 
-    /// @notice Retrieves the position information of a pool at a specific position ID.
-    /// @dev Corresponds to pools[poolId].positions[positionId]
-    /// @param poolId The ID of the pool.
-    /// @param positionId The ID of the position.
-    /// @return liquidity The liquidity of the position.
-    /// @return feeGrowthInside0LastX128 The fee growth inside the position for token0.
-    /// @return feeGrowthInside1LastX128 The fee growth inside the position for token1.
+    /// @notice 获取池在指定头寸 ID 处的头寸信息。
+    /// @dev 对应 pools[poolId].positions[positionId]
+    /// @param poolId 池的 ID。
+    /// @param positionId 头寸的 ID。
+    /// @return liquidity 头寸的流动性。
+    /// @return feeGrowthInside0LastX128 头寸内 token0 的手续费增长。
+    /// @return feeGrowthInside1LastX128 头寸内 token1 的手续费增长。
     function getPositionInfo(PoolId poolId, bytes32 positionId)
         external
         view
         returns (uint128 liquidity, uint256 feeGrowthInside0LastX128, uint256 feeGrowthInside1LastX128);
 
-    /// @notice Retrieves the liquidity of a position.
-    /// @dev Corresponds to pools[poolId].positions[positionId].liquidity. More gas efficient for just retrieving liquidity as compared to getPositionInfo
-    /// @param poolId The ID of the pool.
-    /// @param positionId The ID of the position.
-    /// @return liquidity The liquidity of the position.
+    /// @notice 获取头寸的流动性。
+    /// @dev 对应 pools[poolId].positions[positionId].liquidity。仅获取流动性时比 getPositionInfo 更省 gas
+    /// @param poolId 池的 ID。
+    /// @param positionId 头寸的 ID。
+    /// @return liquidity 头寸的流动性。
     function getPositionLiquidity(PoolId poolId, bytes32 positionId) external view returns (uint128 liquidity);
 
-    /// @notice Calculate the fee growth inside a tick range of a pool
-    /// @dev pools[poolId].feeGrowthInside0LastX128 in Position.Info is cached and can become stale. This function will calculate the up to date feeGrowthInside
-    /// @param poolId The ID of the pool.
-    /// @param tickLower The lower tick of the range.
-    /// @param tickUpper The upper tick of the range.
-    /// @return feeGrowthInside0X128 The fee growth inside the tick range for token0.
-    /// @return feeGrowthInside1X128 The fee growth inside the tick range for token1.
+    /// @notice 计算池在某个 tick 区间内的手续费增长
+    /// @dev Position.Info 中的 pools[poolId].feeGrowthInside0LastX128 是缓存值，可能会过时。此函数会计算最新的 feeGrowthInside
+    /// @param poolId 池的 ID。
+    /// @param tickLower 区间的下边界 tick。
+    /// @param tickUpper 区间的上边界 tick。
+    /// @return feeGrowthInside0X128 tick 区间内 token0 的手续费增长。
+    /// @return feeGrowthInside1X128 tick 区间内 token1 的手续费增长。
     function getFeeGrowthInside(PoolId poolId, int24 tickLower, int24 tickUpper)
         external
         view

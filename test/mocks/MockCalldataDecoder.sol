@@ -6,11 +6,11 @@ import {IV4Router} from "../../src/interfaces/IV4Router.sol";
 import {Currency} from "@uniswap/v4-core/src/types/Currency.sol";
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 
-// we need to use a mock contract to make the calls happen in calldata not memory
+// 需要使用 mock（模拟合约），使调用中的数据位于 calldata 而不是 memory
 contract MockCalldataDecoder {
     using CalldataDecoder for bytes;
 
-    // This is used to avoid compiling with via-ir.
+    // 用于避免使用 via-ir 编译。
     struct MintParams {
         PoolKey poolKey;
         int24 tickLower;

@@ -27,11 +27,11 @@ contract MockFOT is MockERC20 {
 
         balanceOf[from] -= amount;
 
-        // bips% fee on the recipient
+        // 对接收者收取 bips% 的手续费
         uint256 amountAfterFee = amount - amount.calculatePortion(bips);
 
-        // Cannot overflow because the sum of all user
-        // balances can't exceed the max uint256 value.
+        // 不会溢出，因为所有用户的
+        // 余额之和不可能超过 uint256 的最大值。
         unchecked {
             balanceOf[to] += amountAfterFee;
         }

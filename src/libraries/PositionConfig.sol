@@ -3,14 +3,14 @@ pragma solidity ^0.8.0;
 
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 
-// A PositionConfig is the input for creating and modifying a Position in core, whose truncated hash is set per tokenId
+// PositionConfig 是在 core 中创建和修改头寸（Position）的输入，其截断哈希按 tokenId 逐个设置
 struct PositionConfig {
     PoolKey poolKey;
     int24 tickLower;
     int24 tickUpper;
 }
 
-/// @notice Library to calculate the PositionConfigId from the PositionConfig struct
+/// @notice 根据 PositionConfig 结构体计算 PositionConfigId 的库
 library PositionConfigLibrary {
     function toId(PositionConfig calldata config) internal pure returns (bytes32 id) {
         // id = keccak256(abi.encodePacked(currency0, currency1, fee, tickSpacing, hooks, tickLower, tickUpper))) >> 1
@@ -24,12 +24,12 @@ library PositionConfigLibrary {
             mstore(add(fmp, 0x14), calldataload(add(config, 0x20))) // currency1: [0x20, 0x34)
             mstore(fmp, calldataload(config)) // currency0: [0x0c, 0x20)
 
-            id := shr(1, keccak256(add(fmp, 0x0c), 0x48)) // len is 72 bytes, truncate lower bit of the hash
+            id := shr(1, keccak256(add(fmp, 0x0c), 0x48)) // 长度为 72 字节，截去哈希的最低位
 
-            // now clean the memory we used
-            mstore(add(fmp, 0x40), 0) // fmp+0x40 held hooks (14 bytes), tickLower, tickUpper
-            mstore(add(fmp, 0x20), 0) // fmp+0x20 held currency1, fee, tickSpacing, hooks (6 bytes)
-            mstore(fmp, 0) // fmp held currency0
+            // 现在清理我们用过的内存
+            mstore(add(fmp, 0x40), 0) // fmp+0x40 处存放了 hooks（14 字节）、tickLower、tickUpper
+            mstore(add(fmp, 0x20), 0) // fmp+0x20 处存放了 currency1、fee、tickSpacing、hooks（6 字节）
+            mstore(fmp, 0) // fmp 处存放了 currency0
         }
     }
 }

@@ -33,7 +33,7 @@ contract PosMGasTest is Test, PosmTestSetup {
     address bob;
     uint256 bobPK;
 
-    // expresses the fee as a wad (i.e. 3000 = 0.003e18 = 0.30%)
+    // 以 wad 形式表示手续费（即 3000 = 0.003e18 = 0.30%）
     uint256 FEE_WAD;
 
     PositionConfig config;
@@ -52,18 +52,18 @@ contract PosMGasTest is Test, PosmTestSetup {
         (nativeKey,) = initPool(CurrencyLibrary.ADDRESS_ZERO, currency1, IHooks(hook), 3000, SQRT_PRICE_1_1);
         FEE_WAD = uint256(key.fee).mulDivDown(FixedPointMathLib.WAD, 1_000_000);
 
-        // Requires currency0 and currency1 to be set in base Deployers contract.
+        // 要求在基础 Deployers 合约中已设置 currency0 和 currency1。
         deployAndApprovePosm(manager);
 
-        // Give tokens to Alice and Bob.
+        // 给 Alice 和 Bob 发放代币。
         seedBalance(alice);
         seedBalance(bob);
 
-        // Approve posm for Alice and bob.
+        // 为 Alice 和 bob 授权 posm。
         approvePosmFor(alice);
         approvePosmFor(bob);
 
-        // define a reusable range
+        // 定义一个可复用的区间
         config = PositionConfig({poolKey: key, tickLower: -300, tickUpper: 300});
         configNative = PositionConfig({poolKey: nativeKey, tickLower: -300, tickUpper: 300});
 
@@ -122,12 +122,12 @@ contract PosMGasTest is Test, PosmTestSetup {
     }
 
     function test_gas_mint_differentRanges() public {
-        // Explicitly mint to a new range on the same pool.
+        // 显式地在同一个池上铸造到一个新区间。
         PositionConfig memory bob_mint = PositionConfig({poolKey: key, tickLower: 0, tickUpper: 60});
         vm.startPrank(bob);
         mint(bob_mint, 10_000 ether, address(bob), ZERO_BYTES);
         vm.stopPrank();
-        // Mint to a diff config, diff user.
+        // 铸造到不同的配置，不同的用户。
         Plan memory planner = Planner.init()
             .add(
                 Actions.MINT_POSITION,
@@ -149,12 +149,12 @@ contract PosMGasTest is Test, PosmTestSetup {
     }
 
     function test_gas_mint_sameTickLower() public {
-        // Explicitly mint to range whos tickLower is the same.
+        // 显式地铸造到 tickLower 相同的区间。
         PositionConfig memory bob_mint = PositionConfig({poolKey: key, tickLower: -300, tickUpper: -60});
         vm.startPrank(bob);
         mint(bob_mint, 10_000 ether, address(bob), ZERO_BYTES);
         vm.stopPrank();
-        // Mint to a diff config, diff user.
+        // 铸造到不同的配置，不同的用户。
         Plan memory planner = Planner.init()
             .add(
                 Actions.MINT_POSITION,
@@ -176,12 +176,12 @@ contract PosMGasTest is Test, PosmTestSetup {
     }
 
     function test_gas_mint_sameTickUpper() public {
-        // Explicitly mint to range whos tickUpperis the same.
+        // 显式地铸造到 tickUpper 相同的区间。
         PositionConfig memory bob_mint = PositionConfig({poolKey: key, tickLower: 60, tickUpper: 300});
         vm.startPrank(bob);
         mint(bob_mint, 10_000 ether, address(bob), ZERO_BYTES);
         vm.stopPrank();
-        // Mint to a diff config, diff user.
+        // 铸造到不同的配置，不同的用户。
         Plan memory planner = Planner.init()
             .add(
                 Actions.MINT_POSITION,
@@ -233,28 +233,28 @@ contract PosMGasTest is Test, PosmTestSetup {
     }
 
     function test_gas_autocompound_exactUnclaimedFees() public {
-        // Alice and Bob provide liquidity on the range
-        // Alice uses her exact fees to increase liquidity (compounding)
+        // Alice 和 Bob 在该区间上提供流动性
+        // Alice 使用她恰好等额的手续费来增加流动性（复利）
 
         uint256 liquidityAlice = 3_000e18;
         uint256 liquidityBob = 1_000e18;
 
-        // alice provides liquidity
+        // alice 提供流动性
         vm.startPrank(alice);
         uint256 tokenIdAlice = lpm.nextTokenId();
         mint(config, liquidityAlice, alice, ZERO_BYTES);
         vm.stopPrank();
 
-        // bob provides liquidity
+        // bob 提供流动性
         vm.startPrank(bob);
         mint(config, liquidityBob, bob, ZERO_BYTES);
         vm.stopPrank();
 
-        // donate to create fees
+        // 捐赠以产生手续费
         uint256 amountDonate = 0.2e18;
         donateRouter.donate(key, amountDonate, amountDonate, ZERO_BYTES);
 
-        // alice uses her exact fees to increase liquidity
+        // alice 使用她恰好等额的手续费来增加流动性
         uint256 tokensOwedAlice = amountDonate.mulDivDown(liquidityAlice, liquidityAlice + liquidityBob) - 1;
 
         (uint160 sqrtPriceX96,,,) = StateLibrary.getSlot0(manager, config.poolKey.toId());
@@ -271,7 +271,7 @@ contract PosMGasTest is Test, PosmTestSetup {
                 Actions.INCREASE_LIQUIDITY,
                 abi.encode(tokenIdAlice, liquidityDelta, MAX_SLIPPAGE_INCREASE, MAX_SLIPPAGE_INCREASE, ZERO_BYTES)
             );
-        // because its a perfect autocompound, the delta is exactly 0 and we dont need to "close" deltas
+        // 因为这是完美的自动复利，delta 恰好为 0，我们不需要 "close" delta
         bytes memory calls = planner.encode();
 
         vm.prank(alice);
@@ -280,28 +280,28 @@ contract PosMGasTest is Test, PosmTestSetup {
     }
 
     function test_gas_autocompound_clearExcess() public {
-        // Alice and Bob provide liquidity on the range
-        // Alice uses her exact fees to increase liquidity (compounding)
+        // Alice 和 Bob 在该区间上提供流动性
+        // Alice 使用她恰好等额的手续费来增加流动性（复利）
 
         uint256 liquidityAlice = 3_000e18;
         uint256 liquidityBob = 1_000e18;
 
-        // alice provides liquidity
+        // alice 提供流动性
         vm.startPrank(alice);
         uint256 tokenIdAlice = lpm.nextTokenId();
         mint(config, liquidityAlice, alice, ZERO_BYTES);
         vm.stopPrank();
 
-        // bob provides liquidity
+        // bob 提供流动性
         vm.startPrank(bob);
         mint(config, liquidityBob, bob, ZERO_BYTES);
         vm.stopPrank();
 
-        // donate to create fees
+        // 捐赠以产生手续费
         uint256 amountDonate = 0.2e18;
         donateRouter.donate(key, amountDonate, amountDonate, ZERO_BYTES);
 
-        // alice will use half of her fees to increase liquidity
+        // alice 将使用她一半的手续费来增加流动性
         uint256 halfTokensOwedAlice = (amountDonate.mulDivDown(liquidityAlice, liquidityAlice + liquidityBob) - 1) / 2;
 
         (uint160 sqrtPriceX96,,,) = StateLibrary.getSlot0(manager, config.poolKey.toId());
@@ -313,7 +313,7 @@ contract PosMGasTest is Test, PosmTestSetup {
             halfTokensOwedAlice
         );
 
-        // Alice elects to forfeit unclaimed tokens
+        // Alice 选择放弃未领取的代币
         Plan memory planner = Planner.init();
         planner.add(
             Actions.INCREASE_LIQUIDITY,
@@ -328,29 +328,29 @@ contract PosMGasTest is Test, PosmTestSetup {
         vm.snapshotGasLastCall("PositionManager_increase_autocompound_clearExcess");
     }
 
-    // Autocompounding but the excess fees are taken to the user
+    // 自动复利，但多余的手续费会被提取给用户
     function test_gas_autocompound_excessFeesCredit() public {
-        // Alice and Bob provide liquidity on the range
-        // Alice uses her fees to increase liquidity. Excess fees are accounted to alice
+        // Alice 和 Bob 在该区间上提供流动性
+        // Alice 使用她的手续费来增加流动性。多余的手续费记入 alice 名下
         uint256 liquidityAlice = 3_000e18;
         uint256 liquidityBob = 1_000e18;
 
-        // alice provides liquidity
+        // alice 提供流动性
         vm.startPrank(alice);
         uint256 tokenIdAlice = lpm.nextTokenId();
         mint(config, liquidityAlice, alice, ZERO_BYTES);
         vm.stopPrank();
 
-        // bob provides liquidity
+        // bob 提供流动性
         vm.startPrank(bob);
         mint(config, liquidityBob, bob, ZERO_BYTES);
         vm.stopPrank();
 
-        // donate to create fees
+        // 捐赠以产生手续费
         uint256 amountDonate = 20e18;
         donateRouter.donate(key, amountDonate, amountDonate, ZERO_BYTES);
 
-        // alice will use half of her fees to increase liquidity
+        // alice 将使用她一半的手续费来增加流动性
         uint256 halfTokensOwedAlice = (amountDonate.mulDivDown(liquidityAlice, liquidityAlice + liquidityBob) - 1) / 2;
 
         (uint160 sqrtPriceX96,,,) = StateLibrary.getSlot0(manager, config.poolKey.toId());
@@ -408,7 +408,7 @@ contract PosMGasTest is Test, PosmTestSetup {
     function test_gas_multicall_initialize_mint() public {
         key = PoolKey({currency0: currency0, currency1: currency1, fee: 0, tickSpacing: 10, hooks: IHooks(address(0))});
 
-        // Use multicall to initialize a pool and mint liquidity
+        // 使用 multicall 初始化池并铸造流动性
         bytes[] memory calls = new bytes[](2);
         calls[0] = abi.encodeWithSelector(IPoolInitializer_v4.initializePool.selector, key, SQRT_PRICE_1_1);
 
@@ -444,10 +444,10 @@ contract PosMGasTest is Test, PosmTestSetup {
         uint256 tokenId = lpm.nextTokenId();
         mint(config, 10_000 ether, ActionConstants.MSG_SENDER, ZERO_BYTES);
 
-        // donate to create fee revenue
+        // 捐赠以产生手续费收入
         donateRouter.donate(config.poolKey, 0.2e18, 0.2e18, ZERO_BYTES);
 
-        // Collect by calling decrease with 0.
+        // 通过以 0 调用 decrease 来收取手续费。
         Plan memory planner = Planner.init()
             .add(
                 Actions.DECREASE_LIQUIDITY,
@@ -463,10 +463,10 @@ contract PosMGasTest is Test, PosmTestSetup {
         uint256 tokenId = lpm.nextTokenId();
         mint(config, 10_000 ether, ActionConstants.MSG_SENDER, ZERO_BYTES);
 
-        // donate to create fee revenue
+        // 捐赠以产生手续费收入
         donateRouter.donate(config.poolKey, 0.2e18, 0.2e18, ZERO_BYTES);
 
-        // Collect by calling decrease with 0.
+        // 通过以 0 调用 decrease 来收取手续费。
         Plan memory planner = Planner.init()
             .add(
                 Actions.DECREASE_LIQUIDITY,
@@ -478,7 +478,7 @@ contract PosMGasTest is Test, PosmTestSetup {
         vm.snapshotGasLastCall("PositionManager_collect_withTakePair");
     }
 
-    // same-range gas tests
+    // 同一区间的 gas 测试
     function test_gas_sameRange_mint() public {
         mint(config, 10_000 ether, ActionConstants.MSG_SENDER, ZERO_BYTES);
 
@@ -503,7 +503,7 @@ contract PosMGasTest is Test, PosmTestSetup {
     }
 
     function test_gas_sameRange_decrease() public {
-        // two positions of the same config, one of them decreases the entirety of the liquidity
+        // 两个相同配置的头寸，其中一个减少全部流动性
         vm.startPrank(alice);
         mint(config, 10_000 ether, ActionConstants.MSG_SENDER, ZERO_BYTES);
         vm.stopPrank();
@@ -523,7 +523,7 @@ contract PosMGasTest is Test, PosmTestSetup {
     }
 
     function test_gas_sameRange_collect() public {
-        // two positions of the same config, one of them collects all their fees
+        // 两个相同配置的头寸，其中一个收取其全部手续费
         vm.startPrank(alice);
         mint(config, 10_000 ether, ActionConstants.MSG_SENDER, ZERO_BYTES);
         vm.stopPrank();
@@ -531,7 +531,7 @@ contract PosMGasTest is Test, PosmTestSetup {
         uint256 tokenId = lpm.nextTokenId();
         mint(config, 10_000 ether, ActionConstants.MSG_SENDER, ZERO_BYTES);
 
-        // donate to create fee revenue
+        // 捐赠以产生手续费收入
         donateRouter.donate(config.poolKey, 0.2e18, 0.2e18, ZERO_BYTES);
 
         Plan memory planner = Planner.init()
@@ -577,15 +577,15 @@ contract PosMGasTest is Test, PosmTestSetup {
         Plan memory planner = Planner.init()
             .add(Actions.BURN_POSITION, abi.encode(tokenId, MIN_SLIPPAGE_DECREASE, MIN_SLIPPAGE_DECREASE, ZERO_BYTES));
 
-        // There is no need to include CLOSE commands.
+        // 无需包含 CLOSE 命令。
         bytes memory calls = planner.encode();
         lpm.modifyLiquidities(calls, _deadline);
         vm.snapshotGasLastCall("PositionManager_burn_empty");
     }
 
     function test_gas_decrease_burnEmpty_batch() public {
-        // Will be more expensive than not encoding a decrease and just encoding a burn.
-        // ie. check this against PositionManager_burn_nonEmpty
+        // 这会比不编码 decrease、只编码 burn 更昂贵。
+        // 即：将其与 PositionManager_burn_nonEmpty 进行对比
         uint256 tokenId = lpm.nextTokenId();
         mint(config, 10_000 ether, ActionConstants.MSG_SENDER, ZERO_BYTES);
 
@@ -598,17 +598,17 @@ contract PosMGasTest is Test, PosmTestSetup {
             Actions.BURN_POSITION, abi.encode(tokenId, MIN_SLIPPAGE_DECREASE, MIN_SLIPPAGE_DECREASE, ZERO_BYTES)
         );
 
-        // We must include CLOSE commands.
+        // 我们必须包含 CLOSE 命令。
         bytes memory calls = planner.finalizeModifyLiquidityWithClose(config.poolKey);
         lpm.modifyLiquidities(calls, _deadline);
         vm.snapshotGasLastCall("PositionManager_decrease_burnEmpty");
     }
 
-    // TODO: ERC6909 Support.
+    // TODO: 支持 ERC6909。
     function test_gas_increaseLiquidity_erc6909() public {}
     function test_gas_decreaseLiquidity_erc6909() public {}
 
-    // Native Token Gas Tests
+    // 原生代币 gas 测试
     function test_gas_mint_native() public {
         uint256 liquidityToAdd = 10_000 ether;
         bytes memory calls = getMintEncoded(configNative, liquidityToAdd, ActionConstants.MSG_SENDER, ZERO_BYTES);
@@ -651,7 +651,7 @@ contract PosMGasTest is Test, PosmTestSetup {
             TickMath.getSqrtPriceAtTick(configNative.tickUpper),
             uint128(liquidityToAdd)
         );
-        // overpay on the native token
+        // 对原生代币多付
         lpm.modifyLiquidities{value: amount0 * 2}(calls, _deadline);
         vm.snapshotGasLastCall("PositionManager_mint_nativeWithSweep_withClose");
     }
@@ -683,7 +683,7 @@ contract PosMGasTest is Test, PosmTestSetup {
             TickMath.getSqrtPriceAtTick(configNative.tickUpper),
             uint128(liquidityToAdd)
         );
-        // overpay on the native token
+        // 对原生代币多付
         lpm.modifyLiquidities{value: amount0 * 2}(calls, _deadline);
         vm.snapshotGasLastCall("PositionManager_mint_nativeWithSweep_withSettlePair");
     }
@@ -718,7 +718,7 @@ contract PosMGasTest is Test, PosmTestSetup {
         uint256 tokenId = lpm.nextTokenId();
         mintWithNative(SQRT_PRICE_1_1, configNative, 10_000 ether, ActionConstants.MSG_SENDER, ZERO_BYTES);
 
-        // donate to create fee revenue
+        // 捐赠以产生手续费收入
         donateRouter.donate{value: 0.2e18}(configNative.poolKey, 0.2e18, 0.2e18, ZERO_BYTES);
 
         bytes memory calls = getCollectEncoded(tokenId, configNative, ZERO_BYTES);
@@ -758,15 +758,15 @@ contract PosMGasTest is Test, PosmTestSetup {
         Plan memory planner = Planner.init()
             .add(Actions.BURN_POSITION, abi.encode(tokenId, MIN_SLIPPAGE_DECREASE, MIN_SLIPPAGE_DECREASE, ZERO_BYTES));
 
-        // There is no need to include CLOSE commands.
+        // 无需包含 CLOSE 命令。
         bytes memory calls = planner.encode();
         lpm.modifyLiquidities(calls, _deadline);
         vm.snapshotGasLastCall("PositionManager_burn_empty_native");
     }
 
     function test_gas_decrease_burnEmpty_batch_native() public {
-        // Will be more expensive than not encoding a decrease and just encoding a burn.
-        // ie. check this against PositionManager_burn_nonEmpty
+        // 这会比不编码 decrease、只编码 burn 更昂贵。
+        // 即：将其与 PositionManager_burn_nonEmpty 进行对比
         uint256 tokenId = lpm.nextTokenId();
         mintWithNative(SQRT_PRICE_1_1, configNative, 10_000 ether, ActionConstants.MSG_SENDER, ZERO_BYTES);
 
@@ -777,21 +777,21 @@ contract PosMGasTest is Test, PosmTestSetup {
             );
         planner.add(Actions.BURN_POSITION, abi.encode(tokenId, 0 wei, 0 wei, ZERO_BYTES));
 
-        // We must include CLOSE commands.
+        // 我们必须包含 CLOSE 命令。
         bytes memory calls = planner.finalizeModifyLiquidityWithClose(configNative.poolKey);
         lpm.modifyLiquidities(calls, _deadline);
         vm.snapshotGasLastCall("PositionManager_decrease_burnEmpty_native");
     }
 
     function test_gas_permit() public {
-        // alice permits for the first time
+        // alice 首次进行许可（permit）
         uint256 liquidityAlice = 1e18;
         vm.startPrank(alice);
         uint256 tokenIdAlice = lpm.nextTokenId();
         mint(config, liquidityAlice, alice, ZERO_BYTES);
         vm.stopPrank();
 
-        // alice gives operator permission to bob
+        // alice 授予 bob 操作者权限
         uint256 nonce = 1;
         bytes32 digest = getDigest(bob, tokenIdAlice, nonce, block.timestamp + 1);
 
@@ -804,14 +804,14 @@ contract PosMGasTest is Test, PosmTestSetup {
     }
 
     function test_gas_permit_secondPosition() public {
-        // alice permits for her two tokens, benchmark the 2nd permit
+        // alice 为她的两个代币进行许可，对第二次 permit 做基准测试
         uint256 liquidityAlice = 1e18;
         vm.startPrank(alice);
         uint256 tokenIdAlice = lpm.nextTokenId();
         mint(config, liquidityAlice, alice, ZERO_BYTES);
         vm.stopPrank();
 
-        // alice gives operator permission to bob
+        // alice 授予 bob 操作者权限
         uint256 nonce = 1;
         bytes32 digest = getDigest(bob, tokenIdAlice, nonce, block.timestamp + 1);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(alicePK, digest);
@@ -820,13 +820,13 @@ contract PosMGasTest is Test, PosmTestSetup {
         vm.prank(bob);
         lpm.permit(bob, tokenIdAlice, block.timestamp + 1, nonce, signature);
 
-        // alice creates another position
+        // alice 创建另一个头寸
         vm.startPrank(alice);
         tokenIdAlice = lpm.nextTokenId();
         mint(config, liquidityAlice, alice, ZERO_BYTES);
         vm.stopPrank();
 
-        // alice gives operator permission to bob
+        // alice 授予 bob 操作者权限
         nonce = 2;
         digest = getDigest(bob, tokenIdAlice, nonce, block.timestamp + 1);
         (v, r, s) = vm.sign(alicePK, digest);
@@ -838,7 +838,7 @@ contract PosMGasTest is Test, PosmTestSetup {
     }
 
     function test_gas_permit_twice() public {
-        // alice permits the same token, twice
+        // alice 对同一个代币进行两次许可
         address charlie = makeAddr("CHARLIE");
 
         uint256 liquidityAlice = 1e18;
@@ -847,7 +847,7 @@ contract PosMGasTest is Test, PosmTestSetup {
         mint(config, liquidityAlice, alice, ZERO_BYTES);
         vm.stopPrank();
 
-        // alice gives operator permission to bob
+        // alice 授予 bob 操作者权限
         uint256 nonce = 1;
         bytes32 digest = getDigest(bob, tokenIdAlice, nonce, block.timestamp + 1);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(alicePK, digest);
@@ -856,7 +856,7 @@ contract PosMGasTest is Test, PosmTestSetup {
         vm.prank(bob);
         lpm.permit(bob, tokenIdAlice, block.timestamp + 1, nonce, signature);
 
-        // alice gives operator permission to charlie
+        // alice 授予 charlie 操作者权限
         nonce = 2;
         digest = getDigest(charlie, tokenIdAlice, nonce, block.timestamp + 1);
         (v, r, s) = vm.sign(alicePK, digest);
@@ -899,7 +899,7 @@ contract PosMGasTest is Test, PosmTestSetup {
         vm.snapshotGasLastCall("PositionManager_mint_settleWithBalance_sweep");
     }
 
-    // Does not encode a take pair
+    // 不编码 take pair
     function test_gas_decrease_take_take() public {
         uint256 tokenId = lpm.nextTokenId();
         mint(config, 1e18, ActionConstants.MSG_SENDER, ZERO_BYTES);

@@ -5,9 +5,9 @@ import {ImmutableState} from "./ImmutableState.sol";
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 import {IPoolInitializer_v4} from "../interfaces/IPoolInitializer_v4.sol";
 
-/// @title Pool Initializer
-/// @notice Initializes a Uniswap v4 Pool
-/// @dev Enables create pool + mint liquidity in a single transaction with multicall
+/// @title 池初始化器（Pool Initializer）
+/// @notice 初始化一个 Uniswap v4 池
+/// @dev 支持借助 multicall 在单笔交易中完成创建池 + 铸造流动性
 abstract contract PoolInitializer_v4 is ImmutableState, IPoolInitializer_v4 {
     /// @inheritdoc IPoolInitializer_v4
     function initializePool(PoolKey calldata key, uint160 sqrtPriceX96) external payable returns (int24) {

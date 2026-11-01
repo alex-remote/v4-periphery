@@ -6,24 +6,24 @@ import {VanityAddressLib} from "./libraries/VanityAddressLib.sol";
 import {IUniswapV4DeployerCompetition} from "./interfaces/IUniswapV4DeployerCompetition.sol";
 
 /// @title UniswapV4DeployerCompetition
-/// @notice A contract to crowdsource a salt for the best Uniswap V4 address
+/// @notice 一个以众包方式寻找最佳 Uniswap V4 地址所需 salt 的合约
 contract UniswapV4DeployerCompetition is IUniswapV4DeployerCompetition {
     using VanityAddressLib for address;
 
-    /// @dev The salt for the best address found so far
+    /// @dev 目前为止找到的最佳地址对应的 salt
     bytes32 public bestAddressSalt;
-    /// @dev The submitter of the best address found so far
+    /// @dev 目前为止找到的最佳地址的提交者
     address public bestAddressSubmitter;
 
-    /// @dev The deadline for the competition
+    /// @dev 竞赛的截止时间
     uint256 public immutable competitionDeadline;
-    /// @dev The init code hash of the V4 contract
+    /// @dev V4 合约的初始化代码（init code）哈希
     bytes32 public immutable initCodeHash;
 
-    /// @dev The deployer who can initiate the deployment of the v4 PoolManager, until the exclusive deploy deadline.
-    /// @dev After this deadline anyone can deploy.
+    /// @dev 在独占部署截止时间之前，可以发起 v4 PoolManager 部署的部署者。
+    /// @dev 此截止时间过后，任何人都可以部署。
     address public immutable deployer;
-    /// @dev The deadline for exclusive deployment by deployer after deadline
+    /// @dev 截止时间之后，由 deployer 独占部署的截止时间
     uint256 public immutable exclusiveDeployDeadline;
 
     constructor(
@@ -70,15 +70,15 @@ contract UniswapV4DeployerCompetition is IUniswapV4DeployerCompetition {
         }
 
         if (msg.sender != deployer && block.timestamp <= exclusiveDeployDeadline) {
-            // anyone can deploy after the deadline
+            // 截止时间过后任何人都可以部署
             revert NotAllowedToDeploy(msg.sender, deployer);
         }
 
-        // the owner of the contract must be encoded in the bytecode
+        // 合约的所有者必须编码在字节码中
         Create2.deploy(0, bestAddressSalt, bytecode);
     }
 
-    /// @dev returns the best address found so far
+    /// @dev 返回目前为止找到的最佳地址
     function bestAddress() public view returns (address) {
         return Create2.computeAddress(bestAddressSalt, initCodeHash);
     }

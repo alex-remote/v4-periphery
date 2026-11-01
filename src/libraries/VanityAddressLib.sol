@@ -2,67 +2,67 @@
 pragma solidity ^0.8.0;
 
 /// @title VanityAddressLib
-/// @notice A library to score addresses based on their vanity
+/// @notice 根据地址的“靓号”程度（vanity）为地址打分的库
 library VanityAddressLib {
-    /// @notice Compares two addresses and returns true if the first address has a better vanity score
-    /// @param first The first address to compare
-    /// @param second The second address to compare
-    /// @return better True if the first address has a better vanity score
+    /// @notice 比较两个地址，若第一个地址的靓号得分更高则返回 true
+    /// @param first 要比较的第一个地址
+    /// @param second 要比较的第二个地址
+    /// @return better 若第一个地址的靓号得分更高则为 true
     function betterThan(address first, address second) internal pure returns (bool better) {
         return score(first) > score(second);
     }
 
-    /// @notice Scores an address based on its vanity
-    /// @dev Scoring rules:
-    ///    Requirement: The first nonzero nibble must be 4
-    ///    10 points for every leading 0 nibble
-    ///    40 points if the first 4 is followed by 3 more 4s
-    ///    20 points if the first nibble after the 4 4s is NOT a 4
-    ///    20 points if the last 4 nibbles are 4s
-    ///    1 point for every 4
-    /// @param addr The address to score
-    /// @return calculatedScore The vanity score of the address
+    /// @notice 根据地址的靓号程度为其打分
+    /// @dev 计分规则：
+    ///    要求：第一个非零 nibble（半字节）必须是 4
+    ///    每个前导 0 nibble 计 10 分
+    ///    若第一个 4 后面还紧跟 3 个 4，计 40 分
+    ///    若这 4 个 4 之后的第一个 nibble 不是 4，计 20 分
+    ///    若最后 4 个 nibble 都是 4，计 20 分
+    ///    每出现一个 4 计 1 分
+    /// @param addr 要打分的地址
+    /// @return calculatedScore 该地址的靓号得分
     function score(address addr) internal pure returns (uint256 calculatedScore) {
-        // convert the address to bytes for easier parsing
+        // 将地址转换为字节，便于解析
         bytes20 addrBytes = bytes20(addr);
 
         unchecked {
-            // 10 points per leading zero nibble
+            // 每个前导零 nibble 计 10 分
             uint256 leadingZeroCount = getLeadingNibbleCount(addrBytes, 0, 0);
             calculatedScore += (leadingZeroCount * 10);
 
-            // special handling for 4s immediately after leading 0s
+            // 对紧跟在前导 0 之后的 4 进行特殊处理
             uint256 leadingFourCount = getLeadingNibbleCount(addrBytes, leadingZeroCount, 4);
-            // If the first nonzero nibble is not 4, return 0
+            // 若第一个非零 nibble 不是 4，返回 0
             if (leadingFourCount == 0) {
                 return 0;
             } else if (leadingFourCount == 4) {
-                // 60 points if exactly 4 4s
+                // 恰好 4 个 4 时计 60 分
                 calculatedScore += 60;
             } else if (leadingFourCount > 4) {
-                // 40 points if more than 4 4s
+                // 超过 4 个 4 时计 40 分
                 calculatedScore += 40;
             }
 
-            // handling for remaining nibbles
+            // 处理剩余的 nibble
             for (uint256 i = 0; i < addrBytes.length * 2; i++) {
                 uint8 currentNibble = getNibble(addrBytes, i);
 
-                // 1 extra point for any 4 nibbles
+                // 每个值为 4 的 nibble 额外计 1 分
                 if (currentNibble == 4) {
                     calculatedScore += 1;
                 }
             }
 
-            // If the last 4 nibbles are 4s, add 20 points
+            // 若最后 4 个 nibble 都是 4，加 20 分
             if (addrBytes[18] == 0x44 && addrBytes[19] == 0x44) {
                 calculatedScore += 20;
             }
         }
     }
 
-    /// @notice Returns the number of leading nibbles in an address that match a given value
-    /// @param addrBytes The address to count the leading zero nibbles in
+    /// @notice 返回地址中与给定值相等的前导 nibble 的数量
+    /// @param addrBytes 要统计前导零 nibble 的地址
     function getLeadingNibbleCount(bytes20 addrBytes, uint256 startIndex, uint8 comparison)
         internal
         pure
@@ -81,16 +81,16 @@ library VanityAddressLib {
         }
     }
 
-    /// @notice Returns the nibble at a given index in an address
-    /// @param input The address to get the nibble from
-    /// @param nibbleIndex The index of the nibble to get
+    /// @notice 返回地址中指定索引处的 nibble
+    /// @param input 要从中获取 nibble 的地址
+    /// @param nibbleIndex 要获取的 nibble 的索引
     function getNibble(bytes20 input, uint256 nibbleIndex) internal pure returns (uint8 currentNibble) {
         uint8 currByte = uint8(input[nibbleIndex / 2]);
         if (nibbleIndex % 2 == 0) {
-            // Get the higher nibble of the byte
+            // 获取该字节的高位 nibble
             currentNibble = currByte >> 4;
         } else {
-            // Get the lower nibble of the byte
+            // 获取该字节的低位 nibble
             currentNibble = currByte & 0x0F;
         }
     }

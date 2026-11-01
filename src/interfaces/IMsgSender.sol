@@ -2,12 +2,12 @@
 pragma solidity ^0.8.0;
 
 /// @title IMsgSender
-/// @notice Interface for contracts that expose the original caller
+/// @notice 对外暴露原始调用者的合约所实现的接口
 interface IMsgSender {
-    /// @notice Returns the address of the original caller (msg.sender)
-    /// @dev Uniswap v4 periphery contracts implement a callback pattern which lose
-    /// the original msg.sender caller context. This view function provides a way for
-    /// integrating contracts (e.g. hooks) to access the original caller address.
-    /// @return The address of the original caller
+    /// @notice 返回原始调用者（msg.sender）的地址
+    /// @dev Uniswap v4 periphery 合约采用回调模式，这会丢失
+    /// 原始 msg.sender 调用者的上下文。该 view 函数为
+    /// 集成合约（例如 hook）提供了一种获取原始调用者地址的方式。
+    /// @return 原始调用者的地址
     function msgSender() external view returns (address);
 }

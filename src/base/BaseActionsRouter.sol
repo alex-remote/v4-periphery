@@ -7,28 +7,28 @@ import {CalldataDecoder} from "../libraries/CalldataDecoder.sol";
 import {ActionConstants} from "../libraries/ActionConstants.sol";
 import {IMsgSender} from "../interfaces/IMsgSender.sol";
 
-/// @notice Abstract contract for performing a combination of actions on Uniswap v4.
-/// @dev Suggested uint256 action values are defined in Actions.sol, however any definition can be used
+/// @notice 用于在 Uniswap v4 上执行一组操作（action）组合的抽象合约。
+/// @dev 建议使用的 uint256 操作值定义在 Actions.sol 中，但也可以使用任意其它定义
 abstract contract BaseActionsRouter is IMsgSender, SafeCallback {
     using CalldataDecoder for bytes;
 
-    /// @notice emitted when different numbers of parameters and actions are provided
+    /// @notice 当提供的参数数量与操作数量不一致时抛出
     error InputLengthMismatch();
 
-    /// @notice emitted when an inheriting contract does not support an action
+    /// @notice 当继承合约不支持某个操作时抛出
     error UnsupportedAction(uint256 action);
 
     constructor(IPoolManager _poolManager) SafeCallback(_poolManager) {}
 
-    /// @notice internal function that triggers the execution of a set of actions on v4
-    /// @dev inheriting contracts should call this function to trigger execution
+    /// @notice 触发在 v4 上执行一组操作的内部函数
+    /// @dev 继承合约应调用此函数来触发执行
     function _executeActions(bytes calldata unlockData) internal {
         poolManager.unlock(unlockData);
     }
 
-    /// @notice function that is called by the PoolManager through the SafeCallback.unlockCallback
-    /// @param data Abi encoding of (bytes actions, bytes[] params)
-    /// where params[i] is the encoded parameters for actions[i]
+    /// @notice 由 PoolManager 通过 SafeCallback.unlockCallback 调用的函数
+    /// @param data (bytes actions, bytes[] params) 的 ABI 编码
+    /// 其中 params[i] 是 actions[i] 的编码参数
     function _unlockCallback(bytes calldata data) internal override returns (bytes memory) {
         // abi.decode(data, (bytes, bytes[]));
         (bytes calldata actions, bytes[] calldata params) = data.decodeActionsRouterParams();
@@ -47,17 +47,17 @@ abstract contract BaseActionsRouter is IMsgSender, SafeCallback {
         }
     }
 
-    /// @notice function to handle the parsing and execution of an action and its parameters
+    /// @notice 负责解析并执行某个操作及其参数的函数
     function _handleAction(uint256 action, bytes calldata params) internal virtual;
 
-    /// @notice function that returns address considered executor of the actions
-    /// @dev The other context functions, _msgData and _msgValue, are not supported by this contract
-    /// In many contracts this will be the address that calls the initial entry point that calls `_executeActions`
-    /// `msg.sender` shouldn't be used, as this will be the v4 pool manager contract that calls `unlockCallback`
-    /// If using ReentrancyLock.sol, this function can return _getLocker()
+    /// @notice 返回被视为这些操作执行者的地址的函数
+    /// @dev 本合约不支持其它上下文函数 _msgData 和 _msgValue
+    /// 在许多合约中，这会是调用初始入口点（该入口点再调用 `_executeActions`）的地址
+    /// 不应使用 `msg.sender`，因为它会是调用 `unlockCallback` 的 v4 PoolManager 合约
+    /// 如果使用 ReentrancyLock.sol，此函数可以返回 _getLocker()
     function msgSender() public view virtual returns (address);
 
-    /// @notice Calculates the address for a action
+    /// @notice 计算某个操作对应的地址
     function _mapRecipient(address recipient) internal view returns (address) {
         if (recipient == ActionConstants.MSG_SENDER) {
             return msgSender();
@@ -68,7 +68,7 @@ abstract contract BaseActionsRouter is IMsgSender, SafeCallback {
         }
     }
 
-    /// @notice Calculates the payer for an action
+    /// @notice 计算某个操作的付款方
     function _mapPayer(bool payerIsUser) internal view returns (address) {
         return payerIsUser ? msgSender() : address(this);
     }

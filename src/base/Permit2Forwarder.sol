@@ -3,10 +3,10 @@ pragma solidity ^0.8.0;
 
 import {IPermit2Forwarder, IAllowanceTransfer} from "../interfaces/IPermit2Forwarder.sol";
 
-/// @notice Permit2Forwarder allows permitting this contract as a spender on permit2
-/// @dev This contract does not enforce the spender to be this contract, but that is the intended use case
+/// @notice Permit2Forwarder 允许通过许可（permit）将本合约设为 permit2 上的被授权者
+/// @dev 本合约并不强制要求被授权者必须是本合约，但这是预期的使用场景
 contract Permit2Forwarder is IPermit2Forwarder {
-    /// @notice the Permit2 contract to forward approvals
+    /// @notice 用于转发授权的 Permit2 合约
     IAllowanceTransfer public immutable permit2;
 
     constructor(IAllowanceTransfer _permit2) {
@@ -19,7 +19,7 @@ contract Permit2Forwarder is IPermit2Forwarder {
         payable
         returns (bytes memory err)
     {
-        // use try/catch in case an actor front-runs the permit, which would DOS multicalls
+        // 使用 try/catch，以防有人抢先执行（front-run）该 permit，导致 multicall 遭到 DoS
         try permit2.permit(owner, permitSingle, signature) {}
         catch (bytes memory reason) {
             err = reason;
@@ -32,7 +32,7 @@ contract Permit2Forwarder is IPermit2Forwarder {
         payable
         returns (bytes memory err)
     {
-        // use try/catch in case an actor front-runs the permit, which would DOS multicalls
+        // 使用 try/catch，以防有人抢先执行（front-run）该 permit，导致 multicall 遭到 DoS
         try permit2.permit(owner, _permitBatch, signature) {}
         catch (bytes memory reason) {
             err = reason;

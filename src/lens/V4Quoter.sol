@@ -14,9 +14,9 @@ import {Locker} from "../libraries/Locker.sol";
 import {IMsgSender} from "../interfaces/IMsgSender.sol";
 
 /// @title V4Quoter
-/// @notice Supports quoting the delta amounts for exact input or exact output swaps.
-/// @dev These functions are not marked view because they rely on calling non-view functions and reverting
-/// to compute the result. They are also not gas efficient and should not be called on-chain.
+/// @notice 支持为精确输入或精确输出的兑换（swap）报价 delta 数量。
+/// @dev 这些函数没有标记为 view，因为它们依赖调用非 view 函数并回滚（revert）
+/// 来计算结果。它们的 gas 效率也不高，不应在链上调用。
 contract V4Quoter is IV4Quoter, BaseV4Quoter {
     using QuoterRevert for *;
 
@@ -24,8 +24,8 @@ contract V4Quoter is IV4Quoter, BaseV4Quoter {
 
     modifier setMsgSender() {
         Locker.set(msg.sender);
-        _; // execute the function
-        Locker.set(address(0)); // reset the locker
+        _; // 执行函数
+        Locker.set(address(0)); // 重置锁定者
     }
 
     /// @inheritdoc IV4Quoter
@@ -38,7 +38,7 @@ contract V4Quoter is IV4Quoter, BaseV4Quoter {
         try poolManager.unlock(abi.encodeCall(this._quoteExactInputSingle, (params))) {}
         catch (bytes memory reason) {
             gasEstimate = gasBefore - gasleft();
-            // Extract the quote from QuoteSwap error, or throw if the quote failed
+            // 从 QuoteSwap 错误中提取报价，若报价失败则抛出错误
             amountOut = reason.parseQuoteAmount();
         }
     }
@@ -53,7 +53,7 @@ contract V4Quoter is IV4Quoter, BaseV4Quoter {
         try poolManager.unlock(abi.encodeCall(this._quoteExactInput, (params))) {}
         catch (bytes memory reason) {
             gasEstimate = gasBefore - gasleft();
-            // Extract the quote from QuoteSwap error, or throw if the quote failed
+            // 从 QuoteSwap 错误中提取报价，若报价失败则抛出错误
             amountOut = reason.parseQuoteAmount();
         }
     }
@@ -68,7 +68,7 @@ contract V4Quoter is IV4Quoter, BaseV4Quoter {
         try poolManager.unlock(abi.encodeCall(this._quoteExactOutputSingle, (params))) {}
         catch (bytes memory reason) {
             gasEstimate = gasBefore - gasleft();
-            // Extract the quote from QuoteSwap error, or throw if the quote failed
+            // 从 QuoteSwap 错误中提取报价，若报价失败则抛出错误
             amountIn = reason.parseQuoteAmount();
         }
     }
@@ -83,12 +83,12 @@ contract V4Quoter is IV4Quoter, BaseV4Quoter {
         try poolManager.unlock(abi.encodeCall(this._quoteExactOutput, (params))) {}
         catch (bytes memory reason) {
             gasEstimate = gasBefore - gasleft();
-            // Extract the quote from QuoteSwap error, or throw if the quote failed
+            // 从 QuoteSwap 错误中提取报价，若报价失败则抛出错误
             amountIn = reason.parseQuoteAmount();
         }
     }
 
-    /// @dev external function called within the _unlockCallback, to simulate an exact input swap, then revert with the result
+    /// @dev 在 _unlockCallback 中调用的 external 函数，用于模拟一次精确输入兑换（swap），然后携带结果回滚（revert）
     function _quoteExactInput(QuoteExactParams calldata params) external selfOnly returns (bytes memory) {
         uint256 pathLength = params.path.length;
         BalanceDelta swapDelta;
@@ -105,21 +105,21 @@ contract V4Quoter is IV4Quoter, BaseV4Quoter {
             amountIn = zeroForOne ? uint128(swapDelta.amount1()) : uint128(swapDelta.amount0());
             inputCurrency = pathKey.intermediateCurrency;
         }
-        // amountIn after the loop actually holds the amountOut of the trade
+        // 循环结束后 amountIn 实际保存的是这笔交易的 amountOut
         amountIn.revertQuote();
     }
 
-    /// @dev external function called within the _unlockCallback, to simulate a single-hop exact input swap, then revert with the result
+    /// @dev 在 _unlockCallback 中调用的 external 函数，用于模拟一次单跳精确输入兑换（swap），然后携带结果回滚（revert）
     function _quoteExactInputSingle(QuoteExactSingleParams calldata params) external selfOnly returns (bytes memory) {
         BalanceDelta swapDelta =
             _swap(params.poolKey, params.zeroForOne, -int256(int128(params.exactAmount)), params.hookData);
 
-        // the output delta of a swap is positive
+        // 兑换（swap）的输出 delta 为正
         uint256 amountOut = params.zeroForOne ? uint128(swapDelta.amount1()) : uint128(swapDelta.amount0());
         amountOut.revertQuote();
     }
 
-    /// @dev external function called within the _unlockCallback, to simulate an exact output swap, then revert with the result
+    /// @dev 在 _unlockCallback 中调用的 external 函数，用于模拟一次精确输出兑换（swap），然后携带结果回滚（revert）
     function _quoteExactOutput(QuoteExactParams calldata params) external selfOnly returns (bytes memory) {
         uint256 pathLength = params.path.length;
         BalanceDelta swapDelta;
@@ -137,23 +137,23 @@ contract V4Quoter is IV4Quoter, BaseV4Quoter {
 
             outputCurrency = pathKey.intermediateCurrency;
         }
-        // amountOut after the loop exits actually holds the amountIn of the trade
+        // 循环退出后 amountOut 实际保存的是这笔交易的 amountIn
         amountOut.revertQuote();
     }
 
-    /// @dev external function called within the _unlockCallback, to simulate a single-hop exact output swap, then revert with the result
+    /// @dev 在 _unlockCallback 中调用的 external 函数，用于模拟一次单跳精确输出兑换（swap），然后携带结果回滚（revert）
     function _quoteExactOutputSingle(QuoteExactSingleParams calldata params) external selfOnly returns (bytes memory) {
         BalanceDelta swapDelta =
             _swap(params.poolKey, params.zeroForOne, int256(uint256(params.exactAmount)), params.hookData);
 
-        // the input delta of a swap is negative so we must flip it
+        // 兑换（swap）的输入 delta 为负，因此必须取反
         uint256 amountIn = params.zeroForOne ? uint128(-swapDelta.amount0()) : uint128(-swapDelta.amount1());
         amountIn.revertQuote();
     }
 
     /// @inheritdoc IMsgSender
     function msgSender() external view returns (address) {
-        // despite using the Locker library, V4Quoter does not have a reentrancy lock
+        // 尽管使用了 Locker 库，V4Quoter 并没有重入锁
         return Locker.get();
     }
 }

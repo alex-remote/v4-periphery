@@ -45,13 +45,13 @@ import {IWETH9} from "../../../../src/interfaces/external/IWETH9.sol";
 import {PermissionFlags} from "../../../../src/hooks/permissionedPools/libraries/PermissionFlags.sol";
 import {IPermissionsAdapter} from "../../../../src/hooks/permissionedPools/interfaces/IPermissionsAdapter.sol";
 
-/// @notice A contract that provides permissioned deployment functionality for tests
-/// This moves the deployFreshManagerAndRoutersPermissioned function from v4-core to the test folder
+/// @notice 为测试提供许可化部署功能的合约
+/// 它把 deployFreshManagerAndRoutersPermissioned 函数从 v4-core 移到了测试目录中
 contract PermissionedDeployers is Test {
     using LPFeeLibrary for uint24;
     using StateLibrary for IPoolManager;
 
-    // Helpful test constants
+    // 常用的测试常量
     bytes public constant ZERO_BYTES = Constants.ZERO_BYTES;
     uint160 public constant SQRT_PRICE_1_1 = Constants.SQRT_PRICE_1_1;
     uint160 public constant SQRT_PRICE_1_2 = Constants.SQRT_PRICE_1_2;
@@ -69,7 +69,7 @@ contract PermissionedDeployers is Test {
     SwapParams public SWAP_PARAMS =
         SwapParams({zeroForOne: true, amountSpecified: -100, sqrtPriceLimitX96: SQRT_PRICE_1_2});
 
-    // Global variables
+    // 全局变量
     Currency internal currency0;
     Currency internal currency1;
 
@@ -167,7 +167,7 @@ contract PermissionedDeployers is Test {
         deployedHooksAddr = calculatedAddr;
     }
 
-    /// @dev `currency` must be a permissions adapter, which owns the hook allowlist
+    /// @dev `currency` 必须是一个权限适配器（permissions adapter），它持有 hook 白名单
     function setAllowedHooks(Currency currency, IHooks permissionedHooks_, bool allowed) internal {
         IPermissionsAdapter(Currency.unwrap(currency)).updateAllowedHook(permissionedHooks_, allowed);
     }
@@ -209,8 +209,8 @@ contract PermissionedDeployers is Test {
         deployMiscRouters();
     }
 
-    /// @dev You must have first initialised the routers with deployFreshManagerAndRouters
-    /// If you only need the currencies (and not approvals) call deployAndMint2Currencies
+    /// @dev 必须先通过 deployFreshManagerAndRouters 初始化路由器
+    /// 如果只需要代币（而不需要授权），请调用 deployAndMint2Currencies
     function deployMintAndApprove2Currencies(bool isPermissioned0, bool isPermissioned1)
         internal
         returns (Currency, Currency)
@@ -299,9 +299,9 @@ contract PermissionedDeployers is Test {
         manager.initialize(_key, sqrtPriceX96);
     }
 
-    /// @notice Helper function for a simple ERC20 swaps that allows for unlimited price impact
+    /// @notice 用于简单 ERC20 兑换（swap）的辅助函数，允许无限的价格影响
     function swap(PoolKey memory _key, bool zeroForOne, int256 amountSpecified) internal {
-        // allow native input for exact-input, guide users to the `swapNativeInput` function
+        // 允许精确输入时使用原生代币输入，并引导用户使用 `swapNativeInput` 函数
         bool isNativeInput = zeroForOne && _key.currency0.isAddressZero();
         if (isNativeInput) require(0 > amountSpecified, "Use swapNativeInput() for native-token exact-output swaps");
 
@@ -316,27 +316,27 @@ contract PermissionedDeployers is Test {
         pure
         returns (bytes memory)
     {
-        // Initialize the plan
+        // 初始化 plan
         Plan memory plan = Planner.init();
 
-        // Create swap parameters
+        // 创建兑换（swap）参数
         IV4Router.ExactInputSingleParams memory params = IV4Router.ExactInputSingleParams(
-            poolKey, // The pool to swap in
-            zeroForOne, // Direction of swap
-            uint128(amountIn), // Amount to swap in
-            0, // Minimum amount out (0 = no slippage protection)
+            poolKey, // 进行兑换的池
+            zeroForOne, // 兑换方向
+            uint128(amountIn), // 兑换输入数量
+            0, // 最小输出数量（0 = 无滑点保护）
             0,
-            bytes("") // Hook data
+            bytes("") // hook 数据
         );
 
-        // Add the swap action to the plan
+        // 将兑换操作（action）加入 plan
         plan = plan.add(Actions.SWAP_EXACT_IN_SINGLE, abi.encode(params));
 
-        // Finalize the plan - this adds SETTLE and TAKE actions
+        // 完成 plan —— 这会添加 SETTLE 和 TAKE 操作（action）
         bytes memory data = plan.finalizeSwap(
-            zeroForOne ? poolKey.currency0 : poolKey.currency1, // Input currency
-            zeroForOne ? poolKey.currency1 : poolKey.currency0, // Output currency
-            ActionConstants.MSG_SENDER // Take recipient
+            zeroForOne ? poolKey.currency0 : poolKey.currency1, // 输入代币
+            zeroForOne ? poolKey.currency1 : poolKey.currency0, // 输出代币
+            ActionConstants.MSG_SENDER // 提取（take）的接收者
         );
 
         return data;

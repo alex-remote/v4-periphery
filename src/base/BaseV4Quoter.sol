@@ -19,8 +19,8 @@ abstract contract BaseV4Quoter is SafeCallback {
 
     constructor(IPoolManager _poolManager) SafeCallback(_poolManager) {}
 
-    /// @dev Only this address may call this function. Used to mimic internal functions, using an
-    /// external call to catch and parse revert reasons
+    /// @dev 只有本合约地址可以调用此函数。用于模拟内部函数：通过一次
+    /// 外部调用来捕获并解析回滚（revert）原因
     modifier selfOnly() {
         if (msg.sender != address(this)) revert NotSelf();
         _;
@@ -28,14 +28,14 @@ abstract contract BaseV4Quoter is SafeCallback {
 
     function _unlockCallback(bytes calldata data) internal override returns (bytes memory) {
         (bool success, bytes memory returnData) = address(this).call(data);
-        // Every quote path gathers a quote, and then reverts either with QuoteSwap(quoteAmount) or alternative error
+        // 每条报价路径都会先获取报价，然后以 QuoteSwap(quoteAmount) 或其它错误回滚（revert）
         if (success) revert UnexpectedCallSuccess();
-        // Bubble the revert string, whether a valid quote or an alternative error
+        // 向上冒泡回滚数据，无论是有效报价还是其它错误
         returnData.bubbleReason();
     }
 
-    /// @dev Execute a swap and return the balance delta
-    /// @notice if amountSpecified < 0, the swap is exactInput, otherwise exactOutput
+    /// @dev 执行一次兑换（swap）并返回余额 delta
+    /// @notice 若 amountSpecified < 0，则为 exactInput（精确输入）兑换，否则为 exactOutput（精确输出）
     function _swap(PoolKey memory poolKey, bool zeroForOne, int256 amountSpecified, bytes calldata hookData)
         internal
         returns (BalanceDelta swapDelta)
@@ -50,7 +50,7 @@ abstract contract BaseV4Quoter is SafeCallback {
             hookData
         );
 
-        // Check that the pool was not illiquid.
+        // 检查池的流动性是否充足。
         int128 amountSpecifiedActual = (zeroForOne == (amountSpecified < 0)) ? swapDelta.amount0() : swapDelta.amount1();
         if (amountSpecifiedActual != amountSpecified) {
             revert NotEnoughLiquidity(poolKey.toId());

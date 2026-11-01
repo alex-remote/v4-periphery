@@ -32,7 +32,7 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
     using PermitHash for IAllowanceTransfer.PermitSingle;
     using StateLibrary for IPoolManager;
 
-    // To allow testing without importing PermissionedV4Router
+    // 便于在不导入 PermissionedV4Router 的情况下进行测试
     error HookNotImplemented();
     error Unauthorized();
     error HookCallFailed();
@@ -45,11 +45,11 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
     Currency public permissionsAdapter0Currency;
     Currency public permissionsAdapter1Currency;
 
-    // Test Users
+    // 测试用户
     address public alice = makeAddr("ALICE");
     address public unauthorizedUser = makeAddr("UNAUTHORIZED");
 
-    // Commands
+    // 命令
     bytes public COMMAND_V4_SWAP = hex"10";
     bytes public COMMAND_PERMIT2_PERMIT = hex"0a";
 
@@ -67,10 +67,10 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
     }
 
     function setupPermissionsAndApprovals() internal {
-        // Setup approvals for test address
+        // 为测试地址设置授权
         _setupApprovals();
 
-        // Setup approvals for authorized user
+        // 为已授权用户设置授权
         vm.startPrank(alice);
         _setupApprovals();
         vm.stopPrank();
@@ -135,11 +135,11 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
         vm.snapshotGasLastCall("PermissionedV4Router_ExactInputSingle_PermissionedTokens");
     }
 
-    /// @notice Cost of an ordinary, non-permissioned swap routed through the permissioned router.
-    ///         This is what UniversalRouter users pay, since V4SwapRouter inherits PermissionedV4Router.
+    /// @notice 通过许可路由器路由的普通（非许可）兑换（swap）的 gas 成本。
+    ///         这就是 UniversalRouter 用户需要支付的成本，因为 V4SwapRouter 继承自 PermissionedV4Router。
     function test_gas_swapExactInputSingle_ordinaryTokens() public {
         uint256 amountIn = 1000;
-        // key2 is currency2/currency3 with no hook — neither side is a permissions adapter
+        // key2 为 currency2/currency3，未安装 hook —— 两侧都不是权限适配器
         IV4Router.ExactInputSingleParams memory params =
             IV4Router.ExactInputSingleParams(key2, true, uint128(amountIn), 0, 0, bytes(""));
 
@@ -150,9 +150,9 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
         vm.snapshotGasLastCall("PermissionedV4Router_ExactInputSingle_OrdinaryTokens");
     }
 
-    /// @notice Cost of an ordinary 3-hop swap over four distinct assets through the permissioned router.
-    ///         Distinct intermediates are what make multi-hop expensive: each is a currency the router
-    ///         never looked up before, so it costs a cold storage read that a same-pool route would not.
+    /// @notice 通过许可路由器在四种不同资产间进行普通 3 跳兑换（swap）的 gas 成本。
+    ///         互不相同的中间代币正是多跳兑换开销大的原因：每一个都是路由器此前从未查询过的代币，
+    ///         因此都会产生一次冷存储读取，而同一池内的路径则不会产生这一开销。
     function test_gas_swapExactIn3Hops_ordinaryTokens_distinctAssets() public {
         MockERC20[] memory extra = deployTokens(1, 2 ** 128, false);
         Currency currency5 = Currency.wrap(address(extra[0]));
@@ -160,11 +160,11 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
         extra[0].approve(address(permissionedRouter), type(uint256).max);
         extra[0].approve(address(positionManager), type(uint256).max);
 
-        // key2 already covers currency2/currency3; add the two remaining legs
+        // key2 已覆盖 currency2/currency3；再添加剩余的两段
         createPoolWithLiquidity(currency3, currency4, address(0));
         createPoolWithLiquidity(currency4, currency5, address(0));
 
-        // currency2 -> currency3 -> currency4 -> currency5, no repeats
+        // currency2 -> currency3 -> currency4 -> currency5，无重复
         PathKey[] memory path = new PathKey[](3);
         path[0] = PathKey(currency3, 3000, 60, IHooks(address(0)), bytes(""));
         path[1] = PathKey(currency4, 3000, 60, IHooks(address(0)), bytes(""));
@@ -173,7 +173,7 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
         IV4Router.ExactInputParams memory params =
             IV4Router.ExactInputParams(currency2, path, new uint256[](0), uint128(1000), 0);
 
-        // createPoolWithLiquidity builds its mint on the shared `plan`, so reset before the swap
+        // createPoolWithLiquidity 会在共享的 `plan` 上构建其铸造操作，因此在兑换前需重置
         plan = Planner.init();
         plan = plan.add(Actions.SWAP_EXACT_IN, abi.encode(params));
         bytes memory data = plan.finalizeSwap(currency2, currency5, ActionConstants.MSG_SENDER);
@@ -183,7 +183,7 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
     }
 
     /*//////////////////////////////////////////////////////////////
-                        PERMISSION TESTS
+                        权限测试
     //////////////////////////////////////////////////////////////*/
 
     function test_swap_reverts_unauthorized_user() public {
@@ -222,20 +222,20 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
 
     error HookNotAllowed();
 
-    /// @notice A pool holding a verified adapter with no hook installed must be rejected before the swap runs.
-    ///         Uses an authorized swapper, so the rejection is attributable to the hook and not to SWAP_ALLOWED.
+    /// @notice 持有已验证适配器但未安装 hook 的池必须在兑换（swap）执行前被拒绝。
+    ///         这里使用已授权的兑换者，因此拒绝可归因于 hook，而非 SWAP_ALLOWED。
     function test_swap_reverts_hooklessPoolWithVerifiedAdapter() public {
         IERC20(Currency.unwrap(currency0)).transfer(alice, 2 ether);
         currency4.transfer(alice, 2 ether);
 
-        // same currencies as key3, but with no hook installed
+        // 与 key3 的代币相同，但未安装 hook
         Currency currencyA = permissionsAdapter0Currency;
         Currency currencyB = currency4;
         if (Currency.unwrap(currencyA) > Currency.unwrap(currencyB)) (currencyA, currencyB) = (currencyB, currencyA);
         PoolKey memory hooklessKey = PoolKey(currencyA, currencyB, 3000, 60, IHooks(address(0)));
         manager.initialize(hooklessKey, SQRT_PRICE_1_1);
 
-        // ordinary token in, permissioned adapter out — the direction the router never used to check
+        // 普通代币输入、许可适配器输出 —— 这是路由器过去从未检查过的方向
         bool zeroForOne = currencyA == currency4;
         IV4Router.ExactInputSingleParams memory params =
             IV4Router.ExactInputSingleParams(hooklessKey, zeroForOne, 1 ether, 0, 0, bytes(""));
@@ -248,8 +248,8 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
         permissionedRouter.execute(COMMAND_V4_SWAP, toBytesArray(data), type(uint256).max);
     }
 
-    /// @notice A non-zero hook that is not on the adapter's allowlist must also be rejected. Rejecting only
-    ///         `address(0)` would let a no-op hook, or an address mined without BEFORE_SWAP_FLAG, straight through.
+    /// @notice 不在适配器白名单上的非零 hook 同样必须被拒绝。如果只拒绝
+    ///         `address(0)`，就会让空操作（no-op）hook 或未带 BEFORE_SWAP_FLAG 挖出的地址直接通过。
     function test_swap_reverts_unapprovedNonZeroHook() public {
         IERC20(Currency.unwrap(currency0)).transfer(alice, 2 ether);
         IERC20(Currency.unwrap(currency1)).transfer(alice, 2 ether);
@@ -257,13 +257,13 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
         IV4Router.ExactInputSingleParams memory params =
             IV4Router.ExactInputSingleParams(insecureKey, true, uint128(1 ether), 0, 0, bytes(""));
 
-        // insecureHooks is allow-listed in setUp, so this identical swap succeeds
+        // insecureHooks 已在 setUp 中加入白名单，因此这笔相同的兑换会成功
         plan = plan.add(Actions.SWAP_EXACT_IN_SINGLE, abi.encode(params));
         bytes memory data = plan.finalizeSwap(insecureKey.currency0, insecureKey.currency1, ActionConstants.MSG_SENDER);
         vm.prank(alice);
         permissionedRouter.execute(COMMAND_V4_SWAP, toBytesArray(data), type(uint256).max);
 
-        // revoke the hook on one side and the same swap is now rejected
+        // 在一侧撤销该 hook 后，同样的兑换现在会被拒绝
         setAllowedHooks(permissionsAdapter0Currency, insecureHooks, false);
 
         plan = Planner.init();
@@ -274,14 +274,14 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
         permissionedRouter.execute(COMMAND_V4_SWAP, toBytesArray(data), type(uint256).max);
     }
 
-    /// @notice A wrapper that is not on the adapter's `allowedWrappers` list cannot obtain an adapter delta.
-    ///         This is what closes the ERC-6909 route: `PoolManager.mint` turns a delta into a freely
-    ///         transferable claim without ever entering `PermissionsAdapter._update`, so the underlying
-    ///         token's allowlist never runs and denying the delta is the only defense. Unapproved-hook
-    ///         pools are covered separately — they can never hold adapter inventory to begin with.
+    /// @notice 不在适配器 `allowedWrappers` 列表中的包装器（wrapper）无法获得适配器的 delta。
+    ///         正是这一点封堵了 ERC-6909 路径：`PoolManager.mint` 会将 delta 转换为可自由
+    ///         转让的凭证（claim），全程不经过 `PermissionsAdapter._update`，因此底层
+    ///         代币的白名单检查根本不会执行，拒绝该 delta 是唯一的防线。使用未批准 hook 的
+    ///         池另有单独的测试覆盖 —— 它们从一开始就无法持有适配器库存。
     function test_unapprovedWrapper_cannotObtainAdapterDelta() public {
-        // reports alice, who holds ALL_ALLOWED, so the allowlist check on the swapper passes and the
-        // only remaining barrier is that the wrapper itself is not on `allowedWrappers`
+        // 该包装器上报的调用者是持有 ALL_ALLOWED 的 alice，因此针对兑换者的白名单检查会通过，
+        // 唯一剩下的障碍就是该包装器本身不在 `allowedWrappers` 中
         MockUnapprovedWrapper unapprovedWrapper = new MockUnapprovedWrapper(manager, alice);
         assertTrue(permissionsAdapter0.isAllowed(alice, PermissionFlags.SWAP_ALLOWED));
         assertFalse(permissionsAdapter0.allowedWrappers(address(unapprovedWrapper)));
@@ -351,7 +351,7 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
         permissionedRouter.execute(COMMAND_V4_SWAP, toBytesArray(data), type(uint256).max);
     }
 
-    /// @notice Standalone SETTLE+TAKE bypasses the hook's swap pause. Router-side check must catch it.
+    /// @notice 单独的 SETTLE+TAKE 会绕过 hook 的兑换暂停，必须由路由器端的检查拦截。
     function test_settle_revert_when_swapping_disabled_on_input_adapter() public {
         IERC20(Currency.unwrap(currency0)).transfer(alice, 2 ether);
         IERC20(Currency.unwrap(currency1)).transfer(alice, 2 ether);
@@ -367,13 +367,13 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
         permissionedRouter.execute(COMMAND_V4_SWAP, toBytesArray(data), type(uint256).max);
     }
 
-    /// @dev The adapter is only on the output side, so `_pay` takes the standard path and the router's
-    ///         `_take` is the sole guard. `insecureHooks` performs no permission checks, so a revert here
-    ///         can only originate in the router. Should revert when swapping is disabled on the output adapter.
+    /// @dev 适配器仅位于输出侧，因此 `_pay` 走标准路径，路由器的
+    ///         `_take` 是唯一的防护。`insecureHooks` 不执行任何权限检查，因此此处的回滚（revert）
+    ///         只可能来自路由器。当输出适配器禁用兑换时应回滚。
     function test_take_revert_when_swapping_disabled_on_output_adapter() public {
         PoolKey memory mixedInsecureKey =
             createPoolWithLiquidity(permissionsAdapter0Currency, currency2, address(insecureHooks));
-        // minting liquidity above leaves its own actions on the shared plan
+        // 上面铸造流动性时会在共享的 plan 上留下其自身的操作（action）
         plan = Planner.init();
 
         IERC20(Currency.unwrap(currency2)).transfer(alice, 2 ether);
@@ -394,13 +394,13 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
         permissionedRouter.execute(COMMAND_V4_SWAP, toBytesArray(data), type(uint256).max);
     }
 
-    /// @dev The adapter is only on the output side, so `_pay` takes the standard path and the router's
-    ///         `_take` is the sole guard. `insecureHooks` performs no permission checks, so a revert here
-    ///         can only originate in the router. Should revert when msg.sender is not swap-allowed.
+    /// @dev 适配器仅位于输出侧，因此 `_pay` 走标准路径，路由器的
+    ///         `_take` 是唯一的防护。`insecureHooks` 不执行任何权限检查，因此此处的回滚（revert）
+    ///         只可能来自路由器。当 msg.sender 没有兑换权限时应回滚。
     function test_take_revert_when_unauthorized_on_output_adapter() public {
         PoolKey memory mixedInsecureKey =
             createPoolWithLiquidity(permissionsAdapter0Currency, currency2, address(insecureHooks));
-        // minting liquidity above leaves its own actions on the shared plan
+        // 上面铸造流动性时会在共享的 plan 上留下其自身的操作（action）
         plan = Planner.init();
 
         IERC20(Currency.unwrap(currency2)).transfer(alice, 2 ether);
@@ -581,7 +581,7 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
             getPermissionedCurrency(key1.currency1).transfer(alice, 2 ether);
         }
 
-        // Give unauthorized user the permissioned currency
+        // 给未授权用户发放许可代币
         MockPermissionedToken(Currency.unwrap(currency1)).setAllowlist(unauthorizedUser, PermissionFlags.ALL_ALLOWED);
         IERC20(Currency.unwrap(currency1)).transfer(unauthorizedUser, 2 ether);
         MockPermissionedToken(Currency.unwrap(currency1)).setAllowlist(unauthorizedUser, PermissionFlags.NONE);
@@ -645,7 +645,7 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
     }
 
     function test_permission_flag_none_swap_reverts() public {
-        // Test that NONE permissions prevent swap operations
+        // 测试 NONE 权限会阻止兑换操作
         MockPermissionedToken(Currency.unwrap(currency0)).setAllowlist(alice, PermissionFlags.NONE);
         MockPermissionedToken(Currency.unwrap(currency1)).setAllowlist(alice, PermissionFlags.NONE);
 
@@ -666,7 +666,7 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
     }
 
     function test_router_user_payment_permissioned_token_unauthorized_reverts() public {
-        // Test that LIQUIDITY_ALLOWED does not allow swap operations
+        // 测试 LIQUIDITY_ALLOWED 不允许兑换操作
         MockPermissionedToken(Currency.unwrap(currency0)).setAllowlist(alice, PermissionFlags.LIQUIDITY_ALLOWED);
         MockPermissionedToken(Currency.unwrap(currency1)).setAllowlist(alice, PermissionFlags.LIQUIDITY_ALLOWED);
 
@@ -691,7 +691,7 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
     }
 
     function test_permission_flag_liquidity_allowed_swap_reverts() public {
-        // Test that LIQUIDITY_ALLOWED does not allow swap operations
+        // 测试 LIQUIDITY_ALLOWED 不允许兑换操作
         MockPermissionedToken(Currency.unwrap(currency0)).setAllowlist(alice, PermissionFlags.LIQUIDITY_ALLOWED);
         MockPermissionedToken(Currency.unwrap(currency1)).setAllowlist(alice, PermissionFlags.LIQUIDITY_ALLOWED);
 
@@ -715,7 +715,7 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
     }
 
     function test_permission_flag_all_allowed_swap_succeeds() public {
-        // Test that ALL_ALLOWED allows swap operations
+        // 测试 ALL_ALLOWED 允许兑换操作
         MockPermissionedToken(Currency.unwrap(currency0)).setAllowlist(alice, PermissionFlags.ALL_ALLOWED);
         MockPermissionedToken(Currency.unwrap(currency1)).setAllowlist(alice, PermissionFlags.ALL_ALLOWED);
 
@@ -738,7 +738,7 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
     }
 
     function test_permission_flag_combinations_swap() public {
-        // Test various combinations of permissions for swaps
+        // 测试兑换的各种权限组合
         IERC20(Currency.unwrap(currency0)).transfer(alice, 2 ether);
         IERC20(Currency.unwrap(currency1)).transfer(alice, 2 ether);
 
@@ -753,7 +753,7 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
         bytes memory data =
             plan.finalizeSwap(permissionsAdapter1Currency, permissionsAdapter0Currency, ActionConstants.MSG_SENDER);
 
-        // Test SWAP_ALLOWED + LIQUIDITY_ALLOWED (should work like ALL_ALLOWED)
+        // 测试 SWAP_ALLOWED + LIQUIDITY_ALLOWED（效果应与 ALL_ALLOWED 相同）
         MockPermissionedToken(Currency.unwrap(currency0))
             .setAllowlist(alice, (PermissionFlags.SWAP_ALLOWED | PermissionFlags.LIQUIDITY_ALLOWED));
         MockPermissionedToken(Currency.unwrap(currency1))
@@ -764,7 +764,7 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
     }
 
     function test_permission_flag_partial_permissions_swap() public {
-        // Test that having permissions on only one token is not enough for swaps
+        // 测试仅在一个代币上拥有权限不足以进行兑换
         MockPermissionedToken(Currency.unwrap(currency0)).setAllowlist(alice, PermissionFlags.SWAP_ALLOWED);
         MockPermissionedToken(Currency.unwrap(currency1)).setAllowlist(alice, PermissionFlags.NONE);
 
@@ -788,7 +788,7 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
     }
 
     function test_permission_flag_dynamic_changes_swap() public {
-        // Test that permission changes take effect immediately for swaps
+        // 测试权限变更对兑换立即生效
         MockPermissionedToken(Currency.unwrap(currency0)).setAllowlist(alice, PermissionFlags.SWAP_ALLOWED);
         MockPermissionedToken(Currency.unwrap(currency1)).setAllowlist(alice, PermissionFlags.SWAP_ALLOWED);
 
@@ -806,22 +806,22 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
         bytes memory data =
             plan.finalizeSwap(permissionsAdapter1Currency, permissionsAdapter0Currency, ActionConstants.MSG_SENDER);
 
-        // Should succeed initially
+        // 初始时应成功
         vm.prank(alice);
         permissionedRouter.execute(COMMAND_V4_SWAP, toBytesArray(data), type(uint256).max);
 
-        // Remove permissions
+        // 移除权限
         MockPermissionedToken(Currency.unwrap(currency0)).setAllowlist(alice, PermissionFlags.NONE);
         MockPermissionedToken(Currency.unwrap(currency1)).setAllowlist(alice, PermissionFlags.NONE);
 
-        // Should fail on subsequent operations
+        // 后续操作应失败
         vm.prank(alice);
         vm.expectRevert();
         permissionedRouter.execute(COMMAND_V4_SWAP, toBytesArray(data), type(uint256).max);
     }
 
     function test_permission_flag_edge_cases_swap() public {
-        // Test edge cases with permission flags for swaps
+        // 测试兑换时权限标志的边界情况
         IERC20(Currency.unwrap(currency0)).transfer(alice, 2 ether);
         IERC20(Currency.unwrap(currency1)).transfer(alice, 2 ether);
 
@@ -836,7 +836,7 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
         bytes memory data =
             plan.finalizeSwap(permissionsAdapter1Currency, permissionsAdapter0Currency, ActionConstants.MSG_SENDER);
 
-        // Test with zero permissions (should be same as NONE)
+        // 使用零权限测试（应与 NONE 相同）
         MockPermissionedToken(Currency.unwrap(currency0)).setAllowlist(alice, PermissionFlag.wrap(0x0000));
         MockPermissionedToken(Currency.unwrap(currency1)).setAllowlist(alice, PermissionFlag.wrap(0x0000));
 
@@ -844,7 +844,7 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
         vm.expectRevert();
         permissionedRouter.execute(COMMAND_V4_SWAP, toBytesArray(data), type(uint256).max);
 
-        // Test with maximum permissions (should be same as ALL_ALLOWED)
+        // 使用最大权限测试（应与 ALL_ALLOWED 相同）
         MockPermissionedToken(Currency.unwrap(currency0)).setAllowlist(alice, PermissionFlag.wrap(0xFFFF));
         MockPermissionedToken(Currency.unwrap(currency1)).setAllowlist(alice, PermissionFlag.wrap(0xFFFF));
 
@@ -881,7 +881,7 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
     }
 
     function test_permission_flag_exact_output_swap() public {
-        // Test permission flags with exact output swaps
+        // 测试精确输出兑换下的权限标志
         MockPermissionedToken(Currency.unwrap(currency0)).setAllowlist(alice, PermissionFlags.SWAP_ALLOWED);
         MockPermissionedToken(Currency.unwrap(currency1)).setAllowlist(alice, PermissionFlags.SWAP_ALLOWED);
 
@@ -906,7 +906,7 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
     }
 
     function test_permission_flag_multi_hop_swap() public {
-        // Test permission flags with multi-hop swaps
+        // 测试多跳兑换下的权限标志
         MockPermissionedToken(Currency.unwrap(currency0)).setAllowlist(alice, PermissionFlags.SWAP_ALLOWED);
         MockPermissionedToken(Currency.unwrap(currency1)).setAllowlist(alice, PermissionFlags.SWAP_ALLOWED);
 
@@ -918,7 +918,7 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
         path[0] = permissionsAdapter1Currency;
         path[1] = permissionsAdapter0Currency;
 
-        // Create path keys for the multi-hop swap
+        // 为多跳兑换创建路径 key
         PathKey[] memory pathKeys = new PathKey[](1);
         pathKeys[0] = PathKey({
             intermediateCurrency: permissionsAdapter0Currency,
@@ -940,7 +940,7 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
     }
 
     function test_router_user_payment_permissioned_token() public {
-        // Test that SWAP_ALLOWED allows swap operations
+        // 测试 SWAP_ALLOWED 允许兑换操作
         MockPermissionedToken(Currency.unwrap(currency0)).setAllowlist(alice, PermissionFlags.SWAP_ALLOWED);
         MockPermissionedToken(Currency.unwrap(currency1)).setAllowlist(alice, PermissionFlags.SWAP_ALLOWED);
 
@@ -963,13 +963,13 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
     }
 
     /*//////////////////////////////////////////////////////////////
-                        ERC20 -> ERC20 EXACT INPUT
+                        ERC20 -> ERC20 精确输入
     //////////////////////////////////////////////////////////////*/
 
     function test_swapExactInputSingle_revertsForAmountOut() public {
         uint256 amountIn = 1 ether;
         uint256 expectedAmountOut = 19992;
-        // min amount out of 1 higher than the actual amount out
+        // 最小输出数量比实际输出数量高 1
         IV4Router.ExactInputSingleParams memory params = IV4Router.ExactInputSingleParams(
             key0, true, uint128(amountIn), uint128(expectedAmountOut + 1), 0, bytes("")
         );
@@ -1021,7 +1021,7 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
 
         (uint256 inputBalanceBefore, uint256 outputBalanceBefore,) =
             getInputAndOutputBalances(key0, true, address(manager));
-        // swap with alice as the take recipient
+        // 以 alice 作为提取（take）接收者进行兑换
         _finalizeAndExecuteSwap(key0.currency0, key0.currency1, amountIn, alice);
         (uint256 inputBalanceAfter, uint256 outputBalanceAfter,) =
             getInputAndOutputBalances(key0, true, address(manager));
@@ -1033,8 +1033,8 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
         assertEq(aliceOutputBalanceAfter - aliceOutputBalanceBefore, expectedAmountOut);
     }
 
-    // This is not a real use-case in isolation, but will be used in the UniversalRouter if a v4
-    // swap is before another swap on v2/v3
+    // 单独来看这并不是真实用例，但当 UniversalRouter 中的一笔 v4 兑换
+    // 位于另一笔 v2/v3 兑换之前时会用到
     function test_swapExactInputSingle_zeroForOne_takeAllToRouter() public {
         uint256 amountIn = 1 ether;
         uint256 expectedAmountOut = 19992;
@@ -1044,13 +1044,13 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
 
         plan = plan.add(Actions.SWAP_EXACT_IN_SINGLE, abi.encode(params));
 
-        // the router holds no funds before
+        // 兑换前路由器不持有任何资金
         assertEq(permissionsAdapter0.balanceOf(address(permissionedRouter)), 0);
         assertEq(permissionsAdapter1.balanceOf(address(permissionedRouter)), 0);
 
         (uint256 inputBalanceBefore, uint256 outputBalanceBefore,) =
             getInputAndOutputBalances(key0, true, address(manager));
-        // swap with the router as the take recipient
+        // 以路由器作为提取（take）接收者进行兑换
         _finalizeAndExecuteSwap(key0.currency0, key0.currency1, amountIn, ActionConstants.ADDRESS_THIS);
         (uint256 inputBalanceAfter, uint256 outputBalanceAfter,) =
             getInputAndOutputBalances(key0, true, address(manager));
@@ -1059,8 +1059,8 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
         assertEq(outputBalanceBefore - outputBalanceAfter, expectedAmountOut);
     }
 
-    // This is not a real use-case in isolation, but will be used in the UniversalRouter if a v4
-    // swap is before another swap on v2/v3
+    // 单独来看这并不是真实用例，但当 UniversalRouter 中的一笔 v4 兑换
+    // 位于另一笔 v2/v3 兑换之前时会用到
     function test_swapExactInputSingle_zeroForOne_takeToRouter() public {
         uint256 amountIn = 1000;
         uint256 expectedAmountOut = 949;
@@ -1073,17 +1073,17 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
 
         plan = plan.add(Actions.SWAP_EXACT_IN_SINGLE, abi.encode(params));
         plan = plan.add(Actions.SETTLE_ALL, abi.encode(key0.currency0, expectedAmountOut * 12 / 10));
-        // take the entire open delta to the router's address
+        // 将全部未结 delta 提取到路由器地址
         plan = plan.add(
             Actions.TAKE, abi.encode(key0.currency1, ActionConstants.ADDRESS_THIS, ActionConstants.OPEN_DELTA)
         );
         bytes memory data = plan.encode();
-        // the router holds no funds before
+        // 兑换前路由器不持有任何资金
         assertEq(inputCurrency.balanceOf(address(permissionedRouter)), 0);
         assertEq(outputCurrency.balanceOf(address(permissionedRouter)), 0);
 
         permissionedRouter.execute(COMMAND_V4_SWAP, toBytesArray(data), type(uint256).max);
-        // the output tokens have been left in the router
+        // 输出代币被留在了路由器中
         assertEq(outputCurrency.balanceOf(address(permissionedRouter)), expectedAmountOut);
         assertEq(inputCurrency.balanceOf(address(permissionedRouter)), 0);
     }
@@ -1224,7 +1224,7 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
         (uint256 inputBalanceAfter, uint256 outputBalanceAfter,) =
             getInputAndOutputBalancesPath(tokenPath, address(manager));
 
-        // check intermediate token balances
+        // 检查中间代币余额
         assertEq(intermediateBalanceBefore, currency1.balanceOfSelf());
         assertEq(permissionsAdapter0.balanceOf(address(permissionedRouter)), 0);
         assertEq(permissionsAdapter1.balanceOf(address(permissionedRouter)), 0);
@@ -1244,7 +1244,7 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
         tokenPath.push(currency2);
         tokenPath.push(currency3);
 
-        // Build path manually: first two hops use permissionedHooks, last hop uses address(0) (key2 is hookless)
+        // 手动构建路径：前两跳使用 permissionedHooks，最后一跳使用 address(0)（key2 没有 hook）
         PathKey[] memory path = new PathKey[](3);
         path[0] = PathKey(permissionsAdapter1Currency, 3000, 60, IHooks(address(permissionedHooks)), bytes(""));
         path[1] = PathKey(currency2, 3000, 60, IHooks(address(permissionedHooks)), bytes(""));
@@ -1270,7 +1270,7 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
         (uint256 inputBalanceAfter, uint256 outputBalanceAfter,) =
             getInputAndOutputBalancesPath(tokenPath, address(manager));
 
-        // check intermediate tokens werent left in the router
+        // 检查中间代币没有留在路由器中
         assertEq(permissionsAdapter0.balanceOf(address(permissionedRouter)), 0);
         assertEq(permissionsAdapter1.balanceOf(address(permissionedRouter)), 0);
         assertEq(currency2.balanceOf(address(permissionedRouter)), 0);
@@ -1282,7 +1282,7 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
     }
 
     /*//////////////////////////////////////////////////////////////
-                ETH -> ERC20 and ERC20 -> ETH EXACT INPUT
+                ETH -> ERC20 与 ERC20 -> ETH 精确输入
     //////////////////////////////////////////////////////////////*/
 
     function test_nativeIn_swapExactInputSingle() public {
@@ -1318,7 +1318,7 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
         uint256 expectedAmountOut = 19992;
         bool zeroForOne = false;
 
-        // native output means we need !zeroForOne
+        // 输出原生代币意味着需要 !zeroForOne
         IV4Router.ExactInputSingleParams memory params =
             IV4Router.ExactInputSingleParams(nativeKey, zeroForOne, uint128(amountIn), 0, 0, bytes(""));
 
@@ -1409,7 +1409,7 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
         uint256 amountIn = 1 ether;
         uint256 expectedAmountOut = 9982;
 
-        // the initialized nativeKey is (native, currency0)
+        // 已初始化的 nativeKey 为 (native, currency0)
         tokenPath.push(CurrencyLibrary.ADDRESS_ZERO);
         tokenPath.push(permissionsAdapter0Currency);
         tokenPath.push(permissionsAdapter1Currency);
@@ -1431,7 +1431,7 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
         (, uint256 outputBalanceAfter, uint256 ethBalanceAfter) =
             getInputAndOutputBalancesPath(tokenPath, address(manager));
 
-        // check intermediate token balances
+        // 检查中间代币余额
         assertEq(intermediateBalanceBefore, currency0.balanceOfSelf());
         assertEq(userInputBalanceBefore - userInputBalanceAfter, amountIn);
         assertEq(userOutputBalanceAfter - userOutputBalanceBefore, expectedAmountOut);
@@ -1446,7 +1446,7 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
         uint256 amountIn = 1 ether;
         uint256 expectedAmountOut = 9982;
 
-        // the initialized nativeKey is (native, currency0)
+        // 已初始化的 nativeKey 为 (native, currency0)
         tokenPath.push(permissionsAdapter1Currency);
         tokenPath.push(permissionsAdapter0Currency);
         tokenPath.push(CurrencyLibrary.ADDRESS_ZERO);
@@ -1469,7 +1469,7 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
         (uint256 inputBalanceAfter,, uint256 ethBalanceAfter) =
             getInputAndOutputBalancesPath(tokenPath, address(manager));
 
-        // check intermediate token balances
+        // 检查中间代币余额
         assertEq(intermediateBalanceBefore, currency0.balanceOfSelf());
         assertEq(userInputBalanceBefore - userInputBalanceAfter, amountIn);
         assertEq(userOutputBalanceAfter - userOutputBalanceBefore, expectedAmountOut);
@@ -1502,20 +1502,20 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
         (uint256 inputBalanceAfter, uint256 outputBalanceAfter, uint256 ethBalanceAfter) =
             getInputAndOutputBalances(nativeKey, zeroForOne, address(manager));
 
-        // caller didnt pay, router paid, caller received the output
+        // 调用者未付款，由路由器付款，调用者收到了输出
         assertEq(ethBalanceBefore, ethBalanceAfter);
         assertEq(inputBalanceAfter - inputBalanceBefore, amountIn);
         assertEq(outputBalanceBefore - outputBalanceAfter, expectedAmountOut);
     }
 
     /*//////////////////////////////////////////////////////////////
-                        ERC20 -> ERC20 EXACT OUTPUT
+                        ERC20 -> ERC20 精确输出
     //////////////////////////////////////////////////////////////*/
 
     function test_swapExactOutputSingle_revertsForAmountIn() public {
-        // key0 (permissioned adapters) can deliver at most 19992 of output before the price hits the
-        // global limit; request a fillable amount so this exercises the amountInMaximum guard rather
-        // than the all-or-nothing underfill guard (V4ExactOutputUnfilled)
+        // key0（许可适配器）在价格触及全局限制之前最多只能提供 19992 的输出；
+        // 这里请求一个可成交的数量，使本测试检验的是 amountInMaximum 防护，而非
+        // 全部成交否则回滚的未足额成交防护（V4ExactOutputUnfilled）
         uint256 amountOut = 19992;
         uint256 expectedAmountIn = 434604409;
 
@@ -1595,9 +1595,9 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
     }
 
     function test_swapExactOut_revertsForAmountIn() public {
-        // key0 (permissioned adapters) can deliver at most 19992 of output before the price hits the
-        // global limit; request a fillable amount so this exercises the amountInMaximum guard rather
-        // than the all-or-nothing underfill guard (V4ExactOutputUnfilled)
+        // key0（许可适配器）在价格触及全局限制之前最多只能提供 19992 的输出；
+        // 这里请求一个可成交的数量，使本测试检验的是 amountInMaximum 防护，而非
+        // 全部成交否则回滚的未足额成交防护（V4ExactOutputUnfilled）
         uint256 amountOut = 19992;
         uint256 expectedAmountIn = 433302557;
 
@@ -1721,10 +1721,10 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
         tokenPath.push(currency2);
         tokenPath.push(currency3);
 
-        // Build path following _getExactOutputParamsWithHook pattern:
-        // path[2] = currency2 (hop: currency3→currency2, hookless pool)
-        // path[1] = adapter1 (hop: currency2→adapter1, permissioned)
-        // path[0] = adapter0 (hop: adapter1→adapter0, permissioned)
+        // 按 _getExactOutputParamsWithHook 的模式构建路径：
+        // path[2] = currency2（跳：currency3→currency2，无 hook 的池）
+        // path[1] = adapter1（跳：currency2→adapter1，许可池）
+        // path[0] = adapter0（跳：adapter1→adapter0，许可池）
         PathKey[] memory path = new PathKey[](3);
         path[0] = PathKey(permissionsAdapter0Currency, 3000, 60, IHooks(address(permissionedHooks)), bytes(""));
         path[1] = PathKey(permissionsAdapter1Currency, 3000, 60, IHooks(address(permissionedHooks)), bytes(""));
@@ -1952,7 +1952,7 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
     }
 
     /*//////////////////////////////////////////////////////////////
-                ETH -> ERC20 and ERC20 -> ETH EXACT OUTPUT
+                ETH -> ERC20 与 ERC20 -> ETH 精确输出
     //////////////////////////////////////////////////////////////*/
 
     function test_nativeOut_swapExactOutputSingle() public {
@@ -2016,7 +2016,7 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
     }
 
     /*//////////////////////////////////////////////////////////////
-                ROUTER SELF-PAYMENT COVERAGE TEST
+                路由器自付款覆盖测试
     //////////////////////////////////////////////////////////////*/
 
     function test_router_self_payment() public {
@@ -2036,13 +2036,13 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
         (uint256 inputBalanceBefore, uint256 outputBalanceBefore,) =
             getInputAndOutputBalances(key2, true, address(manager));
 
-        // Execute the swap - this should trigger the _pay function with payer == address(this) and permissionedToken == address(0)
+        // 执行兑换 —— 这应当在 payer == address(this) 且 permissionedToken == address(0) 的情况下触发 _pay 函数
         permissionedRouter.execute(COMMAND_V4_SWAP, toBytesArray(data), type(uint256).max);
 
         (uint256 inputBalanceAfter, uint256 outputBalanceAfter,) =
             getInputAndOutputBalances(key2, true, address(manager));
 
-        // Verify the router's balance was used (it should be 0 after the swap)
+        // 验证使用的是路由器的余额（兑换后应为 0）
         assertEq(key2.currency0.balanceOf(address(permissionedRouter)), 0);
         assertEq(inputBalanceAfter - inputBalanceBefore, amountIn);
         assertGt(outputBalanceBefore - outputBalanceAfter, 0);
@@ -2065,13 +2065,13 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
         (uint256 inputBalanceBefore, uint256 outputBalanceBefore,) =
             getInputAndOutputBalances(key0, true, address(manager));
 
-        // Execute the swap - this should trigger the _pay function with payer == address(this) and permissionedToken != address(0)
+        // 执行兑换 —— 这应当在 payer == address(this) 且 permissionedToken != address(0) 的情况下触发 _pay 函数
         permissionedRouter.execute(COMMAND_V4_SWAP, toBytesArray(data), type(uint256).max);
 
         (uint256 inputBalanceAfter, uint256 outputBalanceAfter,) =
             getInputAndOutputBalances(key0, true, address(manager));
 
-        // Verify the router's balance was used (it should be 0 after the swap)
+        // 验证使用的是路由器的余额（兑换后应为 0）
         assertEq(getPermissionedCurrency(key0.currency0).balanceOf(address(permissionedRouter)), 0);
         assertEq(inputBalanceAfter - inputBalanceBefore, amountIn);
         assertGt(outputBalanceBefore - outputBalanceAfter, 0);
@@ -2160,9 +2160,9 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
             ModifyLiquidityParams({tickLower: 0, tickUpper: 0, liquidityDelta: 0, salt: bytes32(0)});
         BalanceDelta balanceDelta = BalanceDelta.wrap(0);
 
-        // Use manager to avoid NotPoolManager errors for hooks with OnlyPoolManager modifier
+        // 以 manager 身份调用，避免带 OnlyPoolManager 修饰器的 hook 报 NotPoolManager 错误
         vm.startPrank(address(manager));
-        // afterSwap is implemented and tested separately
+        // afterSwap 已实现，并另行测试
         vm.expectRevert(HookNotImplemented.selector);
         permissionedHooks.afterInitialize(address(this), key0, 0, 0);
         vm.expectRevert(HookNotImplemented.selector);
@@ -2182,7 +2182,7 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
     }
 
     /*//////////////////////////////////////////////////////////////
-                RECEIVE FALLBACK TESTS
+                receive / fallback 测试
     //////////////////////////////////////////////////////////////*/
 
     error InvalidEthSender();
@@ -2213,7 +2213,7 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
     }
 
     /*//////////////////////////////////////////////////////////////
-                            SWAP EVENT TESTS
+                            兑换事件测试
     //////////////////////////////////////////////////////////////*/
 
     function _assertSwapEventMatchesPoolState(VmSafe.Log memory log, PoolKey memory key) private view {
@@ -2329,11 +2329,11 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
     }
 
     /*//////////////////////////////////////////////////////////////
-                    POOL INITIALIZATION TESTS
+                    池初始化测试
     //////////////////////////////////////////////////////////////*/
 
     function test_initialize_reverts_no_verified_adapter() public {
-        // Two non-permissioned tokens — neither is a verified adapter
+        // 两个非许可代币 —— 都不是已验证的适配器
         (Currency c0, Currency c1) = currency2 < currency3 ? (currency2, currency3) : (currency3, currency2);
         PoolKey memory unverifiedKey = PoolKey(c0, c1, 3000, 60, permissionedHooks);
         vm.expectRevert(
@@ -2365,12 +2365,12 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
     }
 
     function test_initialize_reverts_unverified_adapter_paired_with_plain_token() public {
-        // Create an adapter for a permissioned token but do NOT verify it — the M-03 attack path
-        // currency0 is a MockPermissionedToken (first 2 tokens in setup are permissioned)
+        // 为许可代币创建适配器但不进行验证 —— 即 M-03 攻击路径
+        // currency0 是 MockPermissionedToken（setup 中前 2 个代币是许可代币）
         IERC20 token = IERC20(Currency.unwrap(currency0));
         MockAllowlistChecker checker = new MockAllowlistChecker();
         address unverifiedAdapter = permissionsAdapterFactory.createPermissionsAdapter(token, address(this), checker);
-        // Do NOT verify — skip transferring 1 wei and calling verifyPermissionsAdapter
+        // 不进行验证 —— 跳过转入 1 wei 和调用 verifyPermissionsAdapter 这两步
 
         Currency adapterCurrency = Currency.wrap(unverifiedAdapter);
         (Currency c0, Currency c1) =
@@ -2388,16 +2388,16 @@ contract PermissionedV4RouterTest is PermissionedRoutingTestHelpers {
         manager.initialize(attackKey, SQRT_PRICE_1_1);
     }
 
-    /// @dev Closes the residual M-03 gap: the "at least one verified adapter" rule alone passes when
-    /// one side is a verified adapter and the other is a registered-but-unverified adapter. The new
-    /// per-currency check must reject this configuration so liquidity cannot be parked one-sided
-    /// before the second adapter is verified.
+    /// @dev 封堵 M-03 的残留缺口：仅靠“至少一个已验证适配器”这条规则，在
+    /// 一侧为已验证适配器、另一侧为已注册但未验证的适配器时仍会通过。新增的
+    /// 逐代币检查必须拒绝这种配置，以免在第二个适配器完成验证之前
+    /// 流动性被单边停放在池中。
     function test_initialize_reverts_verified_paired_with_unverified_adapter() public {
-        // Build a fresh, unverified adapter for a different permissioned token (currency1).
+        // 为另一个许可代币（currency1）构建一个全新的、未验证的适配器。
         IERC20 token = IERC20(Currency.unwrap(currency1));
         MockAllowlistChecker checker = new MockAllowlistChecker();
         address unverifiedAdapter = permissionsAdapterFactory.createPermissionsAdapter(token, address(this), checker);
-        // Do NOT verify.
+        // 不进行验证。
 
         Currency verifiedAdapterCurrency = Currency.wrap(address(permissionsAdapter0));
         Currency unverifiedAdapterCurrency = Currency.wrap(unverifiedAdapter);

@@ -52,7 +52,7 @@ contract PositionInfoLibraryTest is Test {
         info = info.setSubscribe();
         assertEq(info.hasSubscriber(), true);
 
-        // Calling set subscribe again does nothing.
+        // 再次调用 setSubscribe 不会产生任何效果。
         info = info.setSubscribe();
         assertEq(info.hasSubscriber(), true);
     }
@@ -65,7 +65,7 @@ contract PositionInfoLibraryTest is Test {
         info = info.setUnsubscribe();
         assertEq(info.hasSubscriber(), false);
 
-        // Calling set unsubscribe again does nothing.
+        // 再次调用 setUnsubscribe 不会产生任何效果。
         info = info.setUnsubscribe();
         assertEq(info.hasSubscriber(), false);
     }

@@ -10,8 +10,8 @@ import {ReentrancyLock} from "../../src/base/ReentrancyLock.sol";
 import {IAllowanceTransfer} from "permit2/src/interfaces/IAllowanceTransfer.sol";
 import {IWETH9} from "../../src/interfaces/external/IWETH9.sol";
 
-/// @notice Concrete router for testing the abstract PermissionedV4Router.
-///         Mirrors the old standalone PermissionedV4Router's execute interface.
+/// @notice 用于测试抽象合约 PermissionedV4Router 的具体路由器实现。
+///         复刻旧版独立 PermissionedV4Router 的 execute 接口。
 contract MockPermissionedRouter is PermissionedV4Router, ReentrancyLock {
     IAllowanceTransfer public immutable PERMIT2;
     IWETH9 public immutable WETH9;

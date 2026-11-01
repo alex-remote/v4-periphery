@@ -39,19 +39,19 @@ contract PositionManagerMulticallTest is Test, Permit2SignatureHelpers, PosmTest
     address alice;
     uint256 alicePK;
     address bob;
-    // bob used for permit2 signature tests
+    // bob 用于 permit2 签名测试
     uint256 bobPK;
-    address charlie; // charlie will NOT approve posm in setup()
+    address charlie; // charlie 在 setup() 中不会授权 posm
     uint256 charliePK;
 
     Permit2Forwarder permit2Forwarder;
 
     uint160 permitAmount = type(uint160).max;
-    // the expiration of the allowance is large
+    // 授权额度的过期时间设得很大
     uint48 permitExpiration = uint48(block.timestamp + 10e18);
     uint48 permitNonce = 0;
 
-    // redefine error from permit2/src/PermitErrors.sol since its hard-pinned to a solidity version
+    // 重新定义 permit2/src/PermitErrors.sol 中的错误，因为该文件被硬性锁定到某个 solidity 版本
     error InvalidNonce();
 
     bytes32 PERMIT2_DOMAIN_SEPARATOR;
@@ -68,7 +68,7 @@ contract PositionManagerMulticallTest is Test, Permit2SignatureHelpers, PosmTest
 
         (key, poolId) = initPool(currency0, currency1, IHooks(address(0)), 3000, SQRT_PRICE_1_1);
 
-        // Requires currency0 and currency1 to be set in base Deployers contract.
+        // 要求在基础合约 Deployers 中已设置 currency0 和 currency1。
         deployAndApprovePosm(manager);
 
         permit2Forwarder = new Permit2Forwarder(permit2);
@@ -80,7 +80,7 @@ contract PositionManagerMulticallTest is Test, Permit2SignatureHelpers, PosmTest
         seedBalance(bob);
         approvePosmFor(bob);
 
-        // do not approve posm for charlie, but approve permit2 for allowance transfer
+        // 不为 charlie 授权 posm，但为 allowance transfer 授权 permit2
         seedBalance(charlie);
         vm.startPrank(charlie);
         IERC20(Currency.unwrap(currency0)).approve(address(permit2), type(uint256).max);
@@ -91,7 +91,7 @@ contract PositionManagerMulticallTest is Test, Permit2SignatureHelpers, PosmTest
     function test_multicall_initializePool_mint() public {
         key = PoolKey({currency0: currency0, currency1: currency1, fee: 0, tickSpacing: 10, hooks: IHooks(address(0))});
 
-        // Use multicall to initialize a pool and mint liquidity
+        // 使用 multicall 初始化池并铸造流动性
         bytes[] memory calls = new bytes[](2);
         calls[0] = abi.encodeWithSelector(IPoolInitializer_v4.initializePool.selector, key, SQRT_PRICE_1_1);
 
@@ -121,7 +121,7 @@ contract PositionManagerMulticallTest is Test, Permit2SignatureHelpers, PosmTest
 
         IMulticall_v4(address(lpm)).multicall(calls);
 
-        // test swap, doesn't revert, showing the pool was initialized
+        // 测试兑换（swap），未回滚（revert），说明池已初始化
         int256 amountSpecified = -1e18;
         BalanceDelta result = swap(key, true, amountSpecified, ZERO_BYTES);
         assertEq(result.amount0(), amountSpecified);
@@ -132,7 +132,7 @@ contract PositionManagerMulticallTest is Test, Permit2SignatureHelpers, PosmTest
         key = PoolKey({currency0: currency0, currency1: currency1, fee: 0, tickSpacing: 10, hooks: IHooks(address(0))});
         manager.initialize(key, SQRT_PRICE_1_1);
 
-        // Use multicall to initialize the pool again.
+        // 使用 multicall 再次初始化该池。
         bytes[] memory calls = new bytes[](2);
         calls[0] = abi.encodeWithSelector(IPoolInitializer_v4.initializePool.selector, key, SQRT_PRICE_1_1);
 
@@ -162,7 +162,7 @@ contract PositionManagerMulticallTest is Test, Permit2SignatureHelpers, PosmTest
 
         IMulticall_v4(address(lpm)).multicall(calls);
 
-        // test swap, doesn't revert, showing the mint succeeded even after initialize reverted
+        // 测试兑换（swap），未回滚（revert），说明即使 initialize 回滚，铸造仍然成功
         int256 amountSpecified = -1e18;
         BalanceDelta result = swap(key, true, amountSpecified, ZERO_BYTES);
         assertEq(result.amount0(), amountSpecified);
@@ -178,7 +178,7 @@ contract PositionManagerMulticallTest is Test, Permit2SignatureHelpers, PosmTest
             hooks: IHooks(address(0))
         });
 
-        // Use multicall to initialize a pool and mint liquidity
+        // 使用 multicall 初始化池并铸造流动性
         bytes[] memory calls = new bytes[](2);
         calls[0] = abi.encodeWithSelector(IPoolInitializer_v4.initializePool.selector, key, SQRT_PRICE_1_1);
 
@@ -201,15 +201,15 @@ contract PositionManagerMulticallTest is Test, Permit2SignatureHelpers, PosmTest
 
         IMulticall_v4(address(lpm)).multicall{value: 1000 ether}(calls);
 
-        // test swap, doesn't revert, showing the pool was initialized
+        // 测试兑换（swap），未回滚（revert），说明池已初始化
         int256 amountSpecified = -1e18;
         BalanceDelta result = swap(key, true, amountSpecified, ZERO_BYTES);
         assertEq(result.amount0(), amountSpecified);
         assertGt(result.amount1(), 0);
     }
 
-    // charlie will attempt to decrease liquidity without approval
-    // posm's NotApproved(charlie) should bubble up through Multicall
+    // charlie 会在未获授权的情况下尝试减少流动性
+    // posm 的 NotApproved(charlie) 应通过 Multicall 向上冒泡
     function test_multicall_bubbleRevert() public {
         config = PositionConfig({
             poolKey: key,
@@ -226,7 +226,7 @@ contract PositionManagerMulticallTest is Test, Permit2SignatureHelpers, PosmTest
         );
         bytes memory actions = planner.finalizeModifyLiquidityWithClose(config.poolKey);
 
-        // Use multicall to decrease liquidity
+        // 使用 multicall 减少流动性
         bytes[] memory calls = new bytes[](1);
         calls[0] = abi.encodeWithSelector(IPositionManager.modifyLiquidities.selector, actions, _deadline);
 
@@ -236,8 +236,8 @@ contract PositionManagerMulticallTest is Test, Permit2SignatureHelpers, PosmTest
         vm.stopPrank();
     }
 
-    // decrease liquidity but forget to close
-    // core's CurrencyNotSettled should bubble up through Multicall
+    // 减少流动性但忘记关闭（close）
+    // core 的 CurrencyNotSettled 应通过 Multicall 向上冒泡
     function test_multicall_bubbleRevert_core() public {
         config = PositionConfig({
             poolKey: key,
@@ -247,7 +247,7 @@ contract PositionManagerMulticallTest is Test, Permit2SignatureHelpers, PosmTest
         uint256 tokenId = lpm.nextTokenId();
         mint(config, 100e18, address(this), ZERO_BYTES);
 
-        // do not close deltas to throw CurrencyNotSettled in core
+        // 不关闭 delta，以便在 core 中抛出 CurrencyNotSettled
         Plan memory planner = Planner.init();
         planner.add(
             Actions.DECREASE_LIQUIDITY,
@@ -255,7 +255,7 @@ contract PositionManagerMulticallTest is Test, Permit2SignatureHelpers, PosmTest
         );
         bytes memory actions = planner.encode();
 
-        // Use multicall to decrease liquidity
+        // 使用 multicall 减少流动性
         bytes[] memory calls = new bytes[](1);
         calls[0] = abi.encodeWithSelector(IPositionManager.modifyLiquidities.selector, actions, _deadline);
 
@@ -271,13 +271,13 @@ contract PositionManagerMulticallTest is Test, Permit2SignatureHelpers, PosmTest
         mint(config, liquidityAlice, alice, ZERO_BYTES);
         vm.stopPrank();
 
-        // Alice gives Bob permission to operate on her liquidity
+        // Alice 授予 Bob 操作其流动性的权限
         uint256 nonce = 1;
         bytes32 digest = getDigest(bob, tokenId, nonce, block.timestamp + 1);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(alicePK, digest);
         bytes memory signature = abi.encodePacked(r, s, v);
 
-        // bob gives himself permission and decreases liquidity
+        // bob 给自己授予权限并减少流动性
         bytes[] memory calls = new bytes[](2);
         calls[0] = abi.encodeWithSelector(
             IERC721Permit_v4(lpm).permit.selector, bob, tokenId, block.timestamp + 1, nonce, signature
@@ -299,7 +299,7 @@ contract PositionManagerMulticallTest is Test, Permit2SignatureHelpers, PosmTest
             tickLower: TickMath.minUsableTick(key.tickSpacing),
             tickUpper: TickMath.maxUsableTick(key.tickSpacing)
         });
-        // 1. revoke the auto permit we give to posm for 1 token
+        // 1. 撤销我们自动给 posm 的其中一个代币的许可（permit）
         vm.prank(bob);
         permit2.approve(Currency.unwrap(currency0), address(lpm), 0, 0);
 
@@ -312,12 +312,12 @@ contract PositionManagerMulticallTest is Test, Permit2SignatureHelpers, PosmTest
         uint256 tokenId = lpm.nextTokenId();
         bytes memory mintCall = getMintEncoded(config, 10e18, bob, ZERO_BYTES);
 
-        // 2 . call a mint that reverts because position manager doesn't have permission on permit2
+        // 2 . 调用一次铸造，它会回滚（revert），因为 PositionManager 在 permit2 上没有权限
         vm.expectRevert(abi.encodeWithSelector(IAllowanceTransfer.InsufficientAllowance.selector, 0));
         vm.prank(bob);
         lpm.modifyLiquidities(mintCall, _deadline);
 
-        // 3. encode a permit for that revoked token
+        // 3. 为那个被撤销的代币编码一个许可（permit）
         IAllowanceTransfer.PermitSingle memory permit =
             defaultERC20PermitAllowance(Currency.unwrap(currency0), permitAmount, permitExpiration, permitNonce);
         permit.spender = address(lpm);
@@ -345,7 +345,7 @@ contract PositionManagerMulticallTest is Test, Permit2SignatureHelpers, PosmTest
             tickLower: TickMath.minUsableTick(key.tickSpacing),
             tickUpper: TickMath.maxUsableTick(key.tickSpacing)
         });
-        // 1. revoke the auto permit we give to posm for 1 token
+        // 1. 撤销我们自动给 posm 的其中一个代币的许可（permit）
         vm.prank(bob);
         permit2.approve(Currency.unwrap(currency0), address(lpm), 0, 0);
         permit2.approve(Currency.unwrap(currency1), address(lpm), 0, 0);
@@ -364,12 +364,12 @@ contract PositionManagerMulticallTest is Test, Permit2SignatureHelpers, PosmTest
         uint256 tokenId = lpm.nextTokenId();
         bytes memory mintCall = getMintEncoded(config, 10e18, bob, ZERO_BYTES);
 
-        // 2 . call a mint that reverts because position manager doesn't have permission on permit2
+        // 2 . 调用一次铸造，它会回滚（revert），因为 PositionManager 在 permit2 上没有权限
         vm.expectRevert(abi.encodeWithSelector(IAllowanceTransfer.InsufficientAllowance.selector, 0));
         vm.prank(bob);
         lpm.modifyLiquidities(mintCall, _deadline);
 
-        // 3. encode a permit for that revoked token
+        // 3. 为那个被撤销的代币编码一个许可（permit）
         address[] memory tokens = new address[](2);
         tokens[0] = Currency.unwrap(currency0);
         tokens[1] = Currency.unwrap(currency1);
@@ -396,7 +396,7 @@ contract PositionManagerMulticallTest is Test, Permit2SignatureHelpers, PosmTest
         assertEq(IERC721(address(lpm)).ownerOf(tokenId), bob);
     }
 
-    /// @notice test that a front-ran permit does not fail a multicall with permit
+    /// @notice 测试被抢跑（front-run）的 permit 不会导致带 permit 的 multicall 失败
     function test_multicall_permit_frontrun_suceeds() public {
         config = PositionConfig({
             poolKey: key,
@@ -404,7 +404,7 @@ contract PositionManagerMulticallTest is Test, Permit2SignatureHelpers, PosmTest
             tickUpper: TickMath.maxUsableTick(key.tickSpacing)
         });
 
-        // Charlie signs permit for the two tokens
+        // Charlie 为两个代币签署 permit
         IAllowanceTransfer.PermitSingle memory permit0 =
             defaultERC20PermitAllowance(Currency.unwrap(currency0), permitAmount, permitExpiration, permitNonce);
         permit0.spender = address(lpm);
@@ -415,13 +415,13 @@ contract PositionManagerMulticallTest is Test, Permit2SignatureHelpers, PosmTest
         permit1.spender = address(lpm);
         bytes memory sig1 = getPermitSignature(permit1, charliePK, PERMIT2_DOMAIN_SEPARATOR);
 
-        // bob front-runs the permits
+        // bob 抢跑（front-run）这些 permit
         vm.startPrank(bob);
         lpm.permit(charlie, permit0, sig0);
         lpm.permit(charlie, permit1, sig1);
         vm.stopPrank();
 
-        // bob's front-run was successful
+        // bob 的抢跑成功了
         (uint160 _amount, uint48 _expiration, uint48 _nonce) =
             permit2.allowance(charlie, Currency.unwrap(currency0), address(lpm));
         assertEq(_amount, permitAmount);
@@ -433,7 +433,7 @@ contract PositionManagerMulticallTest is Test, Permit2SignatureHelpers, PosmTest
         assertEq(_expiration1, permitExpiration);
         assertEq(_nonce1, permitNonce + 1);
 
-        // charlie tries to mint an LP token with multicall(permit, permit, mint)
+        // charlie 尝试通过 multicall(permit, permit, mint) 铸造一个 LP 代币
         bytes[] memory calls = new bytes[](3);
         calls[0] = abi.encodeWithSelector(IPermit2Forwarder.permit.selector, charlie, permit0, sig0);
         calls[1] = abi.encodeWithSelector(IPermit2Forwarder.permit.selector, charlie, permit1, sig1);
@@ -442,7 +442,7 @@ contract PositionManagerMulticallTest is Test, Permit2SignatureHelpers, PosmTest
 
         uint256 tokenId = lpm.nextTokenId();
         vm.expectRevert();
-        IERC721(address(lpm)).ownerOf(tokenId); // token does not exist
+        IERC721(address(lpm)).ownerOf(tokenId); // 该代币不存在
 
         bytes[] memory results = lpm.multicall(calls);
         assertEq(results[0], abi.encode(abi.encodeWithSelector(InvalidNonce.selector)));
@@ -451,7 +451,7 @@ contract PositionManagerMulticallTest is Test, Permit2SignatureHelpers, PosmTest
         assertEq(IERC721(address(lpm)).ownerOf(tokenId), charlie);
     }
 
-    /// @notice test that a front-ran permitBatch does not fail a multicall with permitBatch
+    /// @notice 测试被抢跑（front-run）的 permitBatch 不会导致带 permitBatch 的 multicall 失败
     function test_multicall_permitBatch_frontrun_suceeds() public {
         config = PositionConfig({
             poolKey: key,
@@ -459,7 +459,7 @@ contract PositionManagerMulticallTest is Test, Permit2SignatureHelpers, PosmTest
             tickUpper: TickMath.maxUsableTick(key.tickSpacing)
         });
 
-        // Charlie signs permitBatch for the two tokens
+        // Charlie 为两个代币签署 permitBatch
         address[] memory tokens = new address[](2);
         tokens[0] = Currency.unwrap(currency0);
         tokens[1] = Currency.unwrap(currency1);
@@ -469,11 +469,11 @@ contract PositionManagerMulticallTest is Test, Permit2SignatureHelpers, PosmTest
         permit.spender = address(lpm);
         bytes memory sig = getPermitBatchSignature(permit, charliePK, PERMIT2_DOMAIN_SEPARATOR);
 
-        // bob front-runs the permits
+        // bob 抢跑（front-run）这些 permit
         vm.prank(bob);
         lpm.permitBatch(charlie, permit, sig);
 
-        // bob's front-run was successful
+        // bob 的抢跑成功了
         (uint160 _amount, uint48 _expiration, uint48 _nonce) =
             permit2.allowance(charlie, Currency.unwrap(currency0), address(lpm));
         assertEq(_amount, permitAmount);
@@ -485,7 +485,7 @@ contract PositionManagerMulticallTest is Test, Permit2SignatureHelpers, PosmTest
         assertEq(_expiration1, permitExpiration);
         assertEq(_nonce1, permitNonce + 1);
 
-        // charlie tries to mint an LP token with multicall(permitBatch, mint)
+        // charlie 尝试通过 multicall(permitBatch, mint) 铸造一个 LP 代币
         bytes[] memory calls = new bytes[](2);
         calls[0] = abi.encodeWithSelector(lpm.permitBatch.selector, charlie, permit, sig);
         bytes memory mintCall = getMintEncoded(config, 10e18, charlie, ZERO_BYTES);
@@ -493,7 +493,7 @@ contract PositionManagerMulticallTest is Test, Permit2SignatureHelpers, PosmTest
 
         uint256 tokenId = lpm.nextTokenId();
         vm.expectRevert();
-        IERC721(address(lpm)).ownerOf(tokenId); // token does not exist
+        IERC721(address(lpm)).ownerOf(tokenId); // 该代币不存在
 
         bytes[] memory results = lpm.multicall(calls);
         assertEq(results[0], abi.encode(abi.encodeWithSelector(InvalidNonce.selector)));

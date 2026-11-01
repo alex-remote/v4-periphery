@@ -5,9 +5,9 @@ import {ISubscriber} from "../../src/interfaces/ISubscriber.sol";
 import {BalanceDelta} from "@uniswap/v4-core/src/types/BalanceDelta.sol";
 import {PositionInfo} from "../../src/libraries/PositionInfoLibrary.sol";
 
-/// @notice Subscriber that reverts only on `notifyUnsubscribe`. Used to verify that
-///         admin force-exit (`unwindPosition`) swallows the revert via the existing
-///         gas-capped + try/catch path on `_unsubscribe`.
+/// @notice 仅在 `notifyUnsubscribe` 时回滚（revert）的订阅者。用于验证
+///         admin 强制退出（`unwindPosition`）会通过 `_unsubscribe` 上现有的
+///         限制 gas + try/catch 路径吞掉该回滚。
 contract MockUnsubscribeRevertingSubscriber is ISubscriber {
     error TestRevert(string);
 

@@ -21,16 +21,16 @@ contract VanityAddressLibTest is Test {
     function test_scoreLaterFours() public pure {
         address addr = address(0x1444444444444444444444444444444444444444);
         uint256 score = VanityAddressLib.score(addr);
-        uint256 expected = 0; // no leading 4
+        uint256 expected = 0; // 没有前导 4
         assertEq(score, expected);
     }
 
     function test_scoreMixed_4() public pure {
         address addr = address(0x0044001111111111111111111111111111114114);
-        // counts first null byte
-        // counts first leading 4s after that
-        // does not count future null bytes
-        // counts 4 nibbles after that
+        // 计入开头的零字节
+        // 计入其后紧接的前导 4
+        // 不计入后续的零字节
+        // 计入其后值为 4 的 nibble
         uint256 score = VanityAddressLib.score(addr);
         uint256 expected = 24; // 10 * 2 + 2 + 2 = 24
         assertEq(score, expected);
@@ -38,10 +38,10 @@ contract VanityAddressLibTest is Test {
 
     function test_scoreMixed_44() public pure {
         address addr = address(0x0044001111111111111111111111111111114444);
-        // counts first null byte
-        // counts first leading 4s after that
-        // does not count future null bytes
-        // counts 4 nibbles after that
+        // 计入开头的零字节
+        // 计入其后紧接的前导 4
+        // 不计入后续的零字节
+        // 计入其后值为 4 的 nibble
         uint256 score = VanityAddressLib.score(addr);
         uint256 expected = 46; // 10 * 2 + 6 + 20 = 46
         assertEq(score, expected);
@@ -49,8 +49,8 @@ contract VanityAddressLibTest is Test {
 
     function test_scoreMixed_halfZeroHalf4() public pure {
         address addr = address(0x0004111111111111111111111111111111111111);
-        // counts first null byte
-        // counts first leading 4s after that
+        // 计入开头的零字节
+        // 计入其后紧接的前导 4
         uint256 score = VanityAddressLib.score(addr);
         uint256 expected = 31; // 10 * 3 + 1 = 31
         assertEq(score, expected);
@@ -77,11 +77,11 @@ contract VanityAddressLibTest is Test {
     }
 
     function test_betterThan() public pure {
-        address addr1 = address(0x0011111111111111111111111111111111111111); // 0 points
-        address addr2 = address(0x4000111111111111111111111111111111111111); // 1 points
-        address addr3 = address(0x0000411111111111111111111111111111111111); // 10 * 4 + 1 = 41 points
-        address addr4 = address(0x0000441111111111111111111111111111111111); // 10 * 4 + 2 = 42 points
-        address addr5 = address(0x0000440011111111111111111111111111111111); // 10 * 4 + 2 = 42 points
+        address addr1 = address(0x0011111111111111111111111111111111111111); // 0 分
+        address addr2 = address(0x4000111111111111111111111111111111111111); // 1 分
+        address addr3 = address(0x0000411111111111111111111111111111111111); // 10 * 4 + 1 = 41 分
+        address addr4 = address(0x0000441111111111111111111111111111111111); // 10 * 4 + 2 = 42 分
+        address addr5 = address(0x0000440011111111111111111111111111111111); // 10 * 4 + 2 = 42 分
         assertTrue(VanityAddressLib.betterThan(addr2, addr1)); // 1 > 0
         assertTrue(VanityAddressLib.betterThan(addr3, addr2)); // 41 > 1
         assertTrue(VanityAddressLib.betterThan(addr3, addr1)); // 41 > 0

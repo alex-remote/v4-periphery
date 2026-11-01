@@ -6,7 +6,7 @@ import {IPositionManager} from "../../src/interfaces/IPositionManager.sol";
 import {BalanceDelta} from "@uniswap/v4-core/src/types/BalanceDelta.sol";
 import {PositionInfo} from "../../src/libraries/PositionInfoLibrary.sol";
 
-/// @notice A subscriber contract that returns values from the subscriber entrypoints
+/// @notice 在订阅者入口函数中返回数据的订阅者合约
 contract MockReturnDataSubscriber is ISubscriber {
     IPositionManager posm;
 
@@ -57,7 +57,7 @@ contract MockReturnDataSubscriber is ISubscriber {
     }
 }
 
-/// @notice A subscriber contract that returns values from the subscriber entrypoints
+/// @notice 在订阅者入口函数中返回数据的订阅者合约
 contract MockRevertSubscriber is ISubscriber {
     IPositionManager posm;
 

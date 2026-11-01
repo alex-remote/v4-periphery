@@ -5,48 +5,48 @@ import {IERC20} from "./IPermissionsAdapter.sol";
 import {IAllowlistChecker} from "./IAllowlistChecker.sol";
 
 interface IPermissionsAdapterFactory {
-    /// @notice Emitted when a permissions adapter is created
+    /// @notice 创建权限适配器时触发
     event PermissionsAdapterCreated(address indexed permissionsAdapter, address indexed permissionedToken);
 
-    /// @notice Emitted when a permissions adapter is verified
+    /// @notice 权限适配器通过验证时触发
     event PermissionsAdapterVerified(address indexed permissionsAdapter, address indexed permissionedToken);
 
-    /// @notice Thrown when the permissions adapter does not exist
+    /// @notice 当权限适配器不存在时抛出
     error PermissionsAdapterNotFound(address permissionsAdapter);
 
-    /// @notice Thrown when the permissions adapter is already verified
+    /// @notice 当权限适配器已通过验证时抛出
     error PermissionsAdapterAlreadyVerified(address permissionsAdapter);
 
-    /// @notice Thrown when the permissions adapter is not verified
+    /// @notice 当权限适配器未通过验证时抛出
     error PermissionsAdapterNotVerified(address permissionsAdapter);
 
-    /// @notice Creates a new permissions adapter
-    /// @param permissionedToken The permissioned token to wrap
-    /// @param initialOwner The initial owner of the permissions adapter
-    /// @param allowListChecker The allow list checker that will be used to check if transfers are allowed
+    /// @notice 创建一个新的权限适配器
+    /// @param permissionedToken 要包装的许可代币
+    /// @param initialOwner 权限适配器的初始所有者
+    /// @param allowListChecker 用于检查转账是否被允许的白名单检查器
     function createPermissionsAdapter(
         IERC20 permissionedToken,
         address initialOwner,
         IAllowlistChecker allowListChecker
     ) external returns (address);
 
-    /// @notice Verifies a permissions adapter
-    /// @param permissionsAdapter The permissions adapter
-    /// @dev This function verifies that the permissions adapter has a balance of the permissioned token. This means that the permissions adapter is on the allow list of the permissioned token and can be used to wrap and unwrap the permissioned token.
+    /// @notice 验证权限适配器
+    /// @param permissionsAdapter 权限适配器
+    /// @dev 本函数验证权限适配器持有许可代币的余额。这意味着该权限适配器已在许可代币的白名单中，可用于包装和解包许可代币。
     function verifyPermissionsAdapter(address permissionsAdapter) external;
 
-    /// @notice Returns the permissioned token of a permissions adapter
-    /// @param permissionsAdapter The permissions adapter
-    /// @return permissionedToken The permissioned token
+    /// @notice 返回权限适配器对应的许可代币
+    /// @param permissionsAdapter 权限适配器
+    /// @return permissionedToken 许可代币
     function permissionsAdapterOf(address permissionsAdapter) external view returns (address permissionedToken);
 
-    /// @notice Returns the verified permissioned token of a permissions adapter
-    /// @param permissionsAdapter The permissions adapter
-    /// @return permissionedToken The verified permissioned token
-    /// @dev A reverse lookup of the permissioned token is required, otherwise anyone could create a permissions adapter for a non-permissioned token
+    /// @notice 返回权限适配器对应的已验证许可代币
+    /// @param permissionsAdapter 权限适配器
+    /// @return permissionedToken 已验证的许可代币
+    /// @dev 需要对许可代币进行反向查找，否则任何人都可以为非许可代币创建权限适配器
     function verifiedPermissionsAdapterOf(address permissionsAdapter) external view returns (address permissionedToken);
 
-    /// @notice Returns the v4 pool manager
-    /// @return poolManager The v4 pool manager
+    /// @notice 返回 v4 的 PoolManager
+    /// @return poolManager v4 的 PoolManager
     function POOL_MANAGER() external view returns (address poolManager);
 }

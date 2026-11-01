@@ -8,9 +8,9 @@ import {IPermissionsAdapter} from "./interfaces/IPermissionsAdapter.sol";
 import {IPermissionsAdapterFactory} from "./interfaces/IPermissionsAdapterFactory.sol";
 import {PermissionFlags} from "./libraries/PermissionFlags.sol";
 
-/// @title Abstract base for routers that support permissioned V4 pools
-/// @notice Provides _pay and _mapSettleAmount overrides for wrapping/unwrapping permissioned tokens.
-///         Concrete routers (e.g., UniversalRouter's V4SwapRouter) inherit this contract.
+/// @title 支持许可 V4 池的路由器的抽象基合约
+/// @notice 提供 _pay 与 _mapSettleAmount 的重写，用于包装/解包许可代币。
+///         具体的路由器（例如 UniversalRouter 的 V4SwapRouter）继承本合约。
 abstract contract PermissionedV4Router is V4Router {
     IPermissionsAdapterFactory public immutable PERMISSIONS_ADAPTER_FACTORY;
 
@@ -25,17 +25,17 @@ abstract contract PermissionedV4Router is V4Router {
     }
 
     /// @inheritdoc V4Router
-    /// @dev Permission enforcement for a permissioned pool lives in its hook, so a pool holding a
-    ///      verified adapter must not be swapped through unless the adapter's owner has allow-listed
-    ///      that hook. Rejecting only `address(0)` is insufficient — a no-op hook, or an address mined
-    ///      without `BEFORE_SWAP_FLAG`, would otherwise pass.
+    /// @dev 许可池的权限控制由其 hook 执行，因此对于包含
+    ///      已验证适配器的池，除非适配器的所有者已将该 hook 加入白名单，否则不得
+    ///      通过它进行兑换（swap）。仅拒绝 `address(0)` 是不够的 —— 无操作的 hook，或挖出的不带
+    ///      `BEFORE_SWAP_FLAG` 的地址，否则都会通过检查。
     function _validatePoolKey(PoolKey memory poolKey) internal view override {
         if (address(PERMISSIONS_ADAPTER_FACTORY) == address(0)) return;
         _validateHook(poolKey.currency0, poolKey.hooks);
         _validateHook(poolKey.currency1, poolKey.hooks);
     }
 
-    /// @notice Reverts if `currency` is a verified permissions adapter that has not allow-listed `hooks`
+    /// @notice 若 `currency` 是已验证的权限适配器且未将 `hooks` 加入白名单，则回滚（revert）
     function _validateHook(Currency currency, IHooks hooks) internal view {
         if (PERMISSIONS_ADAPTER_FACTORY.verifiedPermissionsAdapterOf(Currency.unwrap(currency)) == address(0)) return;
         if (!IPermissionsAdapter(Currency.unwrap(currency)).allowedHooks(hooks)) revert HookNotAllowed();
@@ -46,7 +46,7 @@ abstract contract PermissionedV4Router is V4Router {
             ? address(0)
             : PERMISSIONS_ADAPTER_FACTORY.verifiedPermissionsAdapterOf(Currency.unwrap(currency));
 
-        // If the token is permissioned, validate swapping is enabled and the sender is swap-allowed
+        // 若该代币是许可代币，则校验兑换功能已启用且发送者被允许兑换
         if (permissionedToken != address(0)) {
             IPermissionsAdapter permissionsAdapter = IPermissionsAdapter(Currency.unwrap(currency));
             if (!permissionsAdapter.swappingEnabled()) revert SwappingDisabled();
@@ -64,7 +64,7 @@ abstract contract PermissionedV4Router is V4Router {
             _payStandard(currency, payer, amount);
             return;
         }
-        // token is permissioned, wrap the token and transfer it to the pool manager
+        // 该代币是许可代币，包装该代币并将其转给 PoolManager
         IPermissionsAdapter permissionsAdapter = IPermissionsAdapter(Currency.unwrap(currency));
         if (!permissionsAdapter.swappingEnabled()) revert SwappingDisabled();
         if (!permissionsAdapter.isAllowed(msgSender(), PermissionFlags.SWAP_ALLOWED)) {
@@ -78,10 +78,10 @@ abstract contract PermissionedV4Router is V4Router {
         }
     }
 
-    /// @notice Hook for concrete routers to implement standard (non-permissioned) payment
+    /// @notice 供具体路由器实现的扩展点（hook）：标准（非许可）付款
     function _payStandard(Currency currency, address payer, uint256 amount) internal virtual;
 
-    /// @notice Hook for concrete routers to implement payer-to-adapter transfer (e.g., via Permit2)
+    /// @notice 供具体路由器实现的扩展点（hook）：从付款方到适配器的转账（例如通过 Permit2）
     function _payPermissionedFromPayer(
         address payer,
         IPermissionsAdapter permissionsAdapter,
@@ -89,12 +89,12 @@ abstract contract PermissionedV4Router is V4Router {
         uint256 amount
     ) internal virtual;
 
-    /// @notice Calculates the amount for a settle action
+    /// @notice 计算结算操作（settle action）的数量
     function _mapSettleAmount(uint256 amount, Currency currency) internal view virtual override returns (uint256) {
         address permissionedToken = address(PERMISSIONS_ADAPTER_FACTORY) == address(0)
             ? address(0)
             : PERMISSIONS_ADAPTER_FACTORY.verifiedPermissionsAdapterOf(Currency.unwrap(currency));
-        // use the default implementation unless the currency is a permissioned token with a balance on the router
+        // 除非该代币是在路由器上持有余额的许可代币，否则使用默认实现
         if (permissionedToken == address(0) || amount != ActionConstants.CONTRACT_BALANCE) {
             return super._mapSettleAmount(amount, currency);
         }

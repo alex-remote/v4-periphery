@@ -8,7 +8,7 @@ import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 import {IReservesLens} from "../src/interfaces/IReservesLens.sol";
 import {ReservesLens} from "../src/lens/ReservesLens.sol";
 
-/// @notice Stable synthetic gas baselines. Real-pool distributions are produced by the fork comparison harness.
+/// @notice 稳定的合成 gas 基准。真实池的 gas 分布由分叉比对测试框架（fork comparison harness）生成。
 contract ReservesLensGasTest is Test, Deployers {
     ReservesLens internal lens;
 

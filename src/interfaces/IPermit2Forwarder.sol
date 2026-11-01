@@ -4,25 +4,25 @@ pragma solidity ^0.8.0;
 import {IAllowanceTransfer} from "permit2/src/interfaces/IAllowanceTransfer.sol";
 
 /// @title IPermit2Forwarder
-/// @notice Interface for the Permit2Forwarder contract
+/// @notice Permit2Forwarder 合约的接口
 interface IPermit2Forwarder {
-    /// @notice allows forwarding a single permit to permit2
-    /// @dev this function is payable to allow multicall with NATIVE based actions
-    /// @param owner the owner of the tokens
-    /// @param permitSingle the permit data
-    /// @param signature the signature of the permit; abi.encodePacked(r, s, v)
-    /// @return err the error returned by a reverting permit call, empty if successful
+    /// @notice 允许将单个许可（permit）转发给 Permit2
+    /// @dev 该函数声明为 payable，以便与基于 NATIVE 的操作（action）一起进行 multicall
+    /// @param owner 代币的所有者
+    /// @param permitSingle 许可（permit）数据
+    /// @param signature 该许可的签名；abi.encodePacked(r, s, v)
+    /// @return err 许可调用回滚（revert）时返回的错误数据，成功时为空
     function permit(address owner, IAllowanceTransfer.PermitSingle calldata permitSingle, bytes calldata signature)
         external
         payable
         returns (bytes memory err);
 
-    /// @notice allows forwarding batch permits to permit2
-    /// @dev this function is payable to allow multicall with NATIVE based actions
-    /// @param owner the owner of the tokens
-    /// @param _permitBatch a batch of approvals
-    /// @param signature the signature of the permit; abi.encodePacked(r, s, v)
-    /// @return err the error returned by a reverting permit call, empty if successful
+    /// @notice 允许将批量许可（permit）转发给 Permit2
+    /// @dev 该函数声明为 payable，以便与基于 NATIVE 的操作（action）一起进行 multicall
+    /// @param owner 代币的所有者
+    /// @param _permitBatch 一批授权
+    /// @param signature 该许可的签名；abi.encodePacked(r, s, v)
+    /// @return err 许可调用回滚（revert）时返回的错误数据，成功时为空
     function permitBatch(address owner, IAllowanceTransfer.PermitBatch calldata _permitBatch, bytes calldata signature)
         external
         payable

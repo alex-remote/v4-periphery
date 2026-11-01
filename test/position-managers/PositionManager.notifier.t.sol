@@ -43,7 +43,7 @@ contract PositionManagerNotifierTest is Test, PosmTestSetup {
 
         (key,) = initPool(currency0, currency1, IHooks(hook), 3000, SQRT_PRICE_1_1);
 
-        // Requires currency0 and currency1 to be set in base Deployers contract.
+        // 要求在基础合约 Deployers 中已设置 currency0 和 currency1。
         deployAndApprovePosm(manager);
 
         sub = new MockSubscriber(lpm);
@@ -51,7 +51,7 @@ contract PositionManagerNotifierTest is Test, PosmTestSetup {
         revertSubscriber = new MockRevertSubscriber(lpm);
         config = PositionConfig({poolKey: key, tickLower: -300, tickUpper: 300});
 
-        // set the reenter hook
+        // 设置重入 hook
         MockReenterHook impl = new MockReenterHook();
         address hookAddr = payable(address(uint160(Hooks.BEFORE_ADD_LIQUIDITY_FLAG)));
         vm.etch(hookAddr, address(impl).code);
@@ -62,7 +62,7 @@ contract PositionManagerNotifierTest is Test, PosmTestSetup {
         manager.initialize(reenterKey, SQRT_PRICE_1_1);
         reenterConfig = PositionConfig({poolKey: reenterKey, tickLower: -60, tickUpper: 60});
 
-        // TODO: Test NATIVE poolKey
+        // TODO: 测试原生代币（NATIVE）的 poolKey
     }
 
     function test_subscribe_revertsWithEmptyPositionConfig() public {
@@ -75,7 +75,7 @@ contract PositionManagerNotifierTest is Test, PosmTestSetup {
         uint256 tokenId = lpm.nextTokenId();
         mint(config, 100e18, alice, ZERO_BYTES);
 
-        // this contract is not approved to operate on alice's liq
+        // 本合约未获授权操作 alice 的流动性
 
         vm.expectRevert(abi.encodeWithSelector(IPositionManager.NotApproved.selector, address(this)));
         lpm.subscribe(tokenId, address(sub), ZERO_BYTES);
@@ -85,7 +85,7 @@ contract PositionManagerNotifierTest is Test, PosmTestSetup {
         uint256 tokenId = lpm.nextTokenId();
         mint(config, 100e18, alice, ZERO_BYTES);
 
-        // approve this contract to operate on alices liq
+        // 授权本合约操作 alice 的流动性
         vm.startPrank(alice);
         IERC721(address(lpm)).approve(address(this), tokenId);
         vm.stopPrank();
@@ -97,14 +97,14 @@ contract PositionManagerNotifierTest is Test, PosmTestSetup {
         assertEq(sub.notifySubscribeCount(), 1);
     }
 
-    /// @notice Revert when subscribing to an address without code
+    /// @notice 订阅到没有代码的地址时回滚（revert）
     function test_subscribe_revert_empty(address _subscriber) public {
         vm.assume(_subscriber.code.length == 0);
 
         uint256 tokenId = lpm.nextTokenId();
         mint(config, 100e18, alice, ZERO_BYTES);
 
-        // approve this contract to operate on alices liq
+        // 授权本合约操作 alice 的流动性
         vm.startPrank(alice);
         IERC721(address(lpm)).approve(address(this), tokenId);
         vm.stopPrank();
@@ -117,12 +117,12 @@ contract PositionManagerNotifierTest is Test, PosmTestSetup {
         uint256 tokenId = lpm.nextTokenId();
         mint(config, 100e18, alice, ZERO_BYTES);
 
-        // approve this contract to operate on alices liq
+        // 授权本合约操作 alice 的流动性
         vm.startPrank(alice);
         IERC721(address(lpm)).approve(address(this), tokenId);
         vm.stopPrank();
 
-        // successfully subscribe
+        // 成功订阅
         lpm.subscribe(tokenId, address(sub), ZERO_BYTES);
         assertEq(lpm.positionInfo(tokenId).hasSubscriber(), true);
         assertEq(address(lpm.subscriber(tokenId)), address(sub));
@@ -136,7 +136,7 @@ contract PositionManagerNotifierTest is Test, PosmTestSetup {
         uint256 tokenId = lpm.nextTokenId();
         mint(config, 100e18, alice, ZERO_BYTES);
 
-        // approve this contract to operate on alices liq
+        // 授权本合约操作 alice 的流动性
         vm.startPrank(alice);
         IERC721(address(lpm)).approve(address(this), tokenId);
         vm.stopPrank();
@@ -165,7 +165,7 @@ contract PositionManagerNotifierTest is Test, PosmTestSetup {
         uint256 tokenId = lpm.nextTokenId();
         mint(config, 100e18, alice, ZERO_BYTES);
 
-        // approve this contract to operate on alices liq
+        // 授权本合约操作 alice 的流动性
         vm.startPrank(alice);
         IERC721(address(lpm)).approve(address(this), tokenId);
         vm.stopPrank();
@@ -175,7 +175,7 @@ contract PositionManagerNotifierTest is Test, PosmTestSetup {
         assertEq(lpm.positionInfo(tokenId).hasSubscriber(), true);
         assertEq(address(lpm.subscriber(tokenId)), address(sub));
 
-        // simulate selfdestruct by etching the bytecode to 0
+        // 通过把字节码 etch 为 0 来模拟 selfdestruct
         vm.etch(address(sub), ZERO_BYTES);
 
         uint256 liquidityToAdd = 10e18;
@@ -187,12 +187,12 @@ contract PositionManagerNotifierTest is Test, PosmTestSetup {
         uint256 tokenId = lpm.nextTokenId();
         mint(config, 100e18, alice, ZERO_BYTES);
 
-        // donate to generate fee revenue, to be checked in subscriber
+        // 捐赠（donate）以产生手续费收入，供订阅者中检查
         uint256 feeRevenue0 = 1e18;
         uint256 feeRevenue1 = 0.1e18;
         donateRouter.donate(config.poolKey, feeRevenue0, feeRevenue1, ZERO_BYTES);
 
-        // approve this contract to operate on alices liq
+        // 授权本合约操作 alice 的流动性
         vm.startPrank(alice);
         IERC721(address(lpm)).approve(address(this), tokenId);
         vm.stopPrank();
@@ -215,7 +215,7 @@ contract PositionManagerNotifierTest is Test, PosmTestSetup {
         uint256 tokenId = lpm.nextTokenId();
         mint(config, 100e18, alice, ZERO_BYTES);
 
-        // approve this contract to operate on alices liq
+        // 授权本合约操作 alice 的流动性
         vm.startPrank(alice);
         IERC721(address(lpm)).approve(address(this), tokenId);
         vm.stopPrank();
@@ -236,7 +236,7 @@ contract PositionManagerNotifierTest is Test, PosmTestSetup {
         uint256 tokenId = lpm.nextTokenId();
         mint(config, 100e18, alice, ZERO_BYTES);
 
-        // approve this contract to operate on alices liq
+        // 授权本合约操作 alice 的流动性
         vm.startPrank(alice);
         IERC721(address(lpm)).approve(address(this), tokenId);
         vm.stopPrank();
@@ -245,10 +245,10 @@ contract PositionManagerNotifierTest is Test, PosmTestSetup {
         assertEq(lpm.positionInfo(tokenId).hasSubscriber(), true);
         assertEq(address(lpm.subscriber(tokenId)), address(sub));
 
-        // simulate selfdestruct by etching the bytecode to 0
+        // 通过把字节码 etch 为 0 来模拟 selfdestruct
         vm.etch(address(sub), ZERO_BYTES);
 
-        // unsubscribe happens anyway
+        // 取消订阅照常发生
         IERC721(address(lpm)).transferFrom(alice, bob, tokenId);
 
         assertEq(lpm.positionInfo(tokenId).hasSubscriber(), false);
@@ -259,7 +259,7 @@ contract PositionManagerNotifierTest is Test, PosmTestSetup {
         uint256 tokenId = lpm.nextTokenId();
         mint(config, 100e18, alice, ZERO_BYTES);
 
-        // approve this contract to operate on alices liq
+        // 授权本合约操作 alice 的流动性
         vm.startPrank(alice);
         IERC721(address(lpm)).approve(address(this), tokenId);
         vm.stopPrank();
@@ -280,7 +280,7 @@ contract PositionManagerNotifierTest is Test, PosmTestSetup {
         uint256 tokenId = lpm.nextTokenId();
         mint(config, 100e18, alice, ZERO_BYTES);
 
-        // approve this contract to operate on alices liq
+        // 授权本合约操作 alice 的流动性
         vm.startPrank(alice);
         IERC721(address(lpm)).approve(address(this), tokenId);
         vm.stopPrank();
@@ -289,10 +289,10 @@ contract PositionManagerNotifierTest is Test, PosmTestSetup {
         assertEq(lpm.positionInfo(tokenId).hasSubscriber(), true);
         assertEq(address(lpm.subscriber(tokenId)), address(sub));
 
-        // simulate selfdestruct by etching the bytecode to 0
+        // 通过把字节码 etch 为 0 来模拟 selfdestruct
         vm.etch(address(sub), ZERO_BYTES);
 
-        // unsubscribe happens anyway
+        // 取消订阅照常发生
         IERC721(address(lpm)).safeTransferFrom(alice, bob, tokenId);
 
         assertEq(lpm.positionInfo(tokenId).hasSubscriber(), false);
@@ -303,7 +303,7 @@ contract PositionManagerNotifierTest is Test, PosmTestSetup {
         uint256 tokenId = lpm.nextTokenId();
         mint(config, 100e18, alice, ZERO_BYTES);
 
-        // approve this contract to operate on alices liq
+        // 授权本合约操作 alice 的流动性
         vm.startPrank(alice);
         IERC721(address(lpm)).approve(address(this), tokenId);
         vm.stopPrank();
@@ -324,7 +324,7 @@ contract PositionManagerNotifierTest is Test, PosmTestSetup {
         uint256 tokenId = lpm.nextTokenId();
         mint(config, 100e18, alice, ZERO_BYTES);
 
-        // approve this contract to operate on alices liq
+        // 授权本合约操作 alice 的流动性
         vm.startPrank(alice);
         IERC721(address(lpm)).approve(address(this), tokenId);
         vm.stopPrank();
@@ -342,7 +342,7 @@ contract PositionManagerNotifierTest is Test, PosmTestSetup {
         uint256 tokenId = lpm.nextTokenId();
         mint(config, 100e18, alice, ZERO_BYTES);
 
-        // approve this contract to operate on alices liq
+        // 授权本合约操作 alice 的流动性
         vm.startPrank(alice);
         IERC721(address(lpm)).approve(address(this), tokenId);
         vm.stopPrank();
@@ -352,7 +352,7 @@ contract PositionManagerNotifierTest is Test, PosmTestSetup {
         MockReturnDataSubscriber(badSubscriber).setReturnDataSize(0x600000);
         lpm.unsubscribe(tokenId);
 
-        // the subscriber contract call failed bc it used too much gas
+        // 订阅者合约调用失败，因为它消耗了过多 gas
         assertEq(MockReturnDataSubscriber(badSubscriber).notifyUnsubscribeCount(), 0);
         assertEq(lpm.positionInfo(tokenId).hasSubscriber(), false);
         assertEq(address(lpm.subscriber(tokenId)), address(0));
@@ -362,14 +362,14 @@ contract PositionManagerNotifierTest is Test, PosmTestSetup {
         uint256 tokenId = lpm.nextTokenId();
         mint(config, 100e18, alice, ZERO_BYTES);
 
-        // approve this contract to operate on alices liq
+        // 授权本合约操作 alice 的流动性
         vm.startPrank(alice);
         IERC721(address(lpm)).approve(address(this), tokenId);
         vm.stopPrank();
 
         lpm.subscribe(tokenId, address(sub), ZERO_BYTES);
 
-        // simulate selfdestruct by etching the bytecode to 0
+        // 通过把字节码 etch 为 0 来模拟 selfdestruct
         vm.etch(address(sub), ZERO_BYTES);
 
         lpm.unsubscribe(tokenId);
@@ -416,7 +416,7 @@ contract PositionManagerNotifierTest is Test, PosmTestSetup {
     function test_multicall_mint_subscribe_increase() public {
         uint256 tokenId = lpm.nextTokenId();
 
-        // Encode mint.
+        // 编码铸造。
         Plan memory plan = Planner.init();
         plan.add(
             Actions.MINT_POSITION,
@@ -433,7 +433,7 @@ contract PositionManagerNotifierTest is Test, PosmTestSetup {
         );
         bytes memory actions = plan.finalizeModifyLiquidityWithSettlePair(config.poolKey);
 
-        // Encode increase separately.
+        // 单独编码增加流动性。
         plan = Planner.init();
         plan.add(
             Actions.INCREASE_LIQUIDITY,
@@ -462,7 +462,7 @@ contract PositionManagerNotifierTest is Test, PosmTestSetup {
         uint256 tokenId = lpm.nextTokenId();
         mint(config, 100e18, alice, ZERO_BYTES);
 
-        // approve this contract to operate on alices liq
+        // 授权本合约操作 alice 的流动性
         vm.startPrank(alice);
         IERC721(address(lpm)).approve(address(this), tokenId);
         vm.stopPrank();
@@ -475,7 +475,7 @@ contract PositionManagerNotifierTest is Test, PosmTestSetup {
         uint256 tokenId = lpm.nextTokenId();
         mint(config, 100e18, alice, ZERO_BYTES);
 
-        // approve this contract to operate on alices liq
+        // 授权本合约操作 alice 的流动性
         vm.startPrank(alice);
         IERC721(address(lpm)).approve(address(this), tokenId);
         vm.stopPrank();
@@ -494,7 +494,7 @@ contract PositionManagerNotifierTest is Test, PosmTestSetup {
 
         bytes memory subData = abi.encode(address(this));
 
-        // approve this contract to operate on alices liq
+        // 授权本合约操作 alice 的流动性
         vm.startPrank(alice);
         IERC721(address(lpm)).approve(address(this), tokenId);
         vm.stopPrank();
@@ -511,7 +511,7 @@ contract PositionManagerNotifierTest is Test, PosmTestSetup {
         uint256 tokenId = lpm.nextTokenId();
         mint(config, 100e18, alice, ZERO_BYTES);
 
-        // approve this contract to operate on alices liq
+        // 授权本合约操作 alice 的流动性
         vm.startPrank(alice);
         IERC721(address(lpm)).approve(address(this), tokenId);
         vm.stopPrank();
@@ -534,7 +534,7 @@ contract PositionManagerNotifierTest is Test, PosmTestSetup {
         uint256 tokenId = lpm.nextTokenId();
         mint(config, 100e18, alice, ZERO_BYTES);
 
-        // approve this contract to operate on alices liq
+        // 授权本合约操作 alice 的流动性
         vm.startPrank(alice);
         IERC721(address(lpm)).approve(address(this), tokenId);
         vm.stopPrank();
@@ -562,14 +562,14 @@ contract PositionManagerNotifierTest is Test, PosmTestSetup {
         lpm.modifyLiquidities(calls, _deadline);
     }
 
-    /// @notice burning a position will automatically notify burn
+    /// @notice 销毁头寸会自动发出销毁通知
     function test_notifyBurn_succeeds() public {
         uint256 tokenId = lpm.nextTokenId();
         mint(config, 100e18, alice, ZERO_BYTES);
 
         bytes memory subData = abi.encode(address(this));
 
-        // approve this contract to operate on alices liq
+        // 授权本合约操作 alice 的流动性
         vm.startPrank(alice);
         IERC721(address(lpm)).approve(address(this), tokenId);
         vm.stopPrank();
@@ -579,24 +579,24 @@ contract PositionManagerNotifierTest is Test, PosmTestSetup {
         assertEq(lpm.positionInfo(tokenId).hasSubscriber(), true);
         assertEq(sub.notifyUnsubscribeCount(), 0);
 
-        // burn the position, causing a notifyBurn
+        // 销毁头寸，触发 notifyBurn
         burn(tokenId, config, ZERO_BYTES);
 
-        // position is now unsubscribed
+        // 头寸现已取消订阅
         assertEq(lpm.positionInfo(tokenId).hasSubscriber(), false);
         assertEq(sub.notifyUnsubscribeCount(), 0);
         assertEq(sub.notifyBurnCount(), 1);
     }
 
-    /// @notice Test that users cannot forcibly avoid unsubscribe logic via gas limits
+    /// @notice 测试用户无法通过 gas 限制强行规避取消订阅逻辑
     function test_fuzz_unsubscribe_with_gas_limit(uint64 gasLimit) public {
-        // enforce a minimum amount of gas to avoid OutOfGas reverts
+        // 强制设置最低 gas 数量，避免 OutOfGas 回滚
         gasLimit = uint64(bound(gasLimit, 125_000, block.gaslimit));
 
         uint256 tokenId = lpm.nextTokenId();
         mint(config, 100e18, alice, ZERO_BYTES);
 
-        // approve this contract to operate on alices liq
+        // 授权本合约操作 alice 的流动性
         vm.startPrank(alice);
         IERC721(address(lpm)).approve(address(this), tokenId);
         vm.stopPrank();
@@ -605,11 +605,11 @@ contract PositionManagerNotifierTest is Test, PosmTestSetup {
         uint256 beforeUnsubCount = sub.notifyUnsubscribeCount();
 
         if (gasLimit < lpm.unsubscribeGasLimit()) {
-            // gas too low to call a valid unsubscribe
+            // gas 过低，无法完成一次有效的取消订阅
             vm.expectRevert(INotifier.GasLimitTooLow.selector);
             lpm.unsubscribe{gas: gasLimit}(tokenId);
         } else {
-            // increasing gas limit succeeds and unsubscribe was called
+            // 提高 gas 限制后成功，且取消订阅已被调用
             lpm.unsubscribe{gas: gasLimit}(tokenId);
             assertEq(sub.notifyUnsubscribeCount(), beforeUnsubCount + 1);
         }
@@ -622,12 +622,12 @@ contract PositionManagerNotifierTest is Test, PosmTestSetup {
         bytes memory hookData = abi.encode(lpm.unsubscribe.selector, address(this), tokenId);
         bytes memory actions = getMintEncoded(reenterConfig, 10e18, address(this), hookData);
 
-        // approve hook as it should not revert because it does not have permissions
+        // 授权给 hook，此操作不应回滚（revert），因为它没有相应权限
         IERC721(address(lpm)).approve(address(reenterHook), tokenId);
-        // subscribe as it should not revert because there is no subscriber
+        // 订阅，此操作不应回滚（revert），因为当前没有订阅者
         lpm.subscribe(tokenId, address(sub), ZERO_BYTES);
 
-        // should revert since the pool manager is unlocked
+        // 应当回滚（revert），因为 PoolManager 处于解锁状态
         vm.expectRevert(
             abi.encodeWithSelector(
                 CustomRevert.WrappedError.selector,
@@ -647,10 +647,10 @@ contract PositionManagerNotifierTest is Test, PosmTestSetup {
         bytes memory hookData = abi.encode(lpm.subscribe.selector, address(this), tokenId);
         bytes memory actions = getMintEncoded(reenterConfig, 10e18, address(this), hookData);
 
-        // approve hook as it should not revert because it does not have permissions
+        // 授权给 hook，此操作不应回滚（revert），因为它没有相应权限
         IERC721(address(lpm)).approve(address(reenterHook), tokenId);
 
-        // should revert since the pool manager is unlocked
+        // 应当回滚（revert），因为 PoolManager 处于解锁状态
         vm.expectRevert(
             abi.encodeWithSelector(
                 CustomRevert.WrappedError.selector,
@@ -670,10 +670,10 @@ contract PositionManagerNotifierTest is Test, PosmTestSetup {
         bytes memory hookData = abi.encode(IERC721(address(lpm)).transferFrom.selector, address(this), tokenId);
         bytes memory actions = getMintEncoded(reenterConfig, 10e18, address(this), hookData);
 
-        // approve hook as it should not revert because it does not have permissions
+        // 授权给 hook，此操作不应回滚（revert），因为它没有相应权限
         IERC721(address(lpm)).approve(address(reenterHook), tokenId);
 
-        // should revert since the pool manager is unlocked
+        // 应当回滚（revert），因为 PoolManager 处于解锁状态
         vm.expectRevert(
             abi.encodeWithSelector(
                 CustomRevert.WrappedError.selector,

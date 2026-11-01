@@ -2,7 +2,7 @@
 pragma solidity 0.8.26;
 
 /// @title IUniswapV4DeployerCompetition
-/// @notice Interface for the UniswapV4DeployerCompetition contract
+/// @notice UniswapV4DeployerCompetition 合约的接口
 interface IUniswapV4DeployerCompetition {
     event NewAddressFound(address indexed bestAddress, address indexed submitter, uint256 score);
 
@@ -13,13 +13,13 @@ interface IUniswapV4DeployerCompetition {
     error WorseAddress(address newAddress, address bestAddress, uint256 newScore, uint256 bestScore);
     error InvalidSender(bytes32 salt, address sender);
 
-    /// @notice Updates the best address if the new address has a better vanity score
-    /// @param salt The salt to use to compute the new address with CREATE2
-    /// @dev The first 20 bytes of the salt must be either address(0) or msg.sender
+    /// @notice 如果新地址的靓号（vanity）得分更高，则更新最佳地址
+    /// @param salt 用于通过 CREATE2 计算新地址的 salt
+    /// @dev salt 的前 20 个字节必须是 address(0) 或 msg.sender
     function updateBestAddress(bytes32 salt) external;
 
-    /// @notice deploys the Uniswap v4 PoolManager contract
-    /// @param bytecode The bytecode of the Uniswap v4 PoolManager contract
-    /// @dev The bytecode must match the initCodeHash
+    /// @notice 部署 Uniswap v4 PoolManager 合约
+    /// @param bytecode Uniswap v4 PoolManager 合约的字节码
+    /// @dev 字节码必须与 initCodeHash 匹配
     function deploy(bytes memory bytecode) external;
 }

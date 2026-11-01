@@ -8,7 +8,7 @@ import {IImmutableState} from "./IImmutableState.sol";
 import {IMsgSender} from "./IMsgSender.sol";
 
 /// @title IV4Quoter
-/// @notice Interface for the V4Quoter contract
+/// @notice V4Quoter 合约的接口
 interface IV4Quoter is IImmutableState, IMsgSender {
     struct QuoteExactSingleParams {
         PoolKey poolKey;
@@ -23,45 +23,45 @@ interface IV4Quoter is IImmutableState, IMsgSender {
         uint128 exactAmount;
     }
 
-    /// @notice Returns the delta amounts for a given exact input swap of a single pool
-    /// @param params The params for the quote, encoded as `QuoteExactSingleParams`
-    /// poolKey The key for identifying a V4 pool
-    /// zeroForOne If the swap is from currency0 to currency1
-    /// exactAmount The desired input amount
-    /// hookData arbitrary hookData to pass into the associated hooks
-    /// @return amountOut The output quote for the exactIn swap
-    /// @return gasEstimate Estimated gas units used for the swap
+    /// @notice 返回单个池中给定精确输入兑换（swap）的 delta 数量
+    /// @param params 报价参数，编码为 `QuoteExactSingleParams`
+    /// poolKey 用于标识 V4 池的 key
+    /// zeroForOne 兑换是否从 currency0 到 currency1
+    /// exactAmount 期望的输入数量
+    /// hookData 传递给关联 hook 的任意 hookData
+    /// @return amountOut exactIn 兑换的输出报价
+    /// @return gasEstimate 该兑换预计消耗的 gas 单位数
     function quoteExactInputSingle(QuoteExactSingleParams memory params)
         external
         returns (uint256 amountOut, uint256 gasEstimate);
 
-    /// @notice Returns the delta amounts along the swap path for a given exact input swap
-    /// @param params the params for the quote, encoded as 'QuoteExactParams'
-    /// currencyIn The input currency of the swap
-    /// path The path of the swap encoded as PathKeys that contains currency, fee, tickSpacing, and hook info
-    /// exactAmount The desired input amount
-    /// @return amountOut The output quote for the exactIn swap
-    /// @return gasEstimate Estimated gas units used for the swap
+    /// @notice 返回给定精确输入兑换沿兑换路径的各 delta 数量
+    /// @param params 报价参数，编码为 'QuoteExactParams'
+    /// currencyIn 兑换的输入代币
+    /// path 兑换路径，编码为 PathKeys，包含代币、手续费、tickSpacing 和 hook 信息
+    /// exactAmount 期望的输入数量
+    /// @return amountOut exactIn 兑换的输出报价
+    /// @return gasEstimate 该兑换预计消耗的 gas 单位数
     function quoteExactInput(QuoteExactParams memory params) external returns (uint256 amountOut, uint256 gasEstimate);
 
-    /// @notice Returns the delta amounts for a given exact output swap of a single pool
-    /// @param params The params for the quote, encoded as `QuoteExactSingleParams`
-    /// poolKey The key for identifying a V4 pool
-    /// zeroForOne If the swap is from currency0 to currency1
-    /// exactAmount The desired output amount
-    /// hookData arbitrary hookData to pass into the associated hooks
-    /// @return amountIn The input quote for the exactOut swap
-    /// @return gasEstimate Estimated gas units used for the swap
+    /// @notice 返回单个池中给定精确输出兑换（swap）的 delta 数量
+    /// @param params 报价参数，编码为 `QuoteExactSingleParams`
+    /// poolKey 用于标识 V4 池的 key
+    /// zeroForOne 兑换是否从 currency0 到 currency1
+    /// exactAmount 期望的输出数量
+    /// hookData 传递给关联 hook 的任意 hookData
+    /// @return amountIn exactOut 兑换的输入报价
+    /// @return gasEstimate 该兑换预计消耗的 gas 单位数
     function quoteExactOutputSingle(QuoteExactSingleParams memory params)
         external
         returns (uint256 amountIn, uint256 gasEstimate);
 
-    /// @notice Returns the delta amounts along the swap path for a given exact output swap
-    /// @param params the params for the quote, encoded as 'QuoteExactParams'
-    /// currencyOut The output currency of the swap
-    /// path The path of the swap encoded as PathKeys that contains currency, fee, tickSpacing, and hook info
-    /// exactAmount The desired output amount
-    /// @return amountIn The input quote for the exactOut swap
-    /// @return gasEstimate Estimated gas units used for the swap
+    /// @notice 返回给定精确输出兑换沿兑换路径的各 delta 数量
+    /// @param params 报价参数，编码为 'QuoteExactParams'
+    /// currencyOut 兑换的输出代币
+    /// path 兑换路径，编码为 PathKeys，包含代币、手续费、tickSpacing 和 hook 信息
+    /// exactAmount 期望的输出数量
+    /// @return amountIn exactOut 兑换的输入报价
+    /// @return gasEstimate 该兑换预计消耗的 gas 单位数
     function quoteExactOutput(QuoteExactParams memory params) external returns (uint256 amountIn, uint256 gasEstimate);
 }

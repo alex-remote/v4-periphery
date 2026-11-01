@@ -2,9 +2,9 @@
 pragma solidity ^0.8.0;
 
 /// @title IEIP712_v4
-/// @notice Interface for the EIP712 contract
+/// @notice EIP712 合约的接口
 interface IEIP712_v4 {
-    /// @notice Returns the domain separator for the current chain.
-    /// @return bytes32 The domain separator
+    /// @notice 返回当前链的域分隔符（domain separator）。
+    /// @return bytes32 域分隔符
     function DOMAIN_SEPARATOR() external view returns (bytes32);
 }

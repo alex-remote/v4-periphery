@@ -5,8 +5,8 @@ import {ISubscriber} from "../../src/interfaces/ISubscriber.sol";
 import {BalanceDelta} from "@uniswap/v4-core/src/types/BalanceDelta.sol";
 import {PositionInfo} from "../../src/libraries/PositionInfoLibrary.sol";
 
-/// @notice Subscriber that reverts only on `notifyBurn`. Used to verify that LP-initiated
-///         burns still propagate the revert (base behavior is preserved).
+/// @notice 仅在 `notifyBurn` 时回滚（revert）的订阅者。用于验证由 LP 发起的
+///         销毁仍会向上传播该回滚（保留基础行为）。
 contract MockBurnRevertingSubscriber is ISubscriber {
     error TestRevert(string);
 

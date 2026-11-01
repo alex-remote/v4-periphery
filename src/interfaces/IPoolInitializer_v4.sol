@@ -4,12 +4,12 @@ pragma solidity ^0.8.0;
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 
 /// @title IPoolInitializer_v4
-/// @notice Interface for the PoolInitializer_v4 contract
+/// @notice PoolInitializer_v4 合约的接口
 interface IPoolInitializer_v4 {
-    /// @notice Initialize a Uniswap v4 Pool
-    /// @dev If the pool is already initialized, this function will not revert and just return type(int24).max
-    /// @param key The PoolKey of the pool to initialize
-    /// @param sqrtPriceX96 The initial starting price of the pool, expressed as a sqrtPriceX96
-    /// @return The current tick of the pool, or type(int24).max if the pool creation failed, or the pool already existed
+    /// @notice 初始化一个 Uniswap v4 池
+    /// @dev 若池已初始化，该函数不会回滚（revert），而是直接返回 type(int24).max
+    /// @param key 要初始化的池的 PoolKey
+    /// @param sqrtPriceX96 池的初始价格，以 sqrtPriceX96 形式表示
+    /// @return 池的当前 tick；若创建池失败或池已存在，则返回 type(int24).max
     function initializePool(PoolKey calldata key, uint160 sqrtPriceX96) external payable returns (int24);
 }

@@ -7,27 +7,27 @@ import {PathKey} from "../libraries/PathKey.sol";
 import {IImmutableState} from "./IImmutableState.sol";
 
 /// @title IV4Router
-/// @notice Interface for the V4Router contract
+/// @notice V4Router 合约的接口
 interface IV4Router is IImmutableState {
-    /// @notice Emitted when an exactInput swap does not receive its minAmountOut
+    /// @notice 当 exactInput 兑换收到的数量未达到其 minAmountOut 时抛出
     error V4TooLittleReceived(uint256 minAmountOutReceived, uint256 amountReceived);
-    /// @notice Emitted when an exactOutput is asked for more than its maxAmountIn
+    /// @notice 当 exactOutput 被要求支付的数量超过其 maxAmountIn 时抛出
     error V4TooMuchRequested(uint256 maxAmountInRequested, uint256 amountRequested);
-    /// @notice Emitted when an exactInput swap does not receive its relative minAmountOut per hop (min price)
+    /// @notice 当 exactInput 兑换未达到其相对的每跳（hop）minAmountOut（最低价格）时抛出
     error V4TooLittleReceivedPerHop(uint256 hopIndex, uint256 minPrice, uint256 price);
-    /// @notice Emitted when an exactOutput is asked for more than its relative maxAmountIn per hop (min price)
+    /// @notice 当 exactOutput 被要求支付的数量超过其相对的每跳（hop）maxAmountIn（最低价格）时抛出
     error V4TooMuchRequestedPerHop(uint256 hopIndex, uint256 minPrice, uint256 price);
-    /// @notice Emitted when a single exactInput swap does not meet its relative price limit
+    /// @notice 当单跳 exactInput 兑换未满足其相对价格限制时抛出
     error V4TooLittleReceivedPerHopSingle(uint256 minPrice, uint256 price);
-    /// @notice Emitted when a single exactOutput swap exceeds its relative price limit
+    /// @notice 当单跳 exactOutput 兑换超出其相对价格限制时抛出
     error V4TooMuchRequestedPerHopSingle(uint256 minPrice, uint256 price);
-    /// @notice Emitted when the length of the per-hop minimum price array is not zero and not equal to the path length
+    /// @notice 当每跳最低价格数组的长度既不为零、也不等于路径长度时抛出
     error InvalidHopPriceLength();
-    /// @notice Emitted when an exactOutput swap (or hop) delivers less than the requested amount, e.g. a
-    ///         pool runs out of liquidity before the price limit. Exact output is all-or-nothing.
+    /// @notice 当 exactOutput 兑换（或某一跳）交付的数量少于请求数量时抛出，例如某个
+    ///         池在达到价格限制之前流动性耗尽。精确输出是全有或全无（all-or-nothing）的。
     error V4ExactOutputUnfilled(uint256 amountOutRequested, uint256 amountOutReceived);
 
-    /// @notice Parameters for a single-hop exact-input swap
+    /// @notice 单跳精确输入兑换的参数
     struct ExactInputSingleParams {
         PoolKey poolKey;
         bool zeroForOne;
@@ -37,7 +37,7 @@ interface IV4Router is IImmutableState {
         bytes hookData;
     }
 
-    /// @notice Parameters for a multi-hop exact-input swap
+    /// @notice 多跳精确输入兑换的参数
     struct ExactInputParams {
         Currency currencyIn;
         PathKey[] path;
@@ -46,7 +46,7 @@ interface IV4Router is IImmutableState {
         uint128 amountOutMinimum;
     }
 
-    /// @notice Parameters for a single-hop exact-output swap
+    /// @notice 单跳精确输出兑换的参数
     struct ExactOutputSingleParams {
         PoolKey poolKey;
         bool zeroForOne;
@@ -56,7 +56,7 @@ interface IV4Router is IImmutableState {
         bytes hookData;
     }
 
-    /// @notice Parameters for a multi-hop exact-output swap
+    /// @notice 多跳精确输出兑换的参数
     struct ExactOutputParams {
         Currency currencyOut;
         PathKey[] path;

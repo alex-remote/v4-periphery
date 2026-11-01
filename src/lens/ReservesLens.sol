@@ -13,13 +13,13 @@ import {IReservesLens} from "../interfaces/IReservesLens.sol";
 import {IHookStats} from "../interfaces/external/IHookStats.sol";
 
 /// @title ReservesLens
-/// @notice Stateless view contract for v4 core liquidity TVL and optional URC-3 hook statistics
-/// @dev Reconstructs the aggregate liquidity curve by walking initialized ticks in ascending order, applying each
-///      liquidityNet, and using core SqrtPriceMath for every nonzero-liquidity interval. Raw PoolManager state is read
-///      through extsload; this contract is therefore coupled to the StateLibrary storage layout of compatible v4
-///      PoolManager deployments. The PoolManager is supplied per call so constructor-free bytecode can be deployed at
-///      the same deterministic address on every compatible chain. Callers are responsible for selecting the canonical
-///      PoolManager and obtaining the complete PoolKey from its Initialize event.
+/// @notice 无状态的 view 合约，用于查询 v4 core 流动性 TVL 以及可选的 URC-3 hook 统计数据
+/// @dev 通过按升序遍历已初始化的 tick、依次应用每个 tick 的
+///      liquidityNet，并对每个非零流动性区间使用 core 的 SqrtPriceMath，来重建聚合流动性曲线。原始 PoolManager 状态通过
+///      extsload 读取；因此本合约与兼容的 v4 PoolManager 部署所采用的 StateLibrary 存储布局
+///      相耦合。PoolManager 由每次调用传入，这样不含构造函数的字节码就可以在每条兼容链上
+///      部署到同一个确定性地址。调用者负责选择规范（canonical）的
+///      PoolManager，并从其 Initialize 事件中获取完整的 PoolKey。
 contract ReservesLens is IReservesLens {
     using PoolIdLibrary for PoolKey;
     using StateLibrary for IPoolManager;
@@ -28,14 +28,14 @@ contract ReservesLens is IReservesLens {
     uint256 private constant CURSOR_LENGTH = 15 * 32;
     uint32 private constant MIN_PAGE_READS = 2;
     uint32 private constant MAX_PAGE_READS = 4096;
-    /// @dev Page budget used when the caller passes maxReads == 0; ~2M gas per page fits any eth_call limit
+    /// @dev 调用者传入 maxReads == 0 时使用的分页预算；每页约 2M gas，可满足任何 eth_call 限制
     uint32 private constant DEFAULT_PAGE_READS = 512;
     uint256 private constant BITMAP_BATCH_SIZE = 256;
     uint256 private constant HOOK_STATS_GAS_LIMIT = 500_000;
-    /// @dev ERC165Checker issues at most three 30k-gas probes before the interface is trusted
+    /// @dev 在信任该接口之前，ERC165Checker 最多发起三次各 30k gas 的探测
     uint256 private constant ERC165_PROBE_GAS = 90_000;
-    /// @dev Gas that must remain before probing hook stats: the ERC165 probes, three bounded stats calls, and local
-    ///      overhead between them, grossed up so EIP-150's 63/64 forwarding rule cannot starve any single call
+    /// @dev 探测 hook 统计数据前必须剩余的 gas：包括 ERC165 探测、三次有上限的统计调用，以及它们之间的
+    ///      本地开销，并按比例上调，使 EIP-150 的 63/64 转发规则不会导致任何单次调用 gas 不足
     uint256 private constant HOOK_STATS_GAS_BUDGET = ((3 * HOOK_STATS_GAS_LIMIT + ERC165_PROBE_GAS + 15_000) * 64) / 63;
     uint160 private constant ALL_HOOK_MASK = (1 << 14) - 1;
     uint16 private constant CUSTOM_ACCOUNTING_MASK = (1 << 4) - 1;
@@ -240,7 +240,7 @@ contract ReservesLens is IReservesLens {
 
             uint256 bitmap = manager.getTickBitmap(poolId, state.wordPos);
             reads++;
-            // resume mid-word; a shift of 256 yields zero, so a bitPos-256 cursor skips the word entirely
+            // 从 word 中间恢复；移位 256 的结果为零，因此 bitPos 为 256 的游标会完全跳过该 word
             if (state.bitPos != 0) bitmap &= type(uint256).max << state.bitPos;
 
             bool wordDone;
@@ -288,8 +288,8 @@ contract ReservesLens is IReservesLens {
         return state;
     }
 
-    /// @dev Processes every initialized tick in one bitmap word, charging one read per tick against the budget.
-    ///      Returns done=false with state.bitPos positioned on the unprocessed bit when the budget is exhausted.
+    /// @dev 处理一个位图 word 中的每个已初始化 tick，每个 tick 从预算中扣除一次读取。
+    ///      预算耗尽时返回 done=false，并将 state.bitPos 定位到尚未处理的那个比特上。
     function _processWord(
         IPoolManager manager,
         int24 tickSpacing,
@@ -416,9 +416,9 @@ contract ReservesLens is IReservesLens {
         address provider = suppliedProvider == address(0) ? hook : suppliedProvider;
         result.statsProvider = provider;
 
-        // A gas-starved ERC165 probe or stats call fails in a way indistinguishable from a provider fault, so the
-        // reported status would depend on the caller's gas budget instead of on-chain state. Check headroom for the
-        // whole probe sequence up front and degrade to INSUFFICIENT_GAS; core fields are already populated.
+        // gas 不足的 ERC165 探测或统计调用，其失败方式与提供者（provider）自身故障无法区分，因此
+        // 报告的状态将取决于调用者的 gas 预算而非链上状态。预先检查整个探测序列所需的
+        // gas 余量，不足时降级为 INSUFFICIENT_GAS；此时 core 字段已经填充完毕。
         if (gasleft() < HOOK_STATS_GAS_BUDGET) {
             result.statsStatus = HookStatsStatus.INSUFFICIENT_GAS;
             return;
@@ -476,13 +476,13 @@ contract ReservesLens is IReservesLens {
         return status == StaticCallStatus.FAILED ? HookStatsStatus.CALL_FAILED : HookStatsStatus.INVALID_RESPONSE;
     }
 
-    /// @dev Bounds untrusted provider calls to HOOK_STATS_GAS_LIMIT so a malicious provider cannot consume the
-    ///      caller's whole budget. EIP-150 forwards at most 63/64 of remaining gas, so the requested limit is only
-    ///      honored when enough gas remains. HOOK_STATS_GAS_BUDGET is checked before the probe sequence starts as a
-    ///      fast path, but memory expansion between the check and the final stats call scales with the free memory
-    ///      pointer (quadratic memory pricing after large scans or batches), so no constant overhead estimate can be
-    ///      guaranteed. A starved call therefore degrades to INSUFFICIENT_GAS status instead of reverting away the
-    ///      caller's completed core scan, and can never be misclassified as CALL_FAILED.
+    /// @dev 将对不受信任提供者的调用限制在 HOOK_STATS_GAS_LIMIT 以内，使恶意提供者无法耗尽
+    ///      调用者的全部预算。EIP-150 最多转发剩余 gas 的 63/64，因此只有在剩余 gas 足够时，
+    ///      所请求的上限才会被满足。HOOK_STATS_GAS_BUDGET 会在探测序列开始前作为
+    ///      快速路径进行检查，但从该检查到最后一次统计调用之间的内存扩展开销会随空闲内存
+    ///      指针增长（大规模扫描或批量查询后内存按二次方计价），因此任何常量开销估计都无法
+    ///      得到保证。因此 gas 不足的调用会降级为 INSUFFICIENT_GAS 状态，而不是回滚（revert）掉
+    ///      调用者已完成的 core 扫描，并且绝不会被误判为 CALL_FAILED。
     function _boundedStaticcall(address target, bytes memory input, uint256 expectedSize)
         private
         view
@@ -512,11 +512,11 @@ contract ReservesLens is IReservesLens {
         return keccak256(abi.encode(block.chainid, address(manager), PoolId.unwrap(poolId)));
     }
 
-    /// @dev Anchors a resumed cursor's snapshot fields to live manager state. The scan-position and amount
-    ///      accumulator fields are inherently caller-trusted (only a rescan could validate them), but price, tick,
-    ///      and active liquidity are cheap to re-read, so a resumed page can never return forged snapshot metadata
-    ///      and same-block state drift (e.g. pages evaluated against a pending tag) fails loudly here instead of
-    ///      surfacing as a downstream invariant error attributed to the pool.
+    /// @dev 将恢复的游标中的快照字段锚定到 manager 的实时状态。扫描位置和数量
+    ///      累加字段本质上只能信任调用者（只有重新扫描才能验证它们），但价格、tick
+    ///      和活跃流动性的重读成本很低，因此恢复后的分页绝不会返回伪造的快照元数据，
+    ///      同一区块内的状态漂移（例如针对 pending 标签求值的分页）也会在此处显式失败，而不会
+    ///      表现为归咎于该池的下游不变量错误。
     function _verifyCursorSnapshot(IPoolManager manager, PoolId poolId, ScanState memory state) private view {
         (uint160 sqrtPriceX96, int24 currentTick,,) = manager.getSlot0(poolId);
         if (sqrtPriceX96 == 0) revert PoolNotInitialized(poolId);
@@ -526,8 +526,8 @@ contract ReservesLens is IReservesLens {
         ) revert CursorStateMismatch();
     }
 
-    /// @dev Raw slot for pools[poolId].tickBitmap[wordPos], for the batched extsload in _scanComplete; single-word
-    ///      reads go through StateLibrary getters instead
+    /// @dev pools[poolId].tickBitmap[wordPos] 的原始存储槽，供 _scanComplete 中的批量 extsload 使用；单个 word 的
+    ///      读取则改用 StateLibrary 的 getter 函数
     function _tickBitmapSlot(PoolId poolId, int16 wordPos) private pure returns (bytes32) {
         bytes32 mappingSlot = bytes32(uint256(StateLibrary._getPoolStateSlot(poolId)) + StateLibrary.TICK_BITMAP_OFFSET);
         return keccak256(abi.encodePacked(int256(wordPos), mappingSlot));

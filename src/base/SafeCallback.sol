@@ -5,17 +5,17 @@ import {IUnlockCallback} from "@uniswap/v4-core/src/interfaces/callback/IUnlockC
 import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
 import {ImmutableState} from "./ImmutableState.sol";
 
-/// @title Safe Callback
-/// @notice A contract that only allows the Uniswap v4 PoolManager to call the unlockCallback
+/// @title 安全回调（Safe Callback）
+/// @notice 仅允许 Uniswap v4 PoolManager 调用 unlockCallback 的合约
 abstract contract SafeCallback is ImmutableState, IUnlockCallback {
     constructor(IPoolManager _poolManager) ImmutableState(_poolManager) {}
 
     /// @inheritdoc IUnlockCallback
-    /// @dev We force the onlyPoolManager modifier by exposing a virtual function after the onlyPoolManager check.
+    /// @dev 通过在 onlyPoolManager 检查之后才暴露一个 virtual 函数，来强制应用 onlyPoolManager 修饰器。
     function unlockCallback(bytes calldata data) external onlyPoolManager returns (bytes memory) {
         return _unlockCallback(data);
     }
 
-    /// @dev to be implemented by the child contract, to safely guarantee the logic is only executed by the PoolManager
+    /// @dev 由子合约实现，以安全地保证该逻辑只会由 PoolManager 执行
     function _unlockCallback(bytes calldata data) internal virtual returns (bytes memory);
 }

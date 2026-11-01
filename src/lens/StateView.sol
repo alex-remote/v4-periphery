@@ -8,8 +8,8 @@ import {Position} from "@uniswap/v4-core/src/libraries/Position.sol";
 import {ImmutableState} from "../base/ImmutableState.sol";
 import {IStateView} from "../interfaces/IStateView.sol";
 
-/// @notice A view only contract wrapping the StateLibrary.sol library for reading storage in v4-core.
-/// @dev The contract is intended for offchain clients. Use StateLibrary.sol directly if reading state onchain.
+/// @notice 一个只读（view only）合约，封装了 StateLibrary.sol 库，用于读取 v4-core 中的存储。
+/// @dev 本合约面向链下客户端。如需在链上读取状态，请直接使用 StateLibrary.sol。
 contract StateView is ImmutableState, IStateView {
     using StateLibrary for IPoolManager;
 
