@@ -1,4 +1,4 @@
-# if you add a file here, add it to `.npmignore` too
+# 如果你在这里添加了文件，也要把它添加到 `.npmignore` 中
 cache/
 foundry-out/
 .vscode/

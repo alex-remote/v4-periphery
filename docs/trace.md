@@ -25,7 +25,7 @@
 
 ## 总体进度
 
-**已完成：158 / 179**
+**已完成：168 / 179**
 
 ## 分组明细
 
@@ -251,12 +251,12 @@
 - [x] `test/position-managers/PositionManager.multicall.t.sol` — 503 行｜注释 39 行
 - [x] `test/position-managers/PositionManager.notifier.t.sol` — 688 行｜注释 51 行
 
-### G25（4 个文件，1738 行，注释 104 行）· 进度 0/4
+### G25（4 个文件，1738 行，注释 104 行）· 进度 4/4 ✅
 
-- [ ] `test/position-managers/PositionManager.t.sol` — 1094 行｜注释 81 行
-- [ ] `test/router/Payments.gas.t.sol` — 80 行｜注释 2 行
-- [ ] `test/router/Payments.t.sol` — 189 行｜注释 9 行
-- [ ] `test/router/V4Router.gas.t.sol` — 375 行｜注释 12 行
+- [x] `test/position-managers/PositionManager.t.sol` — 1094 行｜注释 81 行
+- [x] `test/router/Payments.gas.t.sol` — 80 行｜注释 2 行
+- [x] `test/router/Payments.t.sol` — 189 行｜注释 9 行
+- [x] `test/router/V4Router.gas.t.sol` — 375 行｜注释 12 行
 
 ### G26（10 个文件，1730 行，注释 140 行）· 进度 0/10
 
@@ -283,11 +283,11 @@
 - [x] `test/shared/RoutingTestHelpers.sol` — 213 行｜注释 5 行
 - [x] `test/shared/fuzz/LiquidityFuzzers.sol` — 48 行｜注释 0 行（无英文注释，仅需确认）
 
-### G28（6 个文件，199 行，注释 4 行）· 进度 0/6
+### G28（6 个文件，199 行，注释 4 行）· 进度 6/6 ✅
 
-- [ ] `README.md` — 37 行 → 译文 `README_zh.md`
-- [ ] `CONTRIBUTING.md` — 61 行 → 译文 `CONTRIBUTING_zh.md`
-- [ ] `.github/pull_request_template.md` — 3 行 → 译文 `.github/pull_request_template_zh.md`
-- [ ] `foundry.toml` — 44 行｜注释 2 行
-- [ ] `.github/workflows/deploy.yaml` — 48 行｜注释 1 行
-- [ ] `.gitignore` — 6 行｜注释 1 行
+- [x] `README.md` — 37 行 → 译文 `README_zh.md`
+- [x] `CONTRIBUTING.md` — 61 行 → 译文 `CONTRIBUTING_zh.md`
+- [x] `.github/pull_request_template.md` — 3 行 → 译文 `.github/pull_request_template_zh.md`
+- [x] `foundry.toml` — 44 行｜注释 2 行
+- [x] `.github/workflows/deploy.yaml` — 48 行｜注释 1 行
+- [x] `.gitignore` — 6 行｜注释 1 行

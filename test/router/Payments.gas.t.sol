@@ -48,7 +48,7 @@ contract PaymentsTests is RoutingTestHelpers {
         IV4Router.ExactInputSingleParams memory params =
             IV4Router.ExactInputSingleParams(key0, true, uint128(amountIn), 0, 0, bytes(""));
 
-        // seed the router with tokens
+        // 预先向路由器注入代币
         key0.currency0.transfer(address(router), amountIn);
 
         plan = plan.add(Actions.SWAP_EXACT_IN_SINGLE, abi.encode(params));
@@ -65,7 +65,7 @@ contract PaymentsTests is RoutingTestHelpers {
         IV4Router.ExactInputSingleParams memory params =
             IV4Router.ExactInputSingleParams(key0, true, uint128(amountIn), 0, 0, bytes(""));
 
-        // seed the router with tokens
+        // 预先向路由器注入代币
         key0.currency0.transfer(address(router), amountIn);
 
         plan = plan.add(Actions.SWAP_EXACT_IN_SINGLE, abi.encode(params));

@@ -27,7 +27,7 @@ contract V4RouterTest is RoutingTestHelpers {
     }
 
     /*//////////////////////////////////////////////////////////////
-                        ERC20 -> ERC20 EXACT INPUT
+                        ERC20 -> ERC20 精确输入
     //////////////////////////////////////////////////////////////*/
 
     function test_gas_swapExactInputSingle_zeroForOne() public {
@@ -103,7 +103,7 @@ contract V4RouterTest is RoutingTestHelpers {
     }
 
     /*//////////////////////////////////////////////////////////////
-                ETH -> ERC20 and ERC20 -> ETH EXACT INPUT
+                ETH -> ERC20 与 ERC20 -> ETH 精确输入
     //////////////////////////////////////////////////////////////*/
 
     function test_gas_nativeIn_swapExactInputSingle() public {
@@ -192,7 +192,7 @@ contract V4RouterTest is RoutingTestHelpers {
     }
 
     /*//////////////////////////////////////////////////////////////
-                        ERC20 -> ERC20 EXACT OUTPUT
+                        ERC20 -> ERC20 精确输出
     //////////////////////////////////////////////////////////////*/
 
     function test_gas_swapExactOutputSingle_zeroForOne() public {
@@ -268,7 +268,7 @@ contract V4RouterTest is RoutingTestHelpers {
     }
 
     /*//////////////////////////////////////////////////////////////
-                ETH -> ERC20 and ERC20 -> ETH EXACT OUTPUT
+                ETH -> ERC20 与 ERC20 -> ETH 精确输出
     //////////////////////////////////////////////////////////////*/
 
     function test_gas_nativeIn_swapExactOutputSingle_sweepExcessETH() public {

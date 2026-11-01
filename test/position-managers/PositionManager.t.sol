@@ -48,12 +48,12 @@ contract PositionManagerTest is Test, PosmTestSetup, LiquidityFuzzers {
         deployFreshManagerAndRouters();
         deployMintAndApprove2Currencies();
 
-        // This is needed to receive return deltas from modifyLiquidity calls.
+        // 需要它来接收 modifyLiquidity 调用返回的 delta。
         deployPosmHookSavesDelta();
 
         (key, poolId) = initPool(currency0, currency1, IHooks(hook), 3000, SQRT_PRICE_1_1);
 
-        // Requires currency0 and currency1 to be set in base Deployers contract.
+        // 要求在基础合约 Deployers 中已设置 currency0 和 currency1。
         deployAndApprovePosm(manager);
 
         seedBalance(alice);
@@ -82,23 +82,23 @@ contract PositionManagerTest is Test, PosmTestSetup, LiquidityFuzzers {
     }
 
     function test_modifyLiquidities_reverts_reentrancy() public {
-        // Create a reentrant token and initialize the pool
+        // 创建一个会重入的代币并初始化池
         Currency reentrantToken = Currency.wrap(address(new ReentrantToken(lpm)));
         (currency0, currency1) = (Currency.unwrap(reentrantToken) < Currency.unwrap(currency1))
             ? (reentrantToken, currency1)
             : (currency1, reentrantToken);
 
-        // Set up approvals for the reentrant token
+        // 为该重入代币设置授权
         approvePosmCurrency(reentrantToken);
 
         (key, poolId) = initPool(currency0, currency1, IHooks(address(0)), 3000, SQRT_PRICE_1_1);
 
-        // Try to add liquidity at that range, but the token reenters posm
+        // 尝试在该区间添加流动性，但代币会重入 posm
         PositionConfig memory config =
             PositionConfig({poolKey: key, tickLower: -int24(key.tickSpacing), tickUpper: int24(key.tickSpacing)});
         bytes memory calls = getMintEncoded(config, 1e18, ActionConstants.MSG_SENDER, "");
 
-        // Permit2.transferFrom does not bubble the ContractLocked error and instead reverts with its own error
+        // Permit2.transferFrom 不会向上冒泡 ContractLocked 错误，而是以它自己的错误回滚（revert）
         vm.expectRevert("TRANSFER_FROM_FAILED");
         lpm.modifyLiquidities(calls, block.timestamp + 1);
     }
@@ -106,7 +106,7 @@ contract PositionManagerTest is Test, PosmTestSetup, LiquidityFuzzers {
     function test_fuzz_mint_withLiquidityDelta(ModifyLiquidityParams memory params, uint160 sqrtPriceX96) public {
         bound(sqrtPriceX96, MIN_PRICE_LIMIT, MAX_PRICE_LIMIT);
         params = createFuzzyLiquidityParams(key, params, sqrtPriceX96);
-        // liquidity is a uint
+        // 流动性是 uint 类型
         uint256 liquidityToAdd =
             params.liquidityDelta < 0 ? uint256(-params.liquidityDelta) : uint256(params.liquidityDelta);
         PositionConfig memory config =
@@ -183,7 +183,7 @@ contract PositionManagerTest is Test, PosmTestSetup, LiquidityFuzzers {
         uint256 balance1Before = currency1.balanceOfSelf();
 
         uint256 tokenId = lpm.nextTokenId();
-        // mint to specific recipient, not using the recipient constants
+        // 铸造给指定的接收者，而不是使用接收者常量
         mint(config, liquidityToAdd, alice, ZERO_BYTES);
         BalanceDelta delta = getLastDelta();
 
@@ -218,14 +218,14 @@ contract PositionManagerTest is Test, PosmTestSetup, LiquidityFuzzers {
         assertEq(tokenId, 1);
         assertEq(IERC721(address(lpm)).ownerOf(tokenId), alice);
 
-        // alice was not the payer
+        // alice 不是付款方
         assertEq(balance0Before - currency0.balanceOfSelf(), uint256(int256(-delta.amount0())));
         assertEq(balance1Before - currency1.balanceOfSelf(), uint256(int256(-delta.amount1())));
         assertEq(currency0.balanceOf(alice), balance0BeforeAlice);
         assertEq(currency1.balanceOf(alice), balance1BeforeAlice);
     }
 
-    /// @dev clear cannot be used on mint (negative delta)
+    /// @dev 铸造时不能使用 clear（delta 为负）
     function test_fuzz_mint_clear_revert(ModifyLiquidityParams memory seedParams) public {
         ModifyLiquidityParams memory params = createFuzzyLiquidityParams(key, seedParams, SQRT_PRICE_1_1);
         uint256 liquidityToAdd =
@@ -253,7 +253,7 @@ contract PositionManagerTest is Test, PosmTestSetup, LiquidityFuzzers {
         bytes memory calls = planner.encode();
 
         Currency negativeDeltaCurrency = currency0;
-        // because we're fuzzing the range, single-sided mint with currency1 means currency0Delta = 0 and currency1Delta < 0
+        // 由于我们对区间做模糊测试，仅用 currency1 单边铸造意味着 currency0Delta = 0 且 currency1Delta < 0
         if (config.tickUpper <= 0) {
             negativeDeltaCurrency = currency1;
         }
@@ -305,7 +305,7 @@ contract PositionManagerTest is Test, PosmTestSetup, LiquidityFuzzers {
             TickMath.getSqrtPriceAtTick(config.tickUpper),
             uint128(liquidity)
         );
-        assertEq(amount0, amount1); // symmetric liquidity
+        assertEq(amount0, amount1); // 对称流动性
         uint128 slippage = uint128(amount0) + 1;
 
         bytes memory calls =
@@ -317,7 +317,7 @@ contract PositionManagerTest is Test, PosmTestSetup, LiquidityFuzzers {
     }
 
     function test_mint_slippage_revert_swap() public {
-        // swapping will cause a slippage revert
+        // 兑换（swap）会导致滑点回滚（revert）
         PositionConfig memory config = PositionConfig({poolKey: key, tickLower: -120, tickUpper: 120});
 
         uint256 liquidity = 100e18;
@@ -327,13 +327,13 @@ contract PositionManagerTest is Test, PosmTestSetup, LiquidityFuzzers {
             TickMath.getSqrtPriceAtTick(config.tickUpper),
             uint128(liquidity)
         );
-        assertEq(amount0, amount1); // symmetric liquidity
+        assertEq(amount0, amount1); // 对称流动性
         uint128 slippage = uint128(amount0) + 1;
 
         bytes memory calls =
             getMintEncoded(config, liquidity, slippage, slippage, ActionConstants.MSG_SENDER, ZERO_BYTES);
 
-        // swap to move the price and cause a slippage revert
+        // 兑换（swap）以推动价格，从而触发滑点回滚（revert）
         swap(key, true, -1e18, ZERO_BYTES);
 
         vm.expectRevert(
@@ -346,7 +346,7 @@ contract PositionManagerTest is Test, PosmTestSetup, LiquidityFuzzers {
         uint256 balance0Start = currency0.balanceOfSelf();
         uint256 balance1Start = currency1.balanceOfSelf();
 
-        // create liquidity we can burn
+        // 创建可供销毁的流动性
         uint256 tokenId;
         (tokenId, params) = addFuzzyLiquidity(lpm, ActionConstants.MSG_SENDER, key, params, SQRT_PRICE_1_1, ZERO_BYTES);
         PositionConfig memory config =
@@ -358,14 +358,14 @@ contract PositionManagerTest is Test, PosmTestSetup, LiquidityFuzzers {
 
         assertEq(liquidity, uint256(params.liquidityDelta));
 
-        // burn liquidity
+        // 销毁流动性
         uint256 balance0BeforeBurn = currency0.balanceOfSelf();
         uint256 balance1BeforeBurn = currency1.balanceOfSelf();
 
         decreaseLiquidity(tokenId, config, liquidity, ZERO_BYTES);
         BalanceDelta deltaDecrease = getLastDelta();
         uint256 numDeltas = hook.numberDeltasReturned();
-        // No decrease/modifyLiq call will actually happen on the call to burn so the deltas array will be the same length.
+        // 调用 burn 时实际上不会发生 decrease/modifyLiq 调用，因此 deltas 数组的长度保持不变。
         burn(tokenId, config, ZERO_BYTES);
         assertEq(numDeltas, hook.numberDeltasReturned());
 
@@ -376,12 +376,12 @@ contract PositionManagerTest is Test, PosmTestSetup, LiquidityFuzzers {
         assertEq(currency0.balanceOfSelf(), balance0BeforeBurn + uint256(int256(deltaDecrease.amount0())));
         assertEq(currency1.balanceOfSelf(), balance1BeforeBurn + uint256(uint128(deltaDecrease.amount1())));
 
-        // 721 will revert if the token does not exist
+        // 若该 token 不存在，721 会回滚（revert）
         vm.expectRevert();
         IERC721(address(lpm)).ownerOf(1);
 
-        // no tokens were lost, TODO: fuzzer showing off by 1 sometimes
-        // Potentially because we round down in core. I believe this is known in V3. But let's check!
+        // 没有代币损失，TODO: 模糊测试有时会出现差 1 的情况
+        // 可能是因为 core 中向下取整。我认为这在 V3 中是已知问题。但还是检查一下！
         assertApproxEqAbs(currency0.balanceOfSelf(), balance0Start, 1 wei);
         assertApproxEqAbs(currency1.balanceOfSelf(), balance1Start, 1 wei);
     }
@@ -390,7 +390,7 @@ contract PositionManagerTest is Test, PosmTestSetup, LiquidityFuzzers {
         uint256 balance0Start = currency0.balanceOfSelf();
         uint256 balance1Start = currency1.balanceOfSelf();
 
-        // create liquidity we can burn
+        // 创建可供销毁的流动性
         uint256 tokenId;
         (tokenId, params) = addFuzzyLiquidity(lpm, ActionConstants.MSG_SENDER, key, params, SQRT_PRICE_1_1, ZERO_BYTES);
         PositionConfig memory config =
@@ -410,7 +410,7 @@ contract PositionManagerTest is Test, PosmTestSetup, LiquidityFuzzers {
             uint128(int128(params.liquidityDelta))
         );
 
-        // burn liquidity
+        // 销毁流动性
         uint256 balance0BeforeBurn = currency0.balanceOfSelf();
         uint256 balance1BeforeBurn = currency1.balanceOfSelf();
 
@@ -427,12 +427,12 @@ contract PositionManagerTest is Test, PosmTestSetup, LiquidityFuzzers {
         assertEq(currency0.balanceOfSelf(), balance0BeforeBurn + uint256(int256(deltaBurn.amount0())));
         assertEq(currency1.balanceOfSelf(), balance1BeforeBurn + uint256(uint128(deltaBurn.amount1())));
 
-        // OZ 721 will revert if the token does not exist
+        // 若该 token 不存在，OZ 721 会回滚（revert）
         vm.expectRevert();
         IERC721(address(lpm)).ownerOf(1);
 
-        // no tokens were lost, TODO: fuzzer showing off by 1 sometimes
-        // Potentially because we round down in core. I believe this is known in V3. But let's check!
+        // 没有代币损失，TODO: 模糊测试有时会出现差 1 的情况
+        // 可能是因为 core 中向下取整。我认为这在 V3 中是已知问题。但还是检查一下！
         assertApproxEqAbs(currency0.balanceOfSelf(), balance0Start, 1 wei);
         assertApproxEqAbs(currency1.balanceOfSelf(), balance1Start, 1 wei);
     }
@@ -460,7 +460,7 @@ contract PositionManagerTest is Test, PosmTestSetup, LiquidityFuzzers {
 
         bytes memory calls = getBurnEncoded(tokenId, config, MIN_SLIPPAGE_DECREASE, amount1 + 1 wei, ZERO_BYTES);
 
-        // reverts on amount1, because the swap sent token0 into the pool and took token1
+        // 在 amount1 上回滚（revert），因为兑换（swap）把 token0 送入池中并取走了 token1
         vm.expectRevert(
             abi.encodeWithSelector(SlippageCheck.MinimumAmountInsufficient.selector, amount1 + 1, amount1 - 1)
         );
@@ -473,7 +473,7 @@ contract PositionManagerTest is Test, PosmTestSetup, LiquidityFuzzers {
         mint(config, 1e18, ActionConstants.MSG_SENDER, ZERO_BYTES);
         BalanceDelta delta = getLastDelta();
 
-        // TODO: why does burning a newly minted position return original delta - 1 wei?
+        // TODO: 为什么销毁一个新铸造的头寸会返回原始 delta - 1 wei？
         bytes memory calls = getBurnEncoded(
             tokenId, config, uint128(-delta.amount0()) - 1 wei, uint128(-delta.amount1()) - 1 wei, ZERO_BYTES
         );
@@ -485,7 +485,7 @@ contract PositionManagerTest is Test, PosmTestSetup, LiquidityFuzzers {
     }
 
     function test_burn_slippage_revert_swap() public {
-        // swapping will cause a slippage revert
+        // 兑换（swap）会导致滑点回滚（revert）
         PositionConfig memory config = PositionConfig({poolKey: key, tickLower: -120, tickUpper: 120});
         uint256 tokenId = lpm.nextTokenId();
         mint(config, 1e18, ActionConstants.MSG_SENDER, ZERO_BYTES);
@@ -495,7 +495,7 @@ contract PositionManagerTest is Test, PosmTestSetup, LiquidityFuzzers {
         bytes memory calls =
             getBurnEncoded(tokenId, config, uint128(-delta.amount0()) - 1 wei, amount1 - 1 wei, ZERO_BYTES);
 
-        // swap to move the price and cause a slippage revert
+        // 兑换（swap）以推动价格，从而触发滑点回滚（revert）
         swap(key, true, -1e18, ZERO_BYTES);
 
         vm.expectRevert(abi.encodeWithSelector(SlippageCheck.MinimumAmountInsufficient.selector, amount1 - 1, 0));
@@ -522,7 +522,7 @@ contract PositionManagerTest is Test, PosmTestSetup, LiquidityFuzzers {
         assertEq(currency1.balanceOfSelf(), balance1Before + uint256(uint128(delta.amount1())));
     }
 
-    /// @dev Clearing on decrease liquidity is allowed
+    /// @dev 允许在减少流动性时进行清除
     function test_fuzz_decreaseLiquidity_clear(ModifyLiquidityParams memory params, uint256 decreaseLiquidityDelta)
         public
     {
@@ -533,7 +533,7 @@ contract PositionManagerTest is Test, PosmTestSetup, LiquidityFuzzers {
         uint256 balance0Before = currency0.balanceOfSelf();
         uint256 balance1Before = currency1.balanceOfSelf();
 
-        // Clearing is allowed on decrease liquidity
+        // 减少流动性时允许清除
         Plan memory planner = Planner.init();
         planner.add(
             Actions.DECREASE_LIQUIDITY,
@@ -548,16 +548,16 @@ contract PositionManagerTest is Test, PosmTestSetup, LiquidityFuzzers {
         uint256 liquidity = lpm.getPositionLiquidity(tokenId);
         assertEq(liquidity, uint256(params.liquidityDelta) - decreaseLiquidityDelta);
 
-        // did not recieve tokens, as they were forfeited with CLEAR
+        // 没有收到代币，因为它们已通过 CLEAR 被放弃
         assertEq(currency0.balanceOfSelf(), balance0Before);
         assertEq(currency1.balanceOfSelf(), balance1Before);
     }
 
-    /// @dev Clearing on decrease will take tokens if the amount exceeds the clear limit
+    /// @dev 减少流动性时进行清除，若数量超过清除上限则会提取代币
     function test_fuzz_decreaseLiquidity_clearExceedsThenTake(ModifyLiquidityParams memory params) public {
-        // use fuzzer for tick range
+        // 使用模糊测试生成 tick 区间
         params = createFuzzyLiquidityParams(key, params, SQRT_PRICE_1_1);
-        vm.assume(params.tickLower < 0 && 0 < params.tickUpper); // require two-sided liquidity
+        vm.assume(params.tickLower < 0 && 0 < params.tickUpper); // 要求双边流动性
 
         PositionConfig memory config =
             PositionConfig({poolKey: key, tickLower: params.tickLower, tickUpper: params.tickUpper});
@@ -586,11 +586,11 @@ contract PositionManagerTest is Test, PosmTestSetup, LiquidityFuzzers {
         uint256 balance0Before = currency0.balanceOfSelf();
         uint256 balance1Before = currency1.balanceOfSelf();
 
-        // expect to take the tokens
+        // 预期会提取这些代币
         lpm.modifyLiquidities(calls, _deadline);
         BalanceDelta delta = getLastDelta();
 
-        // amount exceeded clear limit, so we should have the tokens
+        // 数量超过了清除上限，因此我们应当拿到这些代币
         assertEq(uint128(delta.amount0()), amount0);
         assertEq(uint128(delta.amount1()), amount1);
         assertEq(currency0.balanceOfSelf(), balance0Before + amount0);
@@ -602,13 +602,13 @@ contract PositionManagerTest is Test, PosmTestSetup, LiquidityFuzzers {
     {
         uint256 tokenId;
         (tokenId, params) = addFuzzyLiquidity(lpm, ActionConstants.MSG_SENDER, key, params, SQRT_PRICE_1_1, ZERO_BYTES);
-        vm.assume(params.tickLower < 0 && 0 < params.tickUpper); // require two-sided liquidity
+        vm.assume(params.tickLower < 0 && 0 < params.tickUpper); // 要求双边流动性
         decreaseLiquidityDelta = bound(decreaseLiquidityDelta, 1, uint256(params.liquidityDelta));
 
         PositionConfig memory config =
             PositionConfig({poolKey: key, tickLower: params.tickLower, tickUpper: params.tickUpper});
 
-        // donate to generate fee revenue
+        // 捐赠（donate）以产生手续费收入
         uint256 feeRevenue0 = 1e18;
         uint256 feeRevenue1 = 0.1e18;
         donateRouter.donate(key, feeRevenue0, feeRevenue1, ZERO_BYTES);
@@ -628,7 +628,7 @@ contract PositionManagerTest is Test, PosmTestSetup, LiquidityFuzzers {
             uint128(decreaseLiquidityDelta)
         );
 
-        // claimed both principal liquidity and fee revenue
+        // 同时领取了本金流动性和手续费收入
         assertApproxEqAbs(currency0.balanceOfSelf() - balance0Before, amount0 + feeRevenue0, 1 wei);
         assertApproxEqAbs(currency1.balanceOfSelf() - balance1Before, amount1 + feeRevenue1, 1 wei);
     }
@@ -669,20 +669,20 @@ contract PositionManagerTest is Test, PosmTestSetup, LiquidityFuzzers {
         mint(config, 1e18, ActionConstants.MSG_SENDER, ZERO_BYTES);
         BalanceDelta delta = getLastDelta();
 
-        // TODO: why does decreasing a newly minted position return original delta - 1 wei?
+        // TODO: 为什么对新铸造的头寸减少流动性会返回原始 delta - 1 wei？
         bytes memory calls = getDecreaseEncoded(
             tokenId, config, 1e18, uint128(-delta.amount0()) - 1 wei, uint128(-delta.amount1()) - 1 wei, ZERO_BYTES
         );
         lpm.modifyLiquidities(calls, _deadline);
         BalanceDelta decreaseDelta = getLastDelta();
 
-        // TODO: why does decreasing a newly minted position return original delta - 1 wei?
+        // TODO: 为什么对新铸造的头寸减少流动性会返回原始 delta - 1 wei？
         assertApproxEqAbs(-delta.amount0(), decreaseDelta.amount0(), 1 wei);
         assertApproxEqAbs(-delta.amount1(), decreaseDelta.amount1(), 1 wei);
     }
 
     function test_decreaseLiquidity_slippage_revert_swap() public {
-        // swapping will cause a slippage revert
+        // 兑换（swap）会导致滑点回滚（revert）
         PositionConfig memory config = PositionConfig({poolKey: key, tickLower: -120, tickUpper: 120});
         uint256 tokenId = lpm.nextTokenId();
         mint(config, 1e18, ActionConstants.MSG_SENDER, ZERO_BYTES);
@@ -692,10 +692,10 @@ contract PositionManagerTest is Test, PosmTestSetup, LiquidityFuzzers {
         bytes memory calls =
             getDecreaseEncoded(tokenId, config, 1e18, uint128(-delta.amount0()) - 1 wei, amount1 - 1 wei, ZERO_BYTES);
 
-        // swap to move the price and cause a slippage revert
+        // 兑换（swap）以推动价格，从而触发滑点回滚（revert）
         swap(key, true, -1e18, ZERO_BYTES);
 
-        // reverts on amount1, because the swap sent token0 into the pool and took token1
+        // 在 amount1 上回滚（revert），因为兑换（swap）把 token0 送入池中并取走了 token1
         vm.expectRevert(abi.encodeWithSelector(SlippageCheck.MinimumAmountInsufficient.selector, amount1 - 1, 0));
         lpm.modifyLiquidities(calls, _deadline);
     }
@@ -706,7 +706,7 @@ contract PositionManagerTest is Test, PosmTestSetup, LiquidityFuzzers {
     ) public {
         uint256 tokenId;
         (tokenId, params) = addFuzzyLiquidity(lpm, ActionConstants.MSG_SENDER, key, params, SQRT_PRICE_1_1, ZERO_BYTES);
-        vm.assume(params.tickLower < 0 && 0 < params.tickUpper); // require two-sided liquidity
+        vm.assume(params.tickLower < 0 && 0 < params.tickUpper); // 要求双边流动性
         vm.assume(0 < decreaseLiquidityDelta);
         vm.assume(decreaseLiquidityDelta < uint256(type(int256).max));
         vm.assume(int256(decreaseLiquidityDelta) <= params.liquidityDelta);
@@ -714,7 +714,7 @@ contract PositionManagerTest is Test, PosmTestSetup, LiquidityFuzzers {
         PositionConfig memory config =
             PositionConfig({poolKey: key, tickLower: params.tickLower, tickUpper: params.tickUpper});
 
-        // swap to create fees
+        // 兑换（swap）以产生手续费
         uint256 swapAmount = 0.01e18;
         swap(key, false, int256(swapAmount), ZERO_BYTES);
 
@@ -727,7 +727,7 @@ contract PositionManagerTest is Test, PosmTestSetup, LiquidityFuzzers {
 
         assertEq(liquidity, uint256(params.liquidityDelta) - decreaseLiquidityDelta);
 
-        // The change in balance equals the delta returned.
+        // 余额变化等于返回的 delta。
         assertEq(currency0.balanceOfSelf() - balance0Before, uint256(int256(delta.amount0())));
         assertEq(currency1.balanceOfSelf() - balance1Before, uint256(int256(delta.amount1())));
     }
@@ -739,10 +739,10 @@ contract PositionManagerTest is Test, PosmTestSetup, LiquidityFuzzers {
         mint(config, liquidity, ActionConstants.MSG_SENDER, ZERO_BYTES);
         BalanceDelta mintDelta = getLastDelta();
 
-        // transfer to alice
+        // 转给 alice
         IERC721(address(lpm)).transferFrom(address(this), alice, tokenId);
 
-        // alice can burn the position
+        // alice 可以销毁该头寸
         bytes memory calls = getBurnEncoded(tokenId, config, ZERO_BYTES);
 
         uint256 balance0BeforeAlice = currency0.balanceOf(alice);
@@ -751,11 +751,11 @@ contract PositionManagerTest is Test, PosmTestSetup, LiquidityFuzzers {
         vm.prank(alice);
         lpm.modifyLiquidities(calls, _deadline);
 
-        // token was burned and does not exist anymore
+        // token 已被销毁，不再存在
         vm.expectRevert();
         IERC721(address(lpm)).ownerOf(tokenId);
 
-        // alice received the principal liquidity
+        // alice 收到了本金流动性
         assertApproxEqAbs(currency0.balanceOf(alice) - balance0BeforeAlice, uint128(-mintDelta.amount0()), 1 wei);
         assertApproxEqAbs(currency1.balanceOf(alice) - balance1BeforeAlice, uint128(-mintDelta.amount1()), 1 wei);
     }
@@ -766,15 +766,15 @@ contract PositionManagerTest is Test, PosmTestSetup, LiquidityFuzzers {
         uint256 tokenId = lpm.nextTokenId();
         mint(config, liquidity, ActionConstants.MSG_SENDER, ZERO_BYTES);
 
-        // donate to generate fee revenue
+        // 捐赠（donate）以产生手续费收入
         uint256 feeRevenue0 = 1e18;
         uint256 feeRevenue1 = 0.1e18;
         donateRouter.donate(key, feeRevenue0, feeRevenue1, ZERO_BYTES);
 
-        // transfer to alice
+        // 转给 alice
         IERC721(address(lpm)).transferFrom(address(this), alice, tokenId);
 
-        // alice can collect the fees
+        // alice 可以收取手续费
         uint256 balance0BeforeAlice = currency0.balanceOf(alice);
         uint256 balance1BeforeAlice = currency1.balanceOf(alice);
         vm.startPrank(alice);
@@ -782,7 +782,7 @@ contract PositionManagerTest is Test, PosmTestSetup, LiquidityFuzzers {
         BalanceDelta delta = getLastDelta();
         vm.stopPrank();
 
-        // alice received the fee revenue
+        // alice 收到了手续费收入
         assertApproxEqAbs(currency0.balanceOf(alice) - balance0BeforeAlice, feeRevenue0, 1 wei);
         assertApproxEqAbs(currency1.balanceOf(alice) - balance1BeforeAlice, feeRevenue1, 1 wei);
         assertApproxEqAbs(uint128(delta.amount0()), feeRevenue0, 1 wei);
@@ -795,10 +795,10 @@ contract PositionManagerTest is Test, PosmTestSetup, LiquidityFuzzers {
         uint256 tokenId = lpm.nextTokenId();
         mint(config, liquidity, ActionConstants.MSG_SENDER, ZERO_BYTES);
 
-        // transfer to alice
+        // 转给 alice
         IERC721(address(lpm)).transferFrom(address(this), alice, tokenId);
 
-        // alice increases liquidity and is the payer
+        // alice 增加流动性，并且是付款方
         uint256 balance0BeforeAlice = currency0.balanceOf(alice);
         uint256 balance1BeforeAlice = currency1.balanceOf(alice);
         vm.startPrank(alice);
@@ -807,11 +807,11 @@ contract PositionManagerTest is Test, PosmTestSetup, LiquidityFuzzers {
         BalanceDelta delta = getLastDelta();
         vm.stopPrank();
 
-        // position liquidity increased
+        // 头寸流动性增加了
         uint256 newLiq = lpm.getPositionLiquidity(tokenId);
         assertEq(newLiq, liquidity + liquidityToAdd);
 
-        // alice paid the tokens
+        // alice 支付了代币
         (uint256 amount0, uint256 amount1) = LiquidityAmounts.getAmountsForLiquidity(
             SQRT_PRICE_1_1,
             TickMath.getSqrtPriceAtTick(config.tickLower),
@@ -830,16 +830,16 @@ contract PositionManagerTest is Test, PosmTestSetup, LiquidityFuzzers {
         uint256 tokenId = lpm.nextTokenId();
         mint(config, liquidity, ActionConstants.MSG_SENDER, ZERO_BYTES);
 
-        // donate to generate fee revenue
+        // 捐赠（donate）以产生手续费收入
         uint256 feeRevenue0 = 1e18;
         uint256 feeRevenue1 = 0.1e18;
         donateRouter.donate(key, feeRevenue0, feeRevenue1, ZERO_BYTES);
 
-        // transfer to alice
+        // 转给 alice
         IERC721(address(lpm)).transferFrom(address(this), alice, tokenId);
 
         {
-            // alice decreases liquidity and is the recipient
+            // alice 减少流动性，并且是接收者
             uint256 balance0BeforeAlice = currency0.balanceOf(alice);
             uint256 balance1BeforeAlice = currency1.balanceOf(alice);
             vm.startPrank(alice);
@@ -849,12 +849,12 @@ contract PositionManagerTest is Test, PosmTestSetup, LiquidityFuzzers {
             vm.stopPrank();
 
             {
-                // position liquidity decreased
+                // 头寸流动性减少了
                 uint256 newLiq = lpm.getPositionLiquidity(tokenId);
                 assertEq(newLiq, liquidity - liquidityToRemove);
             }
 
-            // alice received the principal + fees
+            // alice 收到了本金 + 手续费
             (uint256 amount0, uint256 amount1) = LiquidityAmounts.getAmountsForLiquidity(
                 SQRT_PRICE_1_1,
                 TickMath.getSqrtPriceAtTick(config.tickLower),
@@ -869,7 +869,7 @@ contract PositionManagerTest is Test, PosmTestSetup, LiquidityFuzzers {
     }
 
     function test_initialize() public {
-        // initialize a new pool and add liquidity
+        // 初始化一个新池并添加流动性
         key = PoolKey({currency0: currency0, currency1: currency1, fee: 0, tickSpacing: 10, hooks: IHooks(address(0))});
         lpm.initializePool(key, SQRT_PRICE_1_1);
 
@@ -895,8 +895,8 @@ contract PositionManagerTest is Test, PosmTestSetup, LiquidityFuzzers {
         assertEq(lpFee, fee);
     }
 
-    // tests a decrease and take in both currencies
-    // does not use take pair, so its less optimal
+    // 测试减少流动性并提取两种代币
+    // 没有使用 take pair，因此不是最优方式
     function test_decrease_take() public {
         PositionConfig memory config = PositionConfig({poolKey: key, tickLower: -120, tickUpper: 120});
         uint256 tokenId = lpm.nextTokenId();
@@ -921,9 +921,9 @@ contract PositionManagerTest is Test, PosmTestSetup, LiquidityFuzzers {
         assertEq(currency1.balanceOfSelf(), balanceBefore1 + uint256(int256(delta.amount1())));
     }
 
-    // decrease full range position
-    // mint new one sided position in currency1
-    // expect to TAKE currency0 and SETTLE currency1
+    // 减少全区间头寸的流动性
+    // 用 currency1 铸造一个新的单边头寸
+    // 预期会 TAKE（提取）currency0 并 SETTLE（结算）currency1
     function test_decrease_increaseCurrency1_take_settle() public {
         PositionConfig memory config = PositionConfig({poolKey: key, tickLower: -120, tickUpper: 120});
         uint256 tokenId = lpm.nextTokenId();
@@ -936,7 +936,7 @@ contract PositionManagerTest is Test, PosmTestSetup, LiquidityFuzzers {
 
         uint256 tokenIdMint = lpm.nextTokenId();
 
-        // one-sided liq in currency1
+        // currency1 的单边流动性
         PositionConfig memory configMint = PositionConfig({poolKey: key, tickLower: -120, tickUpper: 0});
 
         Plan memory plan = Planner.init();
@@ -965,20 +965,20 @@ contract PositionManagerTest is Test, PosmTestSetup, LiquidityFuzzers {
         BalanceDelta deltaDecrease = hook.deltas(0);
         BalanceDelta deltaMint = hook.deltas(1);
 
-        assertEq(deltaMint.amount0(), 0); // there is no currency0 in the new position
+        assertEq(deltaMint.amount0(), 0); // 新头寸中没有 currency0
         assertEq(currency0.balanceOfSelf(), balanceBefore0 + uint256(int256(deltaDecrease.amount0())));
         assertEq(
             currency1.balanceOfSelf(), balanceBefore1 - uint256(-int256(deltaDecrease.amount1() + deltaMint.amount1()))
         );
         assertEq(IERC721(address(lpm)).ownerOf(tokenIdMint), address(this));
-        assertLt(currency1.balanceOfSelf(), balanceBefore1); // currency1 was owed
-        assertLt(uint256(int256(deltaDecrease.amount1())), uint256(int256(-deltaMint.amount1()))); // amount1 in the second position was greater than amount1 in the first position
+        assertLt(currency1.balanceOfSelf(), balanceBefore1); // 欠下了 currency1（需要支付）
+        assertLt(uint256(int256(deltaDecrease.amount1())), uint256(int256(-deltaMint.amount1()))); // 第二个头寸中的 amount1 大于第一个头寸中的 amount1
     }
 
     function test_mint_slippageRevert() public {}
 
     /*//////////////////////////////////////////////////////////////
-                       MODIFY POSITION EVENT TESTS
+                       ModifyPosition 事件测试
     //////////////////////////////////////////////////////////////*/
 
     function test_mint_emitsModifyPositionEvent() public {
@@ -1034,8 +1034,8 @@ contract PositionManagerTest is Test, PosmTestSetup, LiquidityFuzzers {
         burn(tokenId, config, ZERO_BYTES);
     }
 
-    /// @dev Guards against a future refactor that might route mint through `_modifyLiquidity` (or vice versa) and cause
-    /// a duplicate `ModifyPosition` emission. Each lifecycle action must emit exactly one event from `address(lpm)`.
+    /// @dev 防止将来的重构把 mint 路由到 `_modifyLiquidity`（或反之），从而导致
+    /// 重复触发 `ModifyPosition` 事件。每个生命周期操作都必须恰好从 `address(lpm)` 触发一个事件。
     function test_modifyPositionEvent_emitsOncePerAction() public {
         PositionConfig memory config = PositionConfig({poolKey: key, tickLower: -120, tickUpper: 120});
         uint256 liquidity = 1e18;

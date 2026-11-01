@@ -31,8 +31,8 @@ fuzz.runs = 100
 [profile.ci]
 fuzz_runs = 100_000
 
-# 50M matches geth's default eth_call gas cap (--rpc.gascap); the documented single-shot
-# ReservesLens call exceeds a 30M block-style limit by design (~33M for tick spacing 1)
+# 50M 与 geth 默认的 eth_call gas 上限（--rpc.gascap）一致；文档中所述的单次（single-shot）
+# ReservesLens 调用按设计会超出 30M 的区块式限制（tick 间距为 1 时约 33M）
 [profile.gas]
 gas_limit=50_000_000
 
