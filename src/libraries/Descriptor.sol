@@ -108,7 +108,7 @@ library Descriptor {
     }
 
     /// @notice 生成 Uniswap v4 NFT 描述的第一部分
-    /// @param quoteCurrencySymbol 报价代币（quote currency）的符号
+    /// @param quoteCurrencySymbol 计价代币（quote currency）的符号
     /// @param baseCurrencySymbol 基础代币（base currency）的符号
     /// @param poolManager PoolManager 的地址
     /// @return 描述的第一部分
@@ -117,7 +117,7 @@ library Descriptor {
         string memory baseCurrencySymbol,
         string memory poolManager
     ) private pure returns (string memory) {
-        // 先显示报价代币，再显示基础代币
+        // 先显示计价代币，再显示基础代币
         return string(
             abi.encodePacked(
                 "This NFT represents a liquidity position in a Uniswap v4 ",
@@ -137,7 +137,7 @@ library Descriptor {
     /// @notice 生成 Uniswap v4 NFT 描述的第二部分
     /// @param tokenId 代币 ID
     /// @param baseCurrencySymbol 基础代币的符号
-    /// @param quoteCurrency 报价代币的地址
+    /// @param quoteCurrency 计价代币的地址
     /// @param baseCurrency 基础代币的地址
     /// @param hooks hooks 合约的地址
     /// @param feeTier 池的手续费档位
@@ -262,7 +262,7 @@ library Descriptor {
     /// @param tick 该 tick（tickLower 或 tickUpper）
     /// @param tickSpacing 池的 tick 间距
     /// @param baseCurrencyDecimals 基础代币的小数位数
-    /// @param quoteCurrencyDecimals 报价代币的小数位数
+    /// @param quoteCurrencyDecimals 计价代币的小数位数
     /// @param flipRatio 若比率已被翻转则为 true
     /// @return 字符串形式的比率值
     function tickToDecimalString(
@@ -306,7 +306,7 @@ library Descriptor {
     /// @notice 针对小数位数不同的代币调整 sqrt 价格
     /// @param sqrtRatioX96 特定 tick 处的 sqrt 价格
     /// @param baseCurrencyDecimals 基础代币的小数位数
-    /// @param quoteCurrencyDecimals 报价代币的小数位数
+    /// @param quoteCurrencyDecimals 计价代币的小数位数
     /// @return adjustedSqrtRatioX96 调整后的 sqrt 价格
     function adjustForDecimalPrecision(uint160 sqrtRatioX96, uint8 baseCurrencyDecimals, uint8 quoteCurrencyDecimals)
         private

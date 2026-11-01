@@ -146,7 +146,7 @@ contract PositionDescriptorTest is Test, PosmTestSetup {
             token = abi.decode(data, (Token));
         }
 
-        // 报价币（quote）为 currency1，基础币（base）为 currency0
+        // 计价币（quote）为 currency1，基础币（base）为 currency0
         assertFalse(proxyAsImplementation.flipRatio(Currency.unwrap(key.currency0), Currency.unwrap(key.currency1)));
 
         string memory symbol0 = SafeCurrencyMetadata.currencySymbol(Currency.unwrap(currency0), nativeCurrencyLabel);
@@ -265,7 +265,7 @@ contract PositionDescriptorTest is Test, PosmTestSetup {
             token = abi.decode(data, (Token));
         }
 
-        // 报价币（quote）为 currency1，基础币（base）为 currency0
+        // 计价币（quote）为 currency1，基础币（base）为 currency0
         assertFalse(
             proxyAsImplementation.flipRatio(Currency.unwrap(nativeKey.currency0), Currency.unwrap(nativeKey.currency1))
         );

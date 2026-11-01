@@ -25,7 +25,7 @@
 
 ## 总体进度
 
-**已完成：178 / 179**
+**已完成：179 / 179**
 
 ## 分组明细
 
@@ -168,9 +168,9 @@
 - [x] `test/erc721Permit/ERC721Permit.permitForAll.t.sol` — 363 行｜注释 54 行
 - [x] `test/hooks/permissionedPools/PermissionedPoolsBase.sol` — 63 行｜注释 3 行
 
-### G15（1 个文件，2714 行，注释 293 行）· 进度 0/1
+### G15（1 个文件，2714 行，注释 293 行）· 进度 1/1 ✅
 
-- [ ] `test/hooks/permissionedPools/PermissionedPositionManager.t.sol` — 2714 行｜注释 293 行
+- [x] `test/hooks/permissionedPools/PermissionedPositionManager.t.sol` — 2714 行｜注释 293 行
 
 ### G16（1 个文件，2422 行，注释 130 行）· 进度 1/1 ✅
 
@@ -291,3 +291,14 @@
 - [x] `foundry.toml` — 44 行｜注释 2 行
 - [x] `.github/workflows/deploy.yaml` — 48 行｜注释 1 行
 - [x] `.gitignore` — 6 行｜注释 1 行
+
+## 完成说明
+
+- 179 个文件全部由子代理翻译完成，主代理用校验脚本逐组复核（逐行比对 git HEAD 原文）：**0 ERROR**，每个文件行数不变；去掉注释后的代码与字符串字面量逐行一致；NatSpec 标签与 `@param` 参数名不变；SPDX / `forge-config` 等指令行原样保留。
+- 剩余 21 处英文注释是有意保留的：被注释掉的代码、`forge script` / `node` 用法命令、函数签名片段、人名邮箱等。
+- 术语统一：quote / base currency 全仓统一为“计价代币 / 基础代币”。
+- 子代理在翻译中发现的**英文原文**疑点（译文照原意翻译，代码与原文均未改动，供精读时参考）：
+  - `src/PositionManager.sol:548`、`src/interfaces/INotifier.sol:40,48`：原文写的是“will revert if pool manager is locked”，但 `onlyIfPoolManagerLocked` 实际在 PoolManager **处于解锁状态**时回滚（`src/PositionManager.sol:163`），原文的 locked 应为 unlocked。
+  - `src/libraries/ERC721PermitHash.sol:41`：`hashPermitForAll` 的说明引用的是 `IERC721Permit_v4.permit()`，应为 `permitForAll()`。
+  - `src/interfaces/INotifier.sol:45`：原文中的 `unsubscriberGasLimit` 疑为 `unsubscribeGasLimit` 的笔误。
+  - `test/position-managers/FeeCollection.t.sol:337`：原文写的是 token0，结合上下文疑为 token1。

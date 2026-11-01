@@ -47,7 +47,7 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
     using FixedPointMathLib for uint256;
     using StateLibrary for IPoolManager;
 
-    // To allow testing without importing PermissionedHooks
+    // 用于在不导入 PermissionedHooks 的情况下进行测试
     error Unauthorized();
     error InvalidHook();
     error HookCallFailed();
@@ -55,7 +55,7 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
     PoolId public poolId;
     PoolId public poolIdFake;
 
-    // Permissioned components
+    // 许可相关组件
     MockAllowlistChecker public mockAllowListChecker;
     PermissionsAdapter public permissionsAdapter0;
     PermissionsAdapter public permissionsAdapter2;
@@ -64,13 +64,13 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
     IPositionManager public secondaryPosm;
     IPositionManager public tertiaryPosm;
 
-    // permissioned / normal
+    // 许可 / 普通
     PoolKey public key0;
-    // normal / permissioned
+    // 普通 / 许可
     PoolKey public key1;
-    // permissioned / permissioned
+    // 许可 / 许可
     PoolKey public key2;
-    // normal / normal
+    // 普通 / 普通
     PoolKey public key3;
 
     PoolKey public keyFake0;
@@ -79,7 +79,7 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
 
     PoolKey public insecureKey;
 
-    // Test Users
+    // 测试用户
     address public alice = makeAddr("ALICE");
     address public unauthorizedUser = makeAddr("UNAUTHORIZED");
 
@@ -94,7 +94,7 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         setupPermissionedComponents();
         setupPool();
 
-        // set up approvals for alice
+        // 为 alice 设置授权
         seedBalance(alice);
         approvePosmFor(alice);
         permissionsAdapter0.updateSwappingEnabled(true);
@@ -104,11 +104,11 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
     function setUpPosms() internal {
         deployAndApprovePosm(manager, address(permissionsAdapterFactory), keccak256("permissionedPosm"));
 
-        // alternate position manager using different hooks
+        // 备用 PositionManager，使用不同的 hooks
         secondaryPosm =
             deployAndApprovePosmOnly(manager, address(permissionsAdapterFactory), keccak256("secondaryPosm"));
 
-        // alternate position manager using the same hooks
+        // 备用 PositionManager，使用相同的 hooks
         tertiaryPosm = deployAndApprovePosmOnly(manager, address(permissionsAdapterFactory), keccak256("tertiaryPosm"));
     }
 
@@ -156,7 +156,7 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
     function setUpCurrencyZero() internal {
         setUpAllowlist(currency0);
         originalToken0 = MockERC20(Currency.unwrap(currency0));
-        // ensure expected ordering
+        // 确保符合预期的排序
         while (true) {
             permissionsAdapter0 = PermissionsAdapter(
                 permissionsAdapterFactory.createPermissionsAdapter(
@@ -174,7 +174,7 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         setUpAllowlist(currency2);
         originalToken2 = MockERC20(Currency.unwrap(currency2));
 
-        // ensure expected ordering
+        // 确保符合预期的排序
         while (true) {
             permissionsAdapter2 = PermissionsAdapter(
                 permissionsAdapterFactory.createPermissionsAdapter(
@@ -211,7 +211,7 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         MockPermissionedToken(Currency.unwrap(currency))
             .setAllowlist(address(permissionsAdapter), PermissionFlags.ALL_ALLOWED);
 
-        // permissions adapter contract must have a non-zero balance of the permissioned token
+        // 权限适配器合约必须持有非零余额的许可代币
         IERC20(Currency.unwrap(currency)).approve(address(permissionsAdapter), 1);
         permissionsAdapter.depositForVerification(1);
 
@@ -265,24 +265,24 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
     function test_modifyLiquidities_reverts_reentrancy() public {
         PoolKey memory key;
 
-        // Create a reentrant token and initialize the pool with a verified adapter so beforeInitialize passes
+        // 创建一个重入代币，并使用已验证的适配器初始化池，使 beforeInitialize 能够通过
         Currency reentrantToken = Currency.wrap(address(new ReentrantToken(lpm)));
         Currency adapterCurrency = Currency.wrap(address(permissionsAdapter0));
         (Currency c0, Currency c1) = (Currency.unwrap(reentrantToken) < Currency.unwrap(adapterCurrency))
             ? (reentrantToken, adapterCurrency)
             : (adapterCurrency, reentrantToken);
 
-        // Set up approvals for the reentrant token
+        // 为重入代币设置授权
         approvePosmCurrency(reentrantToken);
         (key, poolId) = initPool(c0, c1, permissionedHooks, 3000, SQRT_PRICE_1_1);
 
-        // Try to add liquidity at that range, but the token reenters posm
+        // 尝试在该区间添加流动性，但代币会重入 posm
         PositionConfig memory config =
             PositionConfig({poolKey: key, tickLower: -int24(key.tickSpacing), tickUpper: int24(key.tickSpacing)});
 
         bytes memory calls = getMintEncoded(config, 1e18, ActionConstants.MSG_SENDER, "");
 
-        // Permit2.transferFrom does not bubble the ContractLocked error and instead reverts with its own error
+        // Permit2.transferFrom 不会向上传递 ContractLocked 错误，而是以它自己的错误回滚（revert）
         vm.expectRevert("TRANSFER_FROM_FAILED");
         lpm.modifyLiquidities(calls, block.timestamp + 1);
     }
@@ -304,7 +304,7 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         PositionConfig memory config =
             PositionConfig({poolKey: key, tickLower: params.tickLower, tickUpper: params.tickUpper});
 
-        // liquidity is a uint
+        // 流动性是 uint 类型
         uint256 liquidityToAdd =
             params.liquidityDelta < 0 ? uint256(-params.liquidityDelta) : uint256(params.liquidityDelta);
 
@@ -397,7 +397,7 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
 
         BalanceInfo memory balanceInfoBefore = getBalanceInfoSelfAndManager(key);
 
-        // mint to specific recipient, alice, not using the recipient constants
+        // 铸造给指定的接收者 alice，而不使用接收者常量
         mint(config, liquidityToAdd, alice, ZERO_BYTES);
 
         BalanceInfo memory balanceInfoAfter = getBalanceInfoSelfAndManager(key);
@@ -447,7 +447,7 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         uint256 balance0ManagerAfter = currency0Adapter.balanceOf(address(manager));
         uint256 balance1ManagerAfter = currency1Adapter.balanceOf(address(manager));
 
-        // alice was not the payer
+        // alice 不是付款方
         assertEq(tokenId, lpm.nextTokenId() - 1);
         assertEq(IERC721(address(lpm)).ownerOf(tokenId), alice);
         assertEq(balance0Before - currency0_.balanceOfSelf(), balance0ManagerAfter - balance0ManagerBefore);
@@ -456,7 +456,7 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         assertEq(currency1_.balanceOf(alice), balance1BeforeAlice);
     }
 
-    /// @dev clear cannot be used on mint (negative delta)
+    /// @dev 铸造（负 delta）时不能使用 clear
     function test_fuzz_mint_clear_revert(ModifyLiquidityParams memory seedParams) public {
         _test_fuzz_mint_clear_revert(key0, seedParams);
         _test_fuzz_mint_clear_revert(key1, seedParams);
@@ -490,7 +490,7 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         bytes memory calls = planner.encode();
 
         Currency negativeDeltaCurrency = key.currency0;
-        // because we're fuzzing the range, single-sided mint with currency1 means currency0Delta = 0 and currency1Delta < 0
+        // 由于对区间做了模糊测试，仅用 currency1 的单边铸造意味着 currency0Delta = 0 且 currency1Delta < 0
         if (config.tickUpper <= 0) {
             negativeDeltaCurrency = key.currency1;
         }
@@ -568,7 +568,7 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         uint256 balance0ManagerBefore = key.currency0.balanceOf(address(manager));
         uint256 balance1ManagerBefore = key.currency1.balanceOf(address(manager));
 
-        assertEq(amount0, amount1); // symmetric liquidity
+        assertEq(amount0, amount1); // 对称流动性
 
         bytes memory calls =
             getMintEncoded(config, liquidity, slippage, slippage, ActionConstants.MSG_SENDER, ZERO_BYTES);
@@ -589,7 +589,7 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
     }
 
     function _test_mint_slippage_revert_swap(PoolKey memory key) internal {
-        // swapping will cause a slippage revert
+        // 兑换（swap）会导致滑点回滚（revert）
         PositionConfig memory config = PositionConfig({poolKey: key, tickLower: -120, tickUpper: 120});
 
         uint256 liquidity = 100e18;
@@ -601,12 +601,12 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         );
         uint128 slippage = uint128(amount0) + 1;
 
-        assertEq(amount0, amount1); // symmetric liquidity
+        assertEq(amount0, amount1); // 对称流动性
 
         bytes memory calls =
             getMintEncoded(config, liquidity, slippage, slippage, ActionConstants.MSG_SENDER, ZERO_BYTES);
 
-        // swap to move the price and cause a slippage revert
+        // 通过兑换推动价格，从而导致滑点回滚
         swap(key, true, -1e18);
 
         vm.expectRevert(
@@ -627,7 +627,7 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         uint256 liquidity = 1e18;
         uint256 tokenId = lpm.nextTokenId();
 
-        // Alice is in the allowlist, so she should be able to mint
+        // Alice 在白名单中，因此她应该能够铸造
         vm.prank(alice);
         mint(config, liquidity, ActionConstants.MSG_SENDER, ZERO_BYTES);
 
@@ -644,19 +644,19 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         PositionConfig memory config = PositionConfig({poolKey: key, tickLower: -120, tickUpper: 120});
         uint256 liquidity = 1e18;
 
-        // Revoke the hook as the adapter admin (address(this) owns both permissionsAdapter0 and permissionsAdapter2)
+        // 以适配器管理员身份撤销该 hook（address(this) 同时拥有 permissionsAdapter0 和 permissionsAdapter2）
         _setHookAllowedForKey(key, false);
 
         vm.prank(alice);
         vm.expectRevert(InvalidHook.selector);
         mint(config, liquidity, ActionConstants.MSG_SENDER, ZERO_BYTES);
 
-        // restore so the fan-out across keys is independent
+        // 恢复原状，使对各个 key 的逐一测试相互独立
         _setHookAllowedForKey(key, true);
     }
 
     function test_permissioned_mint_alt_posm_same_hooks_reverts() public {
-        // tertiary posm uses the same hooks contract
+        // 第三个 posm 使用相同的 hooks 合约
         _test_permissioned_mint_alt_posm_same_hooks_reverts(key0, tertiaryPosm);
         _test_permissioned_mint_alt_posm_same_hooks_reverts(key1, tertiaryPosm);
         _test_permissioned_mint_alt_posm_same_hooks_reverts(key2, tertiaryPosm);
@@ -667,7 +667,7 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
 
         uint256 liquidity = 1e18;
 
-        // we don't use the helper, so we can choose which position manager to use
+        // 这里不使用辅助函数，以便自行选择使用哪个 PositionManager
         bytes memory calls = getMintEncoded(config, liquidity, ActionConstants.MSG_SENDER, ZERO_BYTES);
 
         vm.prank(alice);
@@ -684,7 +684,7 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
     }
 
     function test_permissioned_mint_alt_posm_allowed_wrapper_succeeds() public {
-        // secondary posm is an allowed wrapper, so the adapter-level hook allowlist is sufficient on its own
+        // 第二个 posm 是被允许的封装合约（wrapper），因此仅靠适配器层面的 hook 白名单就足够了
         _test_permissioned_mint_alt_posm_allowed_wrapper_succeeds(key0, secondaryPosm);
         _test_permissioned_mint_alt_posm_allowed_wrapper_succeeds(key1, secondaryPosm);
         _test_permissioned_mint_alt_posm_allowed_wrapper_succeeds(key2, secondaryPosm);
@@ -698,13 +698,13 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         uint256 liquidity = 1e18;
         uint256 tokenId = posm.nextTokenId();
 
-        // alice already approved permit2 on the underlying tokens; approve this posm as the permit2 spender
+        // alice 已在底层代币上授权过 permit2；这里将此 posm 授权为 permit2 的被授权者
         vm.startPrank(alice);
         permit2.approve(Currency.unwrap(currency0), address(posm), type(uint160).max, type(uint48).max);
         permit2.approve(Currency.unwrap(currency1), address(posm), type(uint160).max, type(uint48).max);
         permit2.approve(Currency.unwrap(currency2), address(posm), type(uint160).max, type(uint48).max);
 
-        // we don't use the helper, so we can choose which position manager to use
+        // 这里不使用辅助函数，以便自行选择使用哪个 PositionManager
         bytes memory calls = getMintEncoded(config, liquidity, ActionConstants.MSG_SENDER, ZERO_BYTES);
         posm.modifyLiquidities(calls, block.timestamp + 1);
         vm.stopPrank();
@@ -723,7 +723,7 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
 
         uint256 liquidity = 1e18;
 
-        // Add some tokens to unauthorized user
+        // 给未授权用户添加一些代币
         MockPermissionedToken(Currency.unwrap(currency0)).setAllowlist(unauthorizedUser, PermissionFlags.ALL_ALLOWED);
         MockPermissionedToken(Currency.unwrap(currency0)).mint(unauthorizedUser, 1000e18);
         MockPermissionedToken(Currency.unwrap(currency0)).setAllowlist(unauthorizedUser, PermissionFlags.NONE);
@@ -731,23 +731,23 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
 
         vm.startPrank(unauthorizedUser);
 
-        // Approve tokens for the position manager
+        // 为 PositionManager 授权代币
         originalToken0.approve(address(permit2), type(uint256).max);
         MockERC20(Currency.unwrap(currency1)).approve(address(permit2), type(uint256).max);
         permit2.approve(address(originalToken0), address(lpm), type(uint160).max, type(uint48).max);
         permit2.approve(Currency.unwrap(currency1), address(lpm), type(uint160).max, type(uint48).max);
 
-        // This should revert because the recipient is not in the allowlist
+        // 这里应当回滚（revert），因为接收者不在白名单中
         vm.expectRevert(Unauthorized.selector);
         mint(config, liquidity, unauthorizedUser, ZERO_BYTES);
         vm.stopPrank();
     }
 
-    /// @dev A pool with no verified permissions adapter on either side has nothing for the
-    ///      PermissionedPositionManager to enforce; minting such a position would only produce
-    ///      a non-transferable NFT (see ECO-221 / `transferFrom`). Reject the mint outright.
+    /// @dev 若池的两侧都没有已验证的权限适配器，
+    ///      PermissionedPositionManager 就没有任何需要执行的约束；铸造这样的头寸只会产生
+    ///      一个不可转让的 NFT（参见 ECO-221 / `transferFrom`）。因此直接拒绝铸造。
     function test_mint_reverts_when_no_verified_adapter() public {
-        // Two ordinary ERC-20s — neither is a verified permissions adapter.
+        // 两个普通的 ERC-20——都不是已验证的权限适配器。
         Currency ordinary0 = deployMintAndApproveCurrency(false);
         Currency ordinary1 = deployMintAndApproveCurrency(false);
         if (Currency.unwrap(ordinary1) < Currency.unwrap(ordinary0)) {
@@ -756,7 +756,7 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         approvePosmCurrency(ordinary0);
         approvePosmCurrency(ordinary1);
 
-        // Initialize directly on the PoolManager with no hooks so initialization isn't gated.
+        // 直接在 PoolManager 上以无 hook 方式初始化，使初始化不受限制。
         PoolKey memory ordinaryKey = PoolKey({
             currency0: ordinary0, currency1: ordinary1, fee: 3000, tickSpacing: 60, hooks: IHooks(address(0))
         });
@@ -765,14 +765,14 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         PositionConfig memory config = PositionConfig({poolKey: ordinaryKey, tickLower: -120, tickUpper: 120});
         bytes memory calls = getMintEncoded(config, 1e18, ActionConstants.MSG_SENDER, ZERO_BYTES);
 
-        // Use the literal selector to avoid pulling in PermissionedPositionManager imports here.
+        // 使用字面量选择器，避免在此处引入 PermissionedPositionManager 的导入。
         // bytes4(keccak256("NoVerifiedAdapter()")) = 0x36a01ad4
         vm.expectRevert(bytes4(keccak256("NoVerifiedAdapter()")));
         lpm.modifyLiquidities(calls, block.timestamp + 1);
     }
 
-    /// @dev Creates a factory adapter over a fresh token and returns it, WITHOUT verifying it. Loops until the
-    ///      adapter address sorts below `permissionsAdapter0` so it can be used as currency0 (validated first).
+    /// @dev 基于一个新代币创建工厂适配器并返回它，但不对其进行验证。循环直到该
+    ///      适配器地址排序低于 `permissionsAdapter0`，从而可以用作 currency0（会被优先校验）。
     function _createUnverifiedAdapterBelow(address ceiling) internal returns (PermissionsAdapter unverified) {
         Currency ordinary = deployMintAndApproveCurrency(false);
         while (true) {
@@ -783,17 +783,17 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
             );
             if (address(unverified) < ceiling) break;
         }
-        // Sanity: created in the factory but not verified.
+        // 健全性检查：已在工厂中创建，但尚未验证。
         assertEq(permissionsAdapterFactory.permissionsAdapterOf(address(unverified)), Currency.unwrap(ordinary));
         assertEq(permissionsAdapterFactory.verifiedPermissionsAdapterOf(address(unverified)), address(0));
     }
 
-    /// @dev A pool pairing a verified adapter with a factory-created-but-unverified adapter must reject the mint:
-    ///      an unverified adapter is not an ordinary token and cannot skip its LIQUIDITY_ALLOWED and hook checks.
+    /// @dev 将已验证适配器与由工厂创建但未验证的适配器配对的池必须拒绝铸造：
+    ///      未验证的适配器不是普通代币，不能跳过其 LIQUIDITY_ALLOWED 与 hook 检查。
     function test_mint_reverts_when_paired_with_unverified_adapter() public {
         PermissionsAdapter unverified = _createUnverifiedAdapterBelow(address(permissionsAdapter0));
 
-        // unverified adapter is currency0 (sorts lower), so it is validated first.
+        // 未验证的适配器是 currency0（排序更低），因此会被优先校验。
         PoolKey memory k = PoolKey({
             currency0: Currency.wrap(address(unverified)),
             currency1: Currency.wrap(address(permissionsAdapter0)),
@@ -811,8 +811,8 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
     }
 
     function test_mint_reverts_when_paired_with_non_contract_currency() public {
-        // A code-less non-adapter address (a not-yet-deployed adapter address), sorted below the adapter so it
-        // is currency0 and is validated first.
+        // 一个没有代码的非适配器地址（即尚未部署的适配器地址），排序低于该适配器，因此它
+        // 是 currency0，并会被优先校验。
         address phantom = address(0xBEEF);
         assertEq(phantom.code.length, 0);
 
@@ -832,13 +832,13 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         lpm.modifyLiquidities(calls, block.timestamp + 1);
     }
 
-    /// @dev Once the adapter is verified it clears the NoVerifiedAdapter gate. The mint then reverts with
-    ///      InvalidHook instead (the zero-address hooks used here are not on the verified adapter's allowlist),
-    ///      confirming verification — not the hook check — was what blocked the mint above.
+    /// @dev 适配器一旦通过验证，就会越过 NoVerifiedAdapter 这道关卡。此时铸造会改为以
+    ///      InvalidHook 回滚（这里使用的零地址 hooks 不在已验证适配器的白名单中），
+    ///      从而确认上面阻止铸造的是验证环节——而不是 hook 检查。
     function test_mint_pastVerificationGate_after_adapter_is_verified() public {
         PermissionsAdapter unverified = _createUnverifiedAdapterBelow(address(permissionsAdapter0));
 
-        // Verify it: the factory requires the adapter to hold a nonzero balance of its underlying.
+        // 验证它：工厂要求适配器持有非零余额的底层代币。
         IERC20 underlying = IERC20(permissionsAdapterFactory.permissionsAdapterOf(address(unverified)));
         underlying.approve(address(unverified), 1);
         unverified.depositForVerification(1);
@@ -857,7 +857,7 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         PositionConfig memory config = PositionConfig({poolKey: k, tickLower: -120, tickUpper: 120});
         bytes memory calls = getMintEncoded(config, 1e18, ActionConstants.MSG_SENDER, ZERO_BYTES);
 
-        // Past the NoVerifiedAdapter gate now; blocked only by the (unrelated) hook allowlist.
+        // 现在已越过 NoVerifiedAdapter 关卡；仅被（无关的）hook 白名单阻止。
         vm.expectRevert(InvalidHook.selector);
         lpm.modifyLiquidities(calls, block.timestamp + 1);
     }
@@ -876,14 +876,14 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
 
         vm.startPrank(alice);
 
-        // add initial liquidity
+        // 添加初始流动性
         mint(config, liquidity, ActionConstants.MSG_SENDER, ZERO_BYTES);
 
         assertEq(IERC721(address(lpm)).ownerOf(tokenId), alice);
 
         tokenId = lpm.nextTokenId();
 
-        // Increase liquidity
+        // 增加流动性
         mint(config, liquidity, ActionConstants.MSG_SENDER, ZERO_BYTES);
         vm.stopPrank();
 
@@ -904,7 +904,7 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
 
         vm.startPrank(alice);
 
-        // add initial liquidity
+        // 添加初始流动性
         mint(config, liquidity, ActionConstants.MSG_SENDER, ZERO_BYTES);
 
         assertEq(IERC721(address(lpm)).ownerOf(tokenId), alice);
@@ -914,7 +914,7 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
 
         tokenId = lpm.nextTokenId();
 
-        // Increasing liquidity should revert because the recipient is no longer in the allowlist
+        // 增加流动性应当回滚（revert），因为接收者已不在白名单中
         vm.expectRevert(Unauthorized.selector);
         mint(config, liquidity, ActionConstants.MSG_SENDER, ZERO_BYTES);
         vm.stopPrank();
@@ -926,7 +926,7 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
     function test_unpermissioned_sided_mint_disallowed_user_reverts() public {
         _test_unpermissioned_sided_mint_disallowed_user_reverts(key0, false);
         _test_unpermissioned_sided_mint_disallowed_user_reverts(key1, true);
-        // key2 has no unpermissioned side
+        // key2 没有非许可的一侧
     }
 
     function _test_unpermissioned_sided_mint_disallowed_user_reverts(PoolKey memory key, bool useZero) internal {
@@ -943,16 +943,16 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
             config = PositionConfig({poolKey: key, tickLower: 60, tickUpper: 180});
         }
 
-        // Add some tokens to unauthorized user
+        // 给未授权用户添加一些代币
         MockERC20(Currency.unwrap(currencyUnpermissioned)).mint(unauthorizedUser, 1000e18);
 
         vm.startPrank(unauthorizedUser);
 
-        // Approve tokens for the position manager and permit2
+        // 为 PositionManager 和 permit2 授权代币
         MockERC20(Currency.unwrap(currencyUnpermissioned)).approve(address(permit2), type(uint256).max);
         permit2.approve(Currency.unwrap(currencyUnpermissioned), address(lpm), type(uint160).max, type(uint48).max);
 
-        // This should revert because the recipient is not in the allowlist
+        // 这里应当回滚（revert），因为接收者不在白名单中
         vm.expectRevert(Unauthorized.selector);
         mint(config, liquidity, unauthorizedUser, ZERO_BYTES);
         vm.stopPrank();
@@ -961,7 +961,7 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
     function test_unpermissioned_sided_mint_allowed_user() public {
         _test_unpermissioned_sided_mint_allowed_user(key0, false);
         _test_unpermissioned_sided_mint_allowed_user(key1, true);
-        // key2 has no unpermissioned side
+        // key2 没有非许可的一侧
     }
 
     function _test_unpermissioned_sided_mint_allowed_user(PoolKey memory key, bool useZero) internal {
@@ -981,7 +981,7 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
 
         vm.startPrank(alice);
 
-        // Approve tokens for the position manager and permit2
+        // 为 PositionManager 和 permit2 授权代币
         MockERC20(Currency.unwrap(currencyPermissioned)).approve(address(permit2), type(uint256).max);
         permit2.approve(Currency.unwrap(currencyPermissioned), address(lpm), type(uint160).max, type(uint48).max);
 
@@ -1011,7 +1011,7 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
             config = PositionConfig({poolKey: key, tickLower: 60, tickUpper: 180});
         }
 
-        // Add some tokens to unauthorized user
+        // 给未授权用户添加一些代币
         MockPermissionedToken(Currency.unwrap(currencyPermissioned))
             .setAllowlist(unauthorizedUser, PermissionFlags.ALL_ALLOWED);
         MockPermissionedToken(Currency.unwrap(currencyPermissioned)).mint(unauthorizedUser, 1000e18);
@@ -1020,11 +1020,11 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
 
         vm.startPrank(unauthorizedUser);
 
-        // Approve tokens for the position manager and permit2
+        // 为 PositionManager 和 permit2 授权代币
         MockERC20(Currency.unwrap(currencyPermissioned)).approve(address(permit2), type(uint256).max);
         permit2.approve(Currency.unwrap(currencyPermissioned), address(lpm), type(uint160).max, type(uint48).max);
 
-        // This should revert because the recipient is not in the allowlist
+        // 这里应当回滚（revert），因为接收者不在白名单中
         vm.expectRevert(Unauthorized.selector);
         mint(config, liquidity, unauthorizedUser, ZERO_BYTES);
         vm.stopPrank();
@@ -1065,7 +1065,7 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         uint256 balance1Start = key.currency1.balanceOfSelf();
         uint256 tokenId;
 
-        // create liquidity we can burn
+        // 创建可供销毁的流动性
         (tokenId, params) = addFuzzyLiquidity(lpm, ActionConstants.MSG_SENDER, key, params, SQRT_PRICE_1_1, ZERO_BYTES);
         PositionConfig memory config =
             PositionConfig({poolKey: key, tickLower: params.tickLower, tickUpper: params.tickUpper});
@@ -1081,7 +1081,7 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         uint256 balance0ManagerBefore = (key.currency0).balanceOf(address(manager));
         uint256 balance1ManagerBefore = (key.currency1).balanceOf(address(manager));
 
-        // burn liquidity
+        // 销毁流动性
         decreaseLiquidity(tokenId, config, liquidity, ZERO_BYTES);
 
         uint256 balance0ManagerAfter = (key.currency0).balanceOf(address(manager));
@@ -1101,7 +1101,7 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
 
         IERC721(address(lpm)).ownerOf(lpm.nextTokenId() - 1);
 
-        // see note from position manager test: "no tokens were lost ... fuzzer showing off by 1 sometimes"
+        // 参见 PositionManager 测试中的说明：“没有代币丢失……模糊测试有时会出现差 1 的情况”
         assertApproxEqAbs(key.currency0.balanceOfSelf(), balance0Start, 1 wei);
         assertApproxEqAbs(key.currency1.balanceOfSelf(), balance1Start, 1 wei);
     }
@@ -1114,7 +1114,7 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
     }
 
     function _test_initialize(Currency currency0_, Currency currency1_) internal {
-        // initialize a new pool
+        // 初始化一个新池
         PoolKey memory key = PoolKey({
             currency0: currency0_, currency1: currency1_, fee: 0, tickSpacing: 100, hooks: IHooks(address(0))
         });
@@ -1166,7 +1166,7 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         uint256 tokenId2 = lpm.nextTokenId();
         _test_permissioned_mint_allowed_user(key2);
 
-        // address(this) is admin of both permissioned tokens
+        // address(this) 是两个许可代币的管理员
         vm.expectRevert(TransferDisabled.selector);
         IERC721(address(lpm)).transferFrom(alice, address(this), tokenId0);
 
@@ -1239,23 +1239,23 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         _test_mint_from_contract_balance(key2);
     }
 
-    /// @dev This function had to be split up and refactored to avoid stack-too-deep errors
+    /// @dev 为避免 stack-too-deep 错误，该函数不得不被拆分并重构
     function _test_mint_from_contract_balance(PoolKey memory key) internal {
         uint256 amount0ToTransfer = 100e18;
         uint256 amount1ToTransfer = 100e18;
 
-        // Setup and transfer tokens
+        // 准备并转移代币
         setupContractBalance(key, amount0ToTransfer, amount1ToTransfer);
 
-        // Get balances before minting
+        // 获取铸造前的余额
         BalanceInfo memory balanceInfo = getBalanceInfo(key);
 
-        // Create and execute mint plan
+        // 创建并执行铸造计划
         bytes memory calls = createMintPlan(key, amount0ToTransfer, amount1ToTransfer);
         uint256 tokenId = lpm.nextTokenId();
         lpm.modifyLiquidities(calls, _deadline);
 
-        // Verify results
+        // 验证结果
         verifyMintResults(key, balanceInfo, tokenId);
     }
 
@@ -1275,11 +1275,11 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         uint256 balance0Before = currency0_.balanceOf(address(secondaryPosm));
         uint256 balance1Before = currency1_.balanceOf(address(secondaryPosm));
 
-        // Transfer tokens to the contract
+        // 将代币转入合约
         currency0_.transfer(address(secondaryPosm), amount0ToTransfer);
         currency1_.transfer(address(secondaryPosm), amount1ToTransfer);
 
-        // Calculate liquidity for the desired amounts
+        // 根据期望的数量计算流动性
         int24 tickLower = -int24(key.tickSpacing);
         int24 tickUpper = int24(key.tickSpacing);
         uint256 liquidityToAdd = LiquidityAmounts.getLiquidityForAmounts(
@@ -1292,11 +1292,11 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
 
         PositionConfig memory config = PositionConfig({poolKey: key, tickLower: tickLower, tickUpper: tickUpper});
 
-        // Verify the contract has the tokens
+        // 验证合约持有这些代币
         assertEq(currency0_.balanceOf(address(secondaryPosm)), amount0ToTransfer + balance0Before);
         assertEq(currency1_.balanceOf(address(secondaryPosm)), amount1ToTransfer + balance1Before);
 
-        // Create a plan that uses the contract's balance instead of the caller's
+        // 创建一个使用合约余额（而非调用者余额）的计划
         Plan memory planner = Planner.init();
         planner.add(
             Actions.MINT_POSITION,
@@ -1307,14 +1307,14 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
                 liquidityToAdd,
                 MAX_SLIPPAGE_INCREASE,
                 MAX_SLIPPAGE_INCREASE,
-                address(this), // recipient
+                address(this), // 接收者
                 ZERO_BYTES // hookData
             )
         );
 
-        // Add actions to settle from the contract's balance
-        planner.add(Actions.SETTLE, abi.encode(key.currency0, ActionConstants.OPEN_DELTA, false)); // false = payer is contract
-        planner.add(Actions.SETTLE, abi.encode(key.currency1, ActionConstants.OPEN_DELTA, false)); // false = payer is contract
+        // 添加从合约余额进行结算的操作（action）
+        planner.add(Actions.SETTLE, abi.encode(key.currency0, ActionConstants.OPEN_DELTA, false)); // false = 付款方为合约
+        planner.add(Actions.SETTLE, abi.encode(key.currency1, ActionConstants.OPEN_DELTA, false)); // false = 付款方为合约
 
         bytes memory calls = planner.finalizeModifyLiquidityWithClose(config.poolKey);
 
@@ -1333,12 +1333,12 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         uint256 amount0ToTransfer = 100e18;
         uint256 amount1ToTransfer = 100e18;
 
-        // Transfer underlying permissioned tokens to the POSM
+        // 将底层许可代币转入 POSM
         setupContractBalance(key, amount0ToTransfer, amount1ToTransfer);
 
         BalanceInfo memory balanceInfo = getBalanceInfo(key);
 
-        // Create a mint plan that uses CONTRACT_BALANCE instead of OPEN_DELTA
+        // 创建一个使用 CONTRACT_BALANCE 而非 OPEN_DELTA 的铸造计划
         int24 tickLower = -int24(key.tickSpacing);
         int24 tickUpper = int24(key.tickSpacing);
         uint256 liquidityToAdd = LiquidityAmounts.getLiquidityForAmounts(
@@ -1366,7 +1366,7 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
             )
         );
 
-        // Use CONTRACT_BALANCE instead of OPEN_DELTA — this is the broken path
+        // 使用 CONTRACT_BALANCE 而非 OPEN_DELTA——这正是出问题的那条路径
         planner.add(Actions.SETTLE, abi.encode(key.currency0, ActionConstants.CONTRACT_BALANCE, false));
         planner.add(Actions.SETTLE, abi.encode(key.currency1, ActionConstants.CONTRACT_BALANCE, false));
 
@@ -1377,14 +1377,14 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         verifyMintResults(key, balanceInfo, tokenId);
     }
 
-    // ===== PERMISSION FLAG TESTS =====
+    // ===== 权限标志测试 =====
 
     function test_permission_flag_none() public {
-        // Test that NONE permissions prevent all operations
+        // 测试 NONE 权限会阻止所有操作
         MockPermissionedToken(Currency.unwrap(currency0)).setAllowlist(alice, PermissionFlags.NONE);
         MockPermissionedToken(Currency.unwrap(currency2)).setAllowlist(alice, PermissionFlags.NONE);
 
-        // Should revert when trying to mint with NONE permissions
+        // 仅有 NONE 权限时尝试铸造应当回滚（revert）
         PositionConfig memory config = PositionConfig({poolKey: key2, tickLower: -120, tickUpper: 120});
         uint256 liquidity = 1e18;
 
@@ -1394,11 +1394,11 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
     }
 
     function test_permission_flag_swap_allowed() public {
-        // Test that SWAP_ALLOWED only allows swaps, not liquidity operations
+        // 测试 SWAP_ALLOWED 只允许兑换（swap），不允许流动性操作
         MockPermissionedToken(Currency.unwrap(currency0)).setAllowlist(alice, PermissionFlags.SWAP_ALLOWED);
         MockPermissionedToken(Currency.unwrap(currency2)).setAllowlist(alice, PermissionFlags.SWAP_ALLOWED);
 
-        // Should revert when trying to mint (liquidity operation) with only SWAP_ALLOWED
+        // 仅有 SWAP_ALLOWED 时尝试铸造（流动性操作）应当回滚（revert）
         PositionConfig memory config = PositionConfig({poolKey: key2, tickLower: -120, tickUpper: 120});
         uint256 liquidity = 1e18;
 
@@ -1408,11 +1408,11 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
     }
 
     function test_permission_flag_liquidity_allowed() public {
-        // Test that LIQUIDITY_ALLOWED allows liquidity operations
+        // 测试 LIQUIDITY_ALLOWED 允许流动性操作
         MockPermissionedToken(Currency.unwrap(currency0)).setAllowlist(alice, PermissionFlags.LIQUIDITY_ALLOWED);
         MockPermissionedToken(Currency.unwrap(currency2)).setAllowlist(alice, PermissionFlags.LIQUIDITY_ALLOWED);
 
-        // Should succeed when trying to mint with LIQUIDITY_ALLOWED
+        // 拥有 LIQUIDITY_ALLOWED 时尝试铸造应当成功
         PositionConfig memory config = PositionConfig({poolKey: key2, tickLower: -120, tickUpper: 120});
         uint256 liquidity = 1e18;
         uint256 tokenId = lpm.nextTokenId();
@@ -1424,11 +1424,11 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
     }
 
     function test_permission_flag_all_allowed() public {
-        // Test that ALL_ALLOWED allows all operations
+        // 测试 ALL_ALLOWED 允许所有操作
         MockPermissionedToken(Currency.unwrap(currency0)).setAllowlist(alice, PermissionFlags.ALL_ALLOWED);
         MockPermissionedToken(Currency.unwrap(currency2)).setAllowlist(alice, PermissionFlags.ALL_ALLOWED);
 
-        // Should succeed when trying to mint with ALL_ALLOWED
+        // 拥有 ALL_ALLOWED 时尝试铸造应当成功
         PositionConfig memory config = PositionConfig({poolKey: key2, tickLower: -120, tickUpper: 120});
         uint256 liquidity = 1e18;
         uint256 tokenId = lpm.nextTokenId();
@@ -1440,11 +1440,11 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
     }
 
     function test_permission_flag_combinations() public {
-        // Test various combinations of permissions
+        // 测试各种权限组合
         PositionConfig memory config = PositionConfig({poolKey: key2, tickLower: -120, tickUpper: 120});
         uint256 liquidity = 1e18;
 
-        // Test SWAP_ALLOWED + LIQUIDITY_ALLOWED (should work like ALL_ALLOWED)
+        // 测试 SWAP_ALLOWED + LIQUIDITY_ALLOWED（效果应与 ALL_ALLOWED 相同）
         MockPermissionedToken(Currency.unwrap(currency0))
             .setAllowlist(alice, (PermissionFlags.SWAP_ALLOWED | PermissionFlags.LIQUIDITY_ALLOWED));
         MockPermissionedToken(Currency.unwrap(currency2))
@@ -1457,7 +1457,7 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
     }
 
     function test_permission_flag_partial_permissions_reverts() public {
-        // Test that having permissions on only one of the pool's tokens is not enough
+        // 测试仅对池中的一个代币拥有权限是不够的
         MockPermissionedToken(Currency.unwrap(currency0)).setAllowlist(alice, PermissionFlags.LIQUIDITY_ALLOWED);
         MockPermissionedToken(Currency.unwrap(currency2)).setAllowlist(alice, PermissionFlags.NONE);
 
@@ -1470,24 +1470,24 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
     }
 
     function test_permission_flag_dynamic_changes() public {
-        // Test that permission changes take effect immediately
+        // 测试权限变更会立即生效
         MockPermissionedToken(Currency.unwrap(currency0)).setAllowlist(alice, PermissionFlags.LIQUIDITY_ALLOWED);
         MockPermissionedToken(Currency.unwrap(currency2)).setAllowlist(alice, PermissionFlags.LIQUIDITY_ALLOWED);
 
         PositionConfig memory config = PositionConfig({poolKey: key2, tickLower: -120, tickUpper: 120});
         uint256 liquidity = 1e18;
 
-        // Should succeed initially
+        // 最初应当成功
         uint256 tokenId = lpm.nextTokenId();
         vm.prank(alice);
         mint(config, liquidity, ActionConstants.MSG_SENDER, ZERO_BYTES);
         assertEq(IERC721(address(lpm)).ownerOf(tokenId), alice);
 
-        // Remove permissions
+        // 移除权限
         MockPermissionedToken(Currency.unwrap(currency0)).setAllowlist(alice, PermissionFlags.NONE);
         MockPermissionedToken(Currency.unwrap(currency2)).setAllowlist(alice, PermissionFlags.NONE);
 
-        // Should fail on subsequent operations
+        // 后续操作应当失败
         tokenId = lpm.nextTokenId();
         vm.prank(alice);
         vm.expectRevert();
@@ -1495,11 +1495,11 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
     }
 
     function test_permission_flag_edge_cases() public {
-        // Test edge cases with permission flags
+        // 测试权限标志的边界情况
         PositionConfig memory config = PositionConfig({poolKey: key2, tickLower: -120, tickUpper: 120});
         uint256 liquidity = 1e18;
 
-        // Test with zero permissions (should be same as NONE)
+        // 测试零权限（应与 NONE 相同）
         MockPermissionedToken(Currency.unwrap(currency0)).setAllowlist(alice, PermissionFlag.wrap(0x0000));
         MockPermissionedToken(Currency.unwrap(currency2)).setAllowlist(alice, PermissionFlag.wrap(0x0000));
 
@@ -1507,7 +1507,7 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         vm.expectRevert();
         mint(config, liquidity, ActionConstants.MSG_SENDER, ZERO_BYTES);
 
-        // Test with maximum permissions (should be same as ALL_ALLOWED)
+        // 测试最大权限（应与 ALL_ALLOWED 相同）
         MockPermissionedToken(Currency.unwrap(currency0)).setAllowlist(alice, PermissionFlag.wrap(0xFFFF));
         MockPermissionedToken(Currency.unwrap(currency2)).setAllowlist(alice, PermissionFlag.wrap(0xFFFF));
 
@@ -1518,7 +1518,7 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
     }
 
     function test_permission_flag_all_pools() public {
-        // Test permission flags work across all pool types
+        // 测试权限标志在所有类型的池中都有效
         MockPermissionedToken(Currency.unwrap(currency0)).setAllowlist(alice, PermissionFlags.LIQUIDITY_ALLOWED);
         MockPermissionedToken(Currency.unwrap(currency2)).setAllowlist(alice, PermissionFlags.LIQUIDITY_ALLOWED);
 
@@ -1527,19 +1527,19 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         PositionConfig memory config2 = PositionConfig({poolKey: key2, tickLower: -120, tickUpper: 120});
         uint256 liquidity = 1e18;
 
-        // Test permissioned/normal pool
+        // 测试 许可/普通 池
         uint256 tokenId0 = lpm.nextTokenId();
         vm.prank(alice);
         mint(config0, liquidity, ActionConstants.MSG_SENDER, ZERO_BYTES);
         assertEq(IERC721(address(lpm)).ownerOf(tokenId0), alice);
 
-        // Test normal/permissioned pool
+        // 测试 普通/许可 池
         uint256 tokenId1 = lpm.nextTokenId();
         vm.prank(alice);
         mint(config1, liquidity, ActionConstants.MSG_SENDER, ZERO_BYTES);
         assertEq(IERC721(address(lpm)).ownerOf(tokenId1), alice);
 
-        // Test permissioned/permissioned pool
+        // 测试 许可/许可 池
         uint256 tokenId2 = lpm.nextTokenId();
         vm.prank(alice);
         mint(config2, liquidity, ActionConstants.MSG_SENDER, ZERO_BYTES);
@@ -1547,11 +1547,11 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
     }
 
     function test_permission_flag_swap_allowed_unauthorized_reverts() public {
-        // Test that SWAP_ALLOWED does not allow liquidity operations
+        // 测试 SWAP_ALLOWED 不允许流动性操作
         MockPermissionedToken(Currency.unwrap(currency0)).setAllowlist(alice, PermissionFlags.SWAP_ALLOWED);
         MockPermissionedToken(Currency.unwrap(currency2)).setAllowlist(alice, PermissionFlags.SWAP_ALLOWED);
 
-        // Should revert when trying to mint with SWAP_ALLOWED
+        // 仅有 SWAP_ALLOWED 时尝试铸造应当回滚（revert）
         PositionConfig memory config = PositionConfig({poolKey: insecureKey, tickLower: -120, tickUpper: 120});
         uint256 liquidity = 1e18;
 
@@ -1562,9 +1562,9 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
     }
 
     function test_permissioned_mint_to_unauthorized_recipient_reverts() public {
-        // Caller (address(this)) is allowed, but unauthorizedUser is not
-        // The hook will pass because the caller is authorized,
-        // but _mint should revert because the recipient lacks LIQUIDITY_ALLOWED
+        // 调用者（address(this)）被允许，但 unauthorizedUser 不被允许
+        // 由于调用者已获授权，hook 检查会通过，
+        // 但 _mint 应当回滚（revert），因为接收者缺少 LIQUIDITY_ALLOWED
         PositionConfig memory config = PositionConfig({poolKey: key0, tickLower: -120, tickUpper: 120});
         uint256 liquidity = 1e18;
 
@@ -1573,8 +1573,8 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
     }
 
     function test_permissioned_mint_to_authorized_recipient_succeeds() public {
-        // Caller (address(this)) is allowed, alice is also allowed
-        // Minting to an authorized recipient should succeed
+        // 调用者（address(this)）被允许，alice 也被允许
+        // 铸造给已获授权的接收者应当成功
         PositionConfig memory config = PositionConfig({poolKey: key0, tickLower: -120, tickUpper: 120});
         uint256 liquidity = 1e18;
         uint256 tokenId = lpm.nextTokenId();
@@ -1584,7 +1584,7 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
     }
 
     // =============================================================================
-    // Hook allowlist revocation enforcement on liquidity increases (ECO-218 / SC-L-07)
+    // 增加流动性时对 hook 白名单撤销的强制执行（ECO-218 / SC-L-07）
     // =============================================================================
 
     function test_permissioned_increase_disallowed_hook_reverts() public {
@@ -1603,7 +1603,7 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
 
         uint128 liquidityBefore = lpm.getPositionLiquidity(tokenId);
 
-        // Revoke the hook as the adapter admin (address(this) owns both permissionsAdapter0 and permissionsAdapter2)
+        // 以适配器管理员身份撤销该 hook（address(this) 同时拥有 permissionsAdapter0 和 permissionsAdapter2）
         _setHookAllowedForKey(key, false);
 
         vm.prank(alice);
@@ -1612,7 +1612,7 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
 
         assertEq(lpm.getPositionLiquidity(tokenId), liquidityBefore);
 
-        // restore so the fan-out across keys is independent
+        // 恢复原状，使对各个 key 的逐一测试相互独立
         _setHookAllowedForKey(key, true);
     }
 
@@ -1634,9 +1634,9 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
 
         _setHookAllowedForKey(key, false);
 
-        // Build a plan that pre-settles both currencies then drives INCREASE_LIQUIDITY_FROM_DELTAS.
-        // The hook-allowlist check runs at the top of the override, so the whole batch reverts
-        // atomically and no funds move.
+        // 构建一个计划：先预结算两种代币，再执行 INCREASE_LIQUIDITY_FROM_DELTAS。
+        // hook 白名单检查在重写函数（override）的开头执行，因此整个批次会
+        // 原子性地回滚，且没有任何资金移动。
         Plan memory planner = Planner.init();
         planner.add(Actions.SETTLE, abi.encode(key.currency0, uint256(10e18), true));
         planner.add(Actions.SETTLE, abi.encode(key.currency1, uint256(10e18), true));
@@ -1691,12 +1691,12 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         vm.prank(alice);
         mint(config, liquidity, ActionConstants.MSG_SENDER, ZERO_BYTES);
 
-        // While the hook is still allowed, increase succeeds.
+        // 在 hook 仍被允许时，增加流动性成功。
         vm.prank(alice);
         increaseLiquidity(tokenId, config, liquidity, ZERO_BYTES);
         uint128 liquidityAfterFirstIncrease = lpm.getPositionLiquidity(tokenId);
 
-        // Revoke the hook — the next increase must revert.
+        // 撤销该 hook——下一次增加流动性必须回滚（revert）。
         _setHookAllowedForKey(key, false);
 
         vm.prank(alice);
@@ -1709,8 +1709,8 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
     }
 
     function test_permissioned_increase_reverts_when_only_one_currency_hook_revoked() public {
-        // Use key2 (permissioned/permissioned): each currency is validated independently, so either side's
-        // revoked hook allowlist must block the increase on its own.
+        // 使用 key2（许可/许可）：每种代币都会被独立校验，因此任意一侧
+        // 被撤销的 hook 白名单都必须能单独阻止增加流动性。
         _test_permissioned_increase_reverts_when_only_one_currency_hook_revoked(key2, true);
         _test_permissioned_increase_reverts_when_only_one_currency_hook_revoked(key2, false);
     }
@@ -1733,17 +1733,17 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         vm.expectRevert(InvalidHook.selector);
         increaseLiquidity(tokenId, config, liquidity, ZERO_BYTES);
 
-        // Restore for the next iteration so the tests are independent.
+        // 为下一轮迭代恢复原状，使各测试相互独立。
         setAllowedHooks(revoked, key.hooks, true);
     }
 
     // =============================================================================
-    // Owner LIQUIDITY_ALLOWED enforcement on liquidity increases
+    // 增加流动性时对所有者 LIQUIDITY_ALLOWED 的强制检查
     // =============================================================================
     //
-    // An ERC-721-approved operator that retains LIQUIDITY_ALLOWED must not be able to grow
-    // a delisted owner's position by paying with their own funds. `_increase` and
-    // `_increaseFromDeltas` re-check the owner's LIQUIDITY_ALLOWED via `_validateLiquidityCurrency`.
+    // 一个经 ERC-721 授权、且仍保有 LIQUIDITY_ALLOWED 的操作者，不得通过用自己的资金付款
+    // 来扩大已被移出白名单的所有者的头寸。`_increase` 和
+    // `_increaseFromDeltas` 会通过 `_validateLiquidityCurrency` 重新检查所有者的 LIQUIDITY_ALLOWED。
 
     function test_permissioned_increase_reverts_when_owner_liquidity_revoked_via_operator() public {
         _test_permissioned_increase_reverts_when_owner_liquidity_revoked_via_operator(key0);
@@ -1755,8 +1755,8 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         internal
     {
         address bob = makeAddr("BOB");
-        // Bob holds LIQUIDITY_ALLOWED on every permissioned underlying and is funded so he can
-        // pay for the increase from his own balance.
+        // Bob 在每个许可底层代币上都持有 LIQUIDITY_ALLOWED，并且已获得资金，以便他能
+        // 用自己的余额为增加流动性付款。
         MockPermissionedToken(Currency.unwrap(currency0)).setAllowlist(bob, PermissionFlags.ALL_ALLOWED);
         MockPermissionedToken(Currency.unwrap(currency2)).setAllowlist(bob, PermissionFlags.ALL_ALLOWED);
         seedBalance(bob);
@@ -1766,29 +1766,29 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         uint256 liquidity = 1e18;
         uint256 tokenId = lpm.nextTokenId();
 
-        // Alice mints a position while she still has LIQUIDITY_ALLOWED.
+        // Alice 在仍拥有 LIQUIDITY_ALLOWED 时铸造一个头寸。
         vm.prank(alice);
         mint(config, liquidity, ActionConstants.MSG_SENDER, ZERO_BYTES);
         uint128 liquidityBefore = lpm.getPositionLiquidity(tokenId);
 
-        // Alice approves Bob via ERC-721 so he can operate on her tokenId.
+        // Alice 通过 ERC-721 授权 Bob，使他能够操作她的 tokenId。
         vm.prank(alice);
         IERC721(address(lpm)).approve(bob, tokenId);
 
-        // Alice's adapter revokes her permissions on every permissioned underlying.
+        // Alice 的适配器撤销她在每个许可底层代币上的权限。
         MockPermissionedToken(Currency.unwrap(currency0)).setAllowlist(alice, PermissionFlags.NONE);
         MockPermissionedToken(Currency.unwrap(currency2)).setAllowlist(alice, PermissionFlags.NONE);
 
-        // Bob — still allowlisted, still ERC-721-approved — must not be able to grow Alice's
-        // position by paying with his own funds.
+        // Bob——仍在白名单中、仍拥有 ERC-721 授权——不得通过用自己的资金付款
+        // 来扩大 Alice 的头寸。
         vm.prank(bob);
         vm.expectRevert(Unauthorized.selector);
         increaseLiquidity(tokenId, config, liquidity, ZERO_BYTES);
 
-        // Position size unchanged.
+        // 头寸规模不变。
         assertEq(lpm.getPositionLiquidity(tokenId), liquidityBefore);
 
-        // Restore so the fan-out across keys is independent.
+        // 恢复原状，使对各个 key 的逐一测试相互独立。
         MockPermissionedToken(Currency.unwrap(currency0)).setAllowlist(alice, PermissionFlags.ALL_ALLOWED);
         MockPermissionedToken(Currency.unwrap(currency2)).setAllowlist(alice, PermissionFlags.ALL_ALLOWED);
     }
@@ -1822,9 +1822,9 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         MockPermissionedToken(Currency.unwrap(currency0)).setAllowlist(alice, PermissionFlags.NONE);
         MockPermissionedToken(Currency.unwrap(currency2)).setAllowlist(alice, PermissionFlags.NONE);
 
-        // Build a plan that pre-settles both currencies then drives INCREASE_LIQUIDITY_FROM_DELTAS.
-        // The owner-allowlist check runs at the top of the override, so the whole batch reverts
-        // atomically and no funds move.
+        // 构建一个计划：先预结算两种代币，再执行 INCREASE_LIQUIDITY_FROM_DELTAS。
+        // 所有者白名单检查在重写函数（override）的开头执行，因此整个批次会
+        // 原子性地回滚，且没有任何资金移动。
         Plan memory planner = Planner.init();
         planner.add(Actions.SETTLE, abi.encode(key.currency0, uint256(10e18), true));
         planner.add(Actions.SETTLE, abi.encode(key.currency1, uint256(10e18), true));
@@ -1844,25 +1844,25 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         MockPermissionedToken(Currency.unwrap(currency2)).setAllowlist(alice, PermissionFlags.ALL_ALLOWED);
     }
 
-    // Helpers for toggling the hook allowlist in tests
+    // 用于在测试中切换 hook 白名单的辅助函数
     function _setHookAllowedForKey(PoolKey memory key, bool allowed) internal {
         _setHookAllowedIfPermissioned(key.currency0, key.hooks, allowed);
         _setHookAllowedIfPermissioned(key.currency1, key.hooks, allowed);
     }
 
     function _setHookAllowedIfPermissioned(Currency currency, IHooks hooks_, bool allowed) internal {
-        // updateAllowedHook requires the currency to have a verified permissions adapter;
-        // skip unpermissioned currencies so mixed-pool keys (key0, key1) work with this helper.
+        // updateAllowedHook 要求该代币拥有已验证的权限适配器；
+        // 跳过非许可代币，使混合池的 key（key0、key1）也能使用此辅助函数。
         if (permissionsAdapterFactory.verifiedPermissionsAdapterOf(Currency.unwrap(currency)) == address(0)) return;
         setAllowedHooks(currency, hooks_, allowed);
     }
 
-    // ===== unwindPosition / withdrawClaim helpers =====
+    // ===== unwindPosition / withdrawClaim 辅助函数 =====
 
-    /// @dev V4 rounds in favor of the pool: a mint+burn roundtrip loses up to 1 wei per side.
+    /// @dev V4 的舍入对池有利：一次铸造 + 销毁的往返每侧最多损失 1 wei。
     uint256 private constant _ROUNDTRIP_TOLERANCE = 1;
-    // Literal `unwindPosition(uint256,uint128,uint128,bytes)` selector; the concrete type is deliberately not
-    // imported here (it is pinned to a different compiler profile, which conflicts with the test profile).
+    // `unwindPosition(uint256,uint128,uint128,bytes)` 的字面量选择器；这里刻意不导入具体类型
+    // （它固定使用另一个编译器 profile，与测试 profile 冲突）。
     bytes4 internal constant _UNWIND_SELECTOR = 0xb0a281b0;
     bytes4 private constant _WITHDRAW_CLAIM_SELECTOR = 0xf77de3fc;
 
@@ -1892,10 +1892,10 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         require(ok, "withdrawClaim failed");
     }
 
-    /// @dev Hands pa0 ownership to `admin1`, pa2 ownership to `admin2`, and filters fuzz inputs to keep the
-    ///      cascade premise sane. Pass `admin1 == admin2` for the same-admin case.
+    /// @dev 将 pa0 的所有权移交给 `admin1`、pa2 的所有权移交给 `admin2`，并过滤模糊测试输入，以保证
+    ///      级联回退的前提合理。同一管理员的场景请传入 `admin1 == admin2`。
     function _setupUnwindPositionTests(address admin1, address admin2) internal {
-        // admins must be valid Ownable2Step recipients and distinct from protocol contracts
+        // 管理员必须是有效的 Ownable2Step 接收者，且不同于各协议合约
         vm.assume(admin1 != address(0) && admin2 != address(0));
         vm.assume(admin1 != alice && admin2 != alice);
         vm.assume(admin1 != address(manager) && admin2 != address(manager));
@@ -1910,9 +1910,9 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         permissionsAdapter2.acceptOwnership();
     }
 
-    // ===== Case 1: both currencies are PAs owned by the same admin (admin1 == admin2) =====
+    // ===== 场景 1：两种代币都是由同一管理员拥有的 PA（admin1 == admin2）=====
 
-    /// @dev Case 1: same admin owns both PAs, LP compliant on both → both legs cascade to LP.
+    /// @dev 场景 1：同一管理员拥有两个 PA，LP 在两侧均合规 → 两部分都经级联流向 LP。
     function test_unwindPosition_two_pas_same_admin_routes_both_to_lp(address admin) public {
         _setupUnwindPositionTests(admin, admin);
 
@@ -1922,11 +1922,11 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         uint256 tokenId = lpm.nextTokenId();
         _test_permissioned_mint_allowed_user(key2);
 
-        // capture the exact deposit amounts so we can do a full-data event check
+        // 记录精确的存入数量，以便对事件做全字段检查
         uint256 deposited0 = aliceCurrency0BeforeMint - _balanceOf(currency0, alice);
         uint256 deposited2 = aliceCurrency2BeforeMint - _balanceOf(currency2, alice);
 
-        // Full-data check verifies caller == admin (msgSender() returns the unwindPosition caller, not PoolManager).
+        // 全字段检查会验证 caller == admin（msgSender() 返回 unwindPosition 的调用者，而不是 PoolManager）。
         vm.expectEmit(true, true, true, true);
         emit CurrencyUnwound(tokenId, key2.currency0, alice, admin, alice, deposited0 - 1, false);
         vm.expectEmit(true, true, true, true);
@@ -1934,14 +1934,14 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         vm.prank(admin);
         _unwind(tokenId);
 
-        // alice should be roughly whole on both currencies
+        // alice 在两种代币上都应基本没有损失
         assertApproxEqAbs(_balanceOf(currency0, alice), aliceCurrency0BeforeMint, _ROUNDTRIP_TOLERANCE);
         assertApproxEqAbs(_balanceOf(currency2, alice), aliceCurrency2BeforeMint, _ROUNDTRIP_TOLERANCE);
     }
 
-    // ===== Case 2: one PA + one regular ERC-20; admin1 (= owner of pa0) calls =====
+    // ===== 场景 2：一个 PA + 一个普通 ERC-20；由 admin1（= pa0 的所有者）调用 =====
 
-    /// @dev Case 2a: LP compliant on pa0's underlying → both cascade to LP.
+    /// @dev 场景 2a：LP 在 pa0 的底层代币上合规 → 两者都经级联流向 LP。
     function test_unwindPosition_pa_and_regular_routes_both_to_lp_when_compliant(address admin1, address admin2)
         public
     {
@@ -1960,7 +1960,7 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         assertApproxEqAbs(_balanceOf(key0.currency1, alice), aliceCurrency1BeforeMint, _ROUNDTRIP_TOLERANCE);
     }
 
-    /// @dev Case 2b: LP delisted on pa0's underlying → pa0 cascades to admin1; regular still goes to LP.
+    /// @dev 场景 2b：LP 被移出 pa0 底层代币的白名单 → pa0 级联流向 admin1；普通代币仍流向 LP。
     function test_unwindPosition_pa_and_regular_routes_pa_to_admin_when_lp_blocked(address admin1, address admin2)
         public
     {
@@ -1973,13 +1973,13 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         uint256 tokenId = lpm.nextTokenId();
         _test_permissioned_mint_allowed_user(key0);
 
-        // capture how much pa0 underlying alice deposited at mint time
+        // 记录 alice 在铸造时存入了多少 pa0 底层代币
         uint256 deposited0 = aliceCurrency0BeforeMint - _balanceOf(currency0, alice);
 
         MockPermissionedToken(Currency.unwrap(currency0)).setTokenAllowlist(alice, false);
         MockPermissionedToken(Currency.unwrap(currency0)).setTokenAllowlist(admin1, true);
 
-        // pa0 leg lands at admin1 as underlying; regular leg lands at alice as underlying
+        // pa0 部分以底层代币形式到达 admin1；普通代币部分以底层代币形式到达 alice
         vm.expectEmit(true, true, true, false);
         emit CurrencyUnwound(tokenId, key0.currency0, admin1, address(0), address(0), 0, false);
         vm.expectEmit(true, true, true, false);
@@ -1987,12 +1987,12 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         vm.prank(admin1);
         _unwind(tokenId);
 
-        // admin1 receives ~exactly what alice deposited on pa0; regular currency goes back to alice
+        // admin1 收到的数量约等于 alice 在 pa0 上的存入；普通代币退回给 alice
         assertApproxEqAbs(_balanceOf(currency0, admin1) - adminCurrency0BeforeMint, deposited0, _ROUNDTRIP_TOLERANCE);
         assertApproxEqAbs(_balanceOf(key0.currency1, alice), aliceCurrency1BeforeMint, _ROUNDTRIP_TOLERANCE);
     }
 
-    /// @dev Case 2c: neither LP nor admin1 on pa0's underlying → pa0 lands as 6909 claim to admin1.
+    /// @dev 场景 2c：LP 和 admin1 都不在 pa0 底层代币的白名单中 → pa0 以 6909 claim 的形式记给 admin1。
     function test_unwindPosition_pa_and_regular_credits_6909_when_lp_and_admin_blocked(address admin1, address admin2)
         public
     {
@@ -2009,7 +2009,7 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         MockPermissionedToken(Currency.unwrap(currency0)).setTokenAllowlist(alice, false);
         MockPermissionedToken(Currency.unwrap(currency0)).setTokenAllowlist(admin1, false);
 
-        // pa0 leg lands at admin1 as 6909 (asClaim=true); regular leg lands at alice as underlying
+        // pa0 部分以 6909 形式到达 admin1（asClaim=true）；普通代币部分以底层代币形式到达 alice
         vm.expectEmit(true, true, true, false);
         emit CurrencyUnwound(tokenId, key0.currency0, admin1, address(0), address(0), 0, true);
         vm.expectEmit(true, true, true, false);
@@ -2017,15 +2017,15 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         vm.prank(admin1);
         _unwind(tokenId);
 
-        // 6909 claim to admin1 ≈ alice's pa0 deposit; regular currency goes back to alice
+        // 记给 admin1 的 6909 claim ≈ alice 在 pa0 上的存入；普通代币退回给 alice
         assertApproxEqAbs(manager.balanceOf(admin1, key0.currency0.toId()), deposited0, _ROUNDTRIP_TOLERANCE);
         assertApproxEqAbs(_balanceOf(key0.currency1, alice), aliceCurrency1BeforeMint, _ROUNDTRIP_TOLERANCE);
     }
 
-    // ===== Case 3: both currencies are PAs owned by different admins; admin1 (= owner of pa0) calls =====
-    // pa0 always cascades happy-path because admin1 controls currency0's compliance list. pa2 is the variable.
+    // ===== 场景 3：两种代币都是由不同管理员拥有的 PA；由 admin1（= pa0 的所有者）调用 =====
+    // pa0 总是走级联的正常路径，因为 admin1 控制着 currency0 的合规名单。pa2 才是变量。
 
-    /// @dev Case 3a: LP on both underlyings → both cascade to LP.
+    /// @dev 场景 3a：LP 在两种底层代币的白名单中 → 两者都经级联流向 LP。
     function test_unwindPosition_two_pas_different_admins_routes_both_to_lp(address admin1, address admin2) public {
         _setupUnwindPositionTests(admin1, admin2);
 
@@ -2042,7 +2042,7 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         assertApproxEqAbs(_balanceOf(currency2, alice), aliceCurrency2BeforeMint, _ROUNDTRIP_TOLERANCE);
     }
 
-    /// @dev Case 3b: LP delisted on currency2 → pa0 → LP, pa2 → admin2 (pa2's admin).
+    /// @dev 场景 3b：LP 被移出 currency2 的白名单 → pa0 → LP，pa2 → admin2（pa2 的管理员）。
     function test_unwindPosition_two_pas_different_admins_routes_pa2_to_admin2_when_lp_blocked(
         address admin1,
         address admin2
@@ -2068,7 +2068,7 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         assertApproxEqAbs(_balanceOf(currency2, admin2) - admin2Currency2BeforeMint, deposited2, _ROUNDTRIP_TOLERANCE);
     }
 
-    /// @dev Case 3c: LP and admin2 delisted on currency2 → pa0 → LP, pa2 → 6909 claim to admin2.
+    /// @dev 场景 3c：LP 和 admin2 都被移出 currency2 的白名单 → pa0 → LP，pa2 → 记给 admin2 的 6909 claim。
     function test_unwindPosition_two_pas_different_admins_credits_6909_when_lp_and_admin2_blocked(
         address admin1,
         address admin2
@@ -2093,24 +2093,24 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         assertApproxEqAbs(manager.balanceOf(admin2, key2.currency1.toId()), deposited2, _ROUNDTRIP_TOLERANCE);
     }
 
-    /// @dev Non-PA edge case: regular ERC-20 transfer to LP reverts (e.g., LP is blocklisted by the token).
-    ///      Cascade falls back to minting a 6909 claim to LP — not to any admin.
+    /// @dev 非 PA 的边界情况：向 LP 转账普通 ERC-20 时回滚（例如 LP 被该代币列入黑名单）。
+    ///      级联回退为向 LP 铸造 6909 claim——而不是给任何管理员。
     function test_unwindPosition_non_pa_credits_6909_to_lp_when_lp_rejects(address admin1, address admin2) public {
         _setupUnwindPositionTests(admin1, admin2);
 
         uint256 tokenId = lpm.nextTokenId();
-        _test_permissioned_mint_allowed_user(key0); // [pa0, regular]
+        _test_permissioned_mint_allowed_user(key0); // [pa0, 普通代币]
 
         uint256 aliceRegularPostMint = _balanceOf(key0.currency1, alice);
 
-        // Force the regular ERC-20's transfer to alice to revert (simulating a blocklist or compliance hook)
+        // 强制使普通 ERC-20 向 alice 的转账回滚（模拟黑名单或合规 hook）
         vm.mockCallRevert(
             Currency.unwrap(key0.currency1),
             abi.encodeWithSelector(IERC20.transfer.selector, alice),
             bytes("LP rejects")
         );
 
-        // pa0 leg lands at alice as underlying; regular leg falls back to 6909 mint to alice (asClaim=true)
+        // pa0 部分以底层代币形式到达 alice；普通代币部分回退为向 alice 铸造 6909（asClaim=true）
         vm.expectEmit(true, true, true, false);
         emit CurrencyUnwound(tokenId, key0.currency0, alice, address(0), address(0), 0, false);
         vm.expectEmit(true, true, true, false);
@@ -2118,14 +2118,14 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         vm.prank(admin1);
         _unwind(tokenId);
 
-        // alice's regular balance unchanged (transfer was rejected) but she received a 6909 claim instead
+        // alice 的普通代币余额不变（转账被拒绝），但她改为收到了 6909 claim
         assertEq(_balanceOf(key0.currency1, alice), aliceRegularPostMint);
         assertGt(manager.balanceOf(alice, key0.currency1.toId()), 0);
-        // admin1 has no 6909 claim for the regular currency — admins don't custody non-PA value
+        // admin1 没有该普通代币的 6909 claim——管理员不托管非 PA 资产
         assertEq(manager.balanceOf(admin1, key0.currency1.toId()), 0);
     }
 
-    // ===== Auth / either-admin =====
+    // ===== 权限校验 / 任一管理员 =====
 
     function test_unwindPosition_reverts_when_caller_is_not_admin(address admin1, address admin2, address notAdmin)
         public
@@ -2143,7 +2143,7 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         assertEq(bytes4(data), Unauthorized.selector);
     }
 
-    /// @dev Either PA admin can call `unwindPosition`. With distinct admins, exercise both.
+    /// @dev 任一 PA 管理员都可以调用 `unwindPosition`。管理员不同时，分别测试两者。
     function test_unwindPosition_either_admin_acts_independently(address admin1, address admin2) public {
         _setupUnwindPositionTests(admin1, admin2);
         vm.assume(admin1 != admin2);
@@ -2166,12 +2166,12 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
 
     // ===== withdrawClaim =====
 
-    /// @dev Forces the cascade to the 6909 fallback (LP and admin1 both delisted on currency0), then redeems
-    ///      the admin1-held claim via `withdrawClaim` to a fresh `to`.
+    /// @dev 强制级联走到 6909 回退分支（LP 和 admin1 都被移出 currency0 的白名单），然后通过
+    ///      `withdrawClaim` 将 admin1 持有的 claim 赎回到一个新的 `to` 地址。
     function test_withdrawClaim_round_trip(address admin1, address admin2, address to) public {
         _setupUnwindPositionTests(admin1, admin2);
-        // `to` must be distinct from existing actors and from action-handler sentinels (MSG_SENDER = 0x1 /
-        // ADDRESS_THIS = 0x2 would get remapped by _mapRecipient inside the TAKE action)
+        // `to` 必须不同于已有的参与者以及操作处理器的哨兵值（MSG_SENDER = 0x1 /
+        // ADDRESS_THIS = 0x2 会在 TAKE 操作中被 _mapRecipient 重新映射）
         vm.assume(to != address(0));
         vm.assume(to != ActionConstants.MSG_SENDER);
         vm.assume(to != ActionConstants.ADDRESS_THIS);
@@ -2194,10 +2194,10 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         uint256 claim = manager.balanceOf(admin1, key0.currency0.toId());
         assertGt(claim, 0);
 
-        // `to` needs to be on the underlying compliance list to receive the secToken on unwrap
+        // `to` 需要在底层代币的合规名单中，才能在解包时收到 secToken
         MockPermissionedToken(Currency.unwrap(currency0)).setAllowlist(to, PermissionFlags.ALL_ALLOWED);
 
-        // admin1 authorizes permPosm to burn its 6909 claims
+        // admin1 授权 permPosm 销毁其 6909 claim
         vm.prank(admin1);
         manager.setOperator(address(lpm), true);
 
@@ -2207,13 +2207,13 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         vm.prank(admin1);
         _withdrawClaim(key0.currency0, claim, to);
 
-        // claim fully consumed; to received exactly `claim` of the underlying
+        // claim 被完全消耗；to 恰好收到 `claim` 数量的底层代币
         assertEq(manager.balanceOf(admin1, key0.currency0.toId()), 0);
         assertEq(_balanceOf(currency0, to) - toBefore, claim);
     }
 
-    /// @dev `MSG_SENDER` sentinel must resolve to the action executor in both the underlying delivery and
-    ///      the `ClaimWithdrawn` event. Same cascade-to-6909 setup as the round-trip test.
+    /// @dev `MSG_SENDER` 哨兵值在底层代币交付和
+    ///      `ClaimWithdrawn` 事件中都必须解析为操作执行者。采用与往返测试相同的级联至 6909 的设置。
     function test_withdrawClaim_resolves_msg_sender_sentinel() public {
         address admin = makeAddr("WC_ADMIN_MS");
         address other = makeAddr("WC_OTHER_MS");
@@ -2231,7 +2231,7 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         uint256 claim = manager.balanceOf(admin, key0.currency0.toId());
         assertGt(claim, 0);
 
-        // re-list admin so the unwrap on TAKE can deliver underlying back to it
+        // 将管理员重新加入白名单，使 TAKE 时的解包能把底层代币交付回给它
         MockPermissionedToken(Currency.unwrap(currency0)).setAllowlist(admin, PermissionFlags.ALL_ALLOWED);
 
         vm.prank(admin);
@@ -2243,7 +2243,7 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         _withdrawClaim(key0.currency0, claim, ActionConstants.MSG_SENDER);
     }
 
-    /// @dev `ADDRESS_THIS` sentinel must resolve to the position manager in both the delivery and the event.
+    /// @dev `ADDRESS_THIS` 哨兵值在交付和事件中都必须解析为 PositionManager。
     function test_withdrawClaim_resolves_address_this_sentinel() public {
         address admin = makeAddr("WC_ADMIN_AT");
         address other = makeAddr("WC_OTHER_AT");
@@ -2261,7 +2261,7 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         uint256 claim = manager.balanceOf(admin, key0.currency0.toId());
         assertGt(claim, 0);
 
-        // permPosm must be allowed to receive the underlying when the TAKE unwraps into it
+        // TAKE 会解包到 permPosm，因此必须允许它接收底层代币
         MockPermissionedToken(Currency.unwrap(currency0)).setAllowlist(address(lpm), PermissionFlags.ALL_ALLOWED);
 
         vm.prank(admin);
@@ -2273,7 +2273,7 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         _withdrawClaim(key0.currency0, claim, ActionConstants.ADDRESS_THIS);
     }
 
-    /// @dev Caller has not authorized permPosm via `setOperator` → BURN_6909 underflows on the allowance check.
+    /// @dev 调用者未通过 `setOperator` 授权 permPosm → BURN_6909 在额度检查时下溢。
     function test_withdrawClaim_reverts_without_operator() public {
         vm.startPrank(alice);
         (bool ok,) = address(lpm).call(abi.encodeWithSelector(_WITHDRAW_CLAIM_SELECTOR, key2.currency0, 1, alice));
@@ -2281,8 +2281,8 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         assertEq(ok, false);
     }
 
-    /// @dev Caller has authorized permPosm but holds no 6909 balance → BURN_6909 passes auth and underflows on
-    ///      the balance subtraction.
+    /// @dev 调用者已授权 permPosm，但没有 6909 余额 → BURN_6909 通过授权检查，并在
+    ///      扣减余额时下溢。
     function test_withdrawClaim_reverts_without_balance() public {
         vm.prank(alice);
         manager.setOperator(address(lpm), true);
@@ -2293,15 +2293,15 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         assertEq(ok, false);
     }
 
-    /// @dev BURN_6909 must reject a `from` that is not the action executor, even when the holder has authorized
-    ///      permPosm as a PoolManager operator. Otherwise a third party could drain the claim via raw
-    ///      `modifyLiquidities([BURN_6909(currency, victim, amount), TAKE(currency, attacker, amount)])`.
+    /// @dev BURN_6909 必须拒绝不是操作执行者的 `from`，即使持有者已将 permPosm 授权为
+    ///      PoolManager 的操作者。否则第三方可以通过直接调用
+    ///      `modifyLiquidities([BURN_6909(currency, victim, amount), TAKE(currency, attacker, amount)])` 掏空该 claim。
     function test_burn6909_reverts_when_from_is_not_executor(address admin1, address admin2) public {
         _setupUnwindPositionTests(admin1, admin2);
         address bob = makeAddr("BOB");
         vm.assume(bob != admin1 && bob != admin2 && bob != alice);
 
-        // produce a 6909 claim held by admin1 via the unwind cascade
+        // 通过 unwind 级联生成一个由 admin1 持有的 6909 claim
         uint256 tokenId = lpm.nextTokenId();
         _test_permissioned_mint_allowed_user(key0);
         MockPermissionedToken(Currency.unwrap(currency0)).setTokenAllowlist(alice, false);
@@ -2312,7 +2312,7 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         uint256 claim = manager.balanceOf(admin1, key0.currency0.toId());
         assertGt(claim, 0);
 
-        // admin1 follows the documented withdrawClaim approval pattern
+        // admin1 遵循文档中说明的 withdrawClaim 授权模式
         vm.prank(admin1);
         manager.setOperator(address(lpm), true);
 
@@ -2326,10 +2326,10 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         lpm.modifyLiquidities(abi.encode(actions, params), block.timestamp + 1);
     }
 
-    /// @dev TAKE(adapter, ADDRESS_THIS) leaves the POSM holding the underlying permissioned token
-    /// (because PermissionsAdapter._update auto-unwraps on transfer out of the PoolManager).
-    /// SWEEP(adapter, ...) must therefore resolve to and transfer the underlying — not the adapter —
-    /// or else the underlying is stranded and sweepable by a later caller.
+    /// @dev TAKE(adapter, ADDRESS_THIS) 会使 POSM 持有底层许可代币
+    /// （因为 PermissionsAdapter._update 在从 PoolManager 转出时会自动解包）。
+    /// 因此 SWEEP(adapter, ...) 必须解析为底层代币并转移它——而不是适配器代币——
+    /// 否则底层代币会滞留，并可被后来的调用者清扫（sweep）走。
     function test_sweep_adapterCurrency_transfersUnderlyingToRecipient() public {
         Currency adapterCurrency = key0.currency0;
         Currency underlying = getPermissionedCurrency(adapterCurrency);
@@ -2342,8 +2342,8 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         uint256 recipientUnderlyingBefore = underlying.balanceOf(alice);
         uint256 recipientAdapterBefore = adapterCurrency.balanceOf(alice);
 
-        // DECREASE to create a positive delta, then TAKE(adapter, ADDRESS_THIS) which routes the
-        // underlying into POSM via the adapter unwrap, then SWEEP(adapter, alice).
+        // 先 DECREASE 产生正 delta，然后 TAKE(adapter, ADDRESS_THIS) 通过适配器解包将
+        // 底层代币转入 POSM，最后 SWEEP(adapter, alice)。
         Plan memory planner = Planner.init();
         planner.add(
             Actions.DECREASE_LIQUIDITY,
@@ -2355,18 +2355,18 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
 
         lpm.modifyLiquidities(planner.encode(), _deadline);
 
-        // Alice received the underlying token, not the adapter token.
+        // Alice 收到的是底层代币，而不是适配器代币。
         assertGt(underlying.balanceOf(alice), recipientUnderlyingBefore, "recipient did not receive underlying");
         assertEq(
             adapterCurrency.balanceOf(alice), recipientAdapterBefore, "recipient should not receive adapter tokens"
         );
-        // POSM should not be left holding either the underlying or the adapter.
+        // POSM 不应残留任何底层代币或适配器代币。
         assertEq(underlying.balanceOf(address(lpm)), 0, "underlying stranded in POSM");
         assertEq(adapterCurrency.balanceOf(address(lpm)), 0, "adapter stranded in POSM");
     }
 
-    /// @dev Second call to SWEEP with the adapter currency must be a no-op — the underlying
-    /// has already been forwarded on the first sweep.
+    /// @dev 第二次以适配器代币调用 SWEEP 必须是空操作——底层代币
+    /// 已在第一次清扫时转出。
     function test_sweep_adapterCurrency_secondSweepTransfersNothing() public {
         Currency adapterCurrency = key0.currency0;
         Currency underlying = getPermissionedCurrency(adapterCurrency);
@@ -2387,8 +2387,8 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         planner.add(Actions.TAKE, abi.encode(adapterCurrency, ActionConstants.ADDRESS_THIS, ActionConstants.OPEN_DELTA));
         planner.add(Actions.TAKE, abi.encode(key0.currency1, ActionConstants.MSG_SENDER, ActionConstants.OPEN_DELTA));
         planner.add(Actions.SWEEP, abi.encode(adapterCurrency, alice));
-        // Second sweep goes to the test contract (also allowlisted) and should move nothing
-        // since the POSM's underlying balance was fully drained by the first sweep.
+        // 第二次清扫发往测试合约（同样在白名单中），并且不应转移任何代币，
+        // 因为 POSM 的底层代币余额已在第一次清扫中被全部转出。
         planner.add(Actions.SWEEP, abi.encode(adapterCurrency, address(this)));
 
         lpm.modifyLiquidities(planner.encode(), _deadline);
@@ -2398,8 +2398,8 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         assertEq(adapterCurrency.balanceOfSelf(), 0, "second sweep should not transfer adapter");
     }
 
-    /// @dev Sweeping a non-permissioned currency is unchanged: it still transfers whatever balance
-    /// of that currency POSM happens to hold.
+    /// @dev 清扫非许可代币的行为不变：它仍会转出 POSM 恰好持有的
+    /// 该代币的全部余额。
     function test_sweep_nonPermissionedCurrency_stillTransfersBalance() public {
         Currency nonPermissioned = key0.currency1;
         uint256 amount = 123 ether;
@@ -2416,9 +2416,9 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         assertEq(nonPermissioned.balanceOf(address(lpm)), 0);
     }
 
-    // ===== Caller-supplied burn bounds and hookData on unwindPosition =====
+    // ===== unwindPosition 上由调用者提供的销毁边界与 hookData =====
 
-    /// @dev Bounds the burn can satisfy do not change the outcome.
+    /// @dev 销毁能够满足的数量边界不会改变结果。
     function test_unwindPosition_withSatisfiableMinAmounts_succeeds() public {
         uint256 tokenId = lpm.nextTokenId();
         _test_permissioned_mint_allowed_user(key2);
@@ -2432,7 +2432,7 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         IERC721(address(lpm)).ownerOf(tokenId);
     }
 
-    /// @dev Bounds the burn cannot satisfy revert the whole force-exit and leave the position intact.
+    /// @dev 销毁无法满足的数量边界会使整个强制退出回滚，并保持头寸不变。
     function test_unwindPosition_withUnsatisfiableMinAmounts_revertsAndPreservesPosition() public {
         uint256 tokenId = lpm.nextTokenId();
         _test_permissioned_mint_allowed_user(key2);
@@ -2447,7 +2447,7 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         assertEq(IERC721(address(lpm)).ownerOf(tokenId), alice);
     }
 
-    /// @dev A custom hook extension with remove-liquidity callbacks receives the caller-supplied `hookData`.
+    /// @dev 带有移除流动性回调的自定义 hook 扩展会收到调用者提供的 `hookData`。
     function test_unwindPosition_forwardsHookDataToHook() public {
         (MockRemoveLiquidityDataHook hook, PoolKey memory hookKey) = _setUpRemoveLiquidityDataHookPool();
         uint256 tokenId = lpm.nextTokenId();
@@ -2464,8 +2464,8 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         assertEq(lpm.getPositionLiquidity(tokenId), 0);
     }
 
-    /// @dev Control: the same pool with empty hookData reverts in the hook, proving the test above passes
-    ///      because the data was forwarded and not because the hook is inert.
+    /// @dev 对照组：同一个池在 hookData 为空时会在 hook 中回滚，证明上面的测试之所以通过，
+    ///      是因为数据被转发了，而不是因为该 hook 什么都不做。
     function test_unwindPosition_emptyHookDataRevertsInHook() public {
         (, PoolKey memory hookKey) = _setUpRemoveLiquidityDataHookPool();
         uint256 tokenId = lpm.nextTokenId();
@@ -2480,8 +2480,8 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         assertEq(lpm.getPositionLiquidity(tokenId), 1e18, "position untouched");
     }
 
-    /// @dev Deploys a hook mined with BEFORE_REMOVE_LIQUIDITY_FLAG, allowlists it, and opens a pool
-    ///      pairing it with a verified adapter.
+    /// @dev 部署一个按 BEFORE_REMOVE_LIQUIDITY_FLAG 挖出地址的 hook，将其加入白名单，并开设一个
+    ///      将其与已验证适配器配对的池。
     function _setUpRemoveLiquidityDataHookPool()
         internal
         returns (MockRemoveLiquidityDataHook hook, PoolKey memory hookKey)
@@ -2506,10 +2506,10 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         setAllowedHooks(Currency.wrap(address(permissionsAdapter2)), IHooks(deployed), true);
     }
 
-    // ===== Subscriber DoS protection on unwindPosition =====
+    // ===== unwindPosition 上针对订阅者 DoS 的防护 =====
 
-    /// @dev Admin force-exit succeeds even when the LP attached a subscriber that reverts on
-    ///      `notifyUnsubscribe`. The revert is gas-capped + try/catch'd inside `_unsubscribe`.
+    /// @dev 管理员强制退出仍会成功，即使 LP 挂载的订阅者在
+    ///      `notifyUnsubscribe` 时回滚。该回滚受 gas 上限限制，并在 `_unsubscribe` 内部被 try/catch 捕获。
     function test_unwindPosition_with_unsubscribe_reverting_subscriber_succeeds() public {
         uint256 tokenId = lpm.nextTokenId();
         _test_permissioned_mint_allowed_user(key2);
@@ -2519,24 +2519,24 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         INotifier(address(lpm)).subscribe(tokenId, address(sub), "");
         assertEq(address(INotifier(address(lpm)).subscriber(tokenId)), address(sub));
 
-        // address(this) is admin of both adapters (default setUp)
+        // address(this) 是两个适配器的管理员（默认 setUp）
         (bool ok,) =
             address(lpm).call(abi.encodeWithSelector(_UNWIND_SELECTOR, tokenId, uint128(0), uint128(0), bytes("")));
         assertEq(ok, true);
 
-        // subscriber detached, NFT burned
+        // 订阅者已解除挂载，NFT 已销毁
         assertEq(address(INotifier(address(lpm)).subscriber(tokenId)), address(0));
         vm.expectRevert();
         IERC721(address(lpm)).ownerOf(tokenId);
     }
 
-    /// @dev Admin force-exit succeeds even when the LP attaches a subscriber that leaves an UNSETTLED
-    ///      PoolManager delta during `notifyUnsubscribe` (mints 1 wei of the native-ETH 6909 claim to
-    ///      itself and returns cleanly). The gas-capped try/catch in `_unsubscribe` has nothing to catch,
-    ///      so the delta must not be created inside an open unlock — otherwise the enclosing `unlock` would
-    ///      revert with `CurrencyNotSettled` after the callback and brick the force-exit. Regression test
-    ///      for the flash-accounting griefing vector: `_unsubscribe` runs with the manager locked, so the
-    ///      subscriber's `mint` reverts with `ManagerLocked` inside the callback and is absorbed.
+    /// @dev 管理员强制退出仍会成功，即使 LP 挂载的订阅者会留下一个未结算（UNSETTLED）的
+    ///      PoolManager delta（在 `notifyUnsubscribe` 期间给自己铸造 1 wei 的原生 ETH 6909 claim
+    ///      并正常返回）。`_unsubscribe` 中受 gas 上限限制的 try/catch 无从捕获，
+    ///      因此该 delta 绝不能在已开启的 unlock 内部产生——否则外层的 `unlock` 会在
+    ///      回调之后以 `CurrencyNotSettled` 回滚，导致强制退出彻底失效。这是针对
+    ///      闪电记账恶意消耗（griefing）攻击向量的回归测试：`_unsubscribe` 在 manager 处于锁定状态时运行，因此
+    ///      订阅者的 `mint` 会在回调内以 `ManagerLocked` 回滚并被吸收。
     function test_unwindPosition_with_flashAttackSubscriber_succeeds() public {
         uint256 tokenId = lpm.nextTokenId();
         _test_permissioned_mint_allowed_user(key2);
@@ -2546,51 +2546,51 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         INotifier(address(lpm)).subscribe(tokenId, address(sub), "");
         assertEq(address(INotifier(address(lpm)).subscriber(tokenId)), address(sub));
 
-        // address(this) is admin of both adapters (default setUp).
-        // Before the fix this reverts with CurrencyNotSettled and `ok` is false.
+        // address(this) 是两个适配器的管理员（默认 setUp）。
+        // 修复之前，这里会以 CurrencyNotSettled 回滚，且 `ok` 为 false。
         (bool ok,) =
             address(lpm).call(abi.encodeWithSelector(_UNWIND_SELECTOR, tokenId, uint128(0), uint128(0), bytes("")));
         assertEq(ok, true);
 
-        // subscriber detached, NFT burned. `notifyUnsubscribeCount` is not asserted: with the manager
-        // locked the subscriber's `mint` reverts inside the callback, so the whole callback (and its
-        // counter increment) is rolled back and swallowed by the try/catch.
+        // 订阅者已解除挂载，NFT 已销毁。这里不断言 `notifyUnsubscribeCount`：由于 manager
+        // 处于锁定状态，订阅者的 `mint` 会在回调内回滚，因此整个回调（及其
+        // 计数器自增）都会被回滚，并被 try/catch 吞掉。
         assertEq(address(INotifier(address(lpm)).subscriber(tokenId)), address(0));
         vm.expectRevert();
         IERC721(address(lpm)).ownerOf(tokenId);
     }
 
-    /// @dev Admin force-exit succeeds even when the LP grants operator approval to a malicious
-    ///      reentrant subscriber that re-attaches a fresh subscriber during `notifyUnsubscribe`.
-    ///      `_unsubscribe` runs with the manager locked, so `subscribe`'s `onlyIfPoolManagerLocked`
-    ///      guard passes and the re-attach succeeds; the force-clear in `unwindPosition` then removes
-    ///      the replacement before BURN_POSITION, so its reverting `notifyBurn` never runs.
+    /// @dev 管理员强制退出仍会成功，即使 LP 向一个恶意的
+    ///      重入订阅者授予了操作者授权，而该订阅者会在 `notifyUnsubscribe` 期间重新挂载一个新的订阅者。
+    ///      `_unsubscribe` 在 manager 锁定状态下运行，因此 `subscribe` 的 `onlyIfPoolManagerLocked`
+    ///      检查会通过，重新挂载也会成功；随后 `unwindPosition` 中的强制清除会在
+    ///      BURN_POSITION 之前移除这个替换者，因此它会回滚的 `notifyBurn` 永远不会执行。
     function test_unwindPosition_with_reentrant_subscriber_reattach_is_force_cleared() public {
         uint256 tokenId = lpm.nextTokenId();
         _test_permissioned_mint_allowed_user(key2);
 
-        // The replacement the reentrant subscriber re-attaches; its `notifyBurn` reverts, so if it
-        // survived to BURN_POSITION it would brick the force-exit.
+        // 重入订阅者重新挂载的替换者；它的 `notifyBurn` 会回滚，因此如果它
+        // 存活到 BURN_POSITION，就会使强制退出彻底失效。
         MockBurnRevertingSubscriber replacement = new MockBurnRevertingSubscriber();
 
-        // The malicious subscriber that the LP attaches. On notifyUnsubscribe it re-attaches
-        // `replacement` via posm.subscribe.
+        // LP 挂载的恶意订阅者。在 notifyUnsubscribe 时，它会通过 posm.subscribe
+        // 重新挂载 `replacement`。
         MockReentrantSubscriber sub = new MockReentrantSubscriber(INotifier(address(lpm)), address(replacement));
 
         vm.prank(alice);
         INotifier(address(lpm)).subscribe(tokenId, address(sub), "");
         assertEq(address(INotifier(address(lpm)).subscriber(tokenId)), address(sub));
 
-        // The reentry path requires the subscriber to be authorized to call posm.subscribe.
-        // LP grants operator approval — this is the setup we're testing the defense against.
+        // 重入路径要求订阅者有权调用 posm.subscribe。
+        // LP 授予操作者授权——这正是我们要测试其防御的场景设置。
         vm.prank(alice);
         IERC721(address(lpm)).setApprovalForAll(address(sub), true);
 
-        // Pin that the re-attach actually happens: this is exactly what the force-clear must neutralize.
-        // If the force-clear were removed, `replacement` would survive and its notifyBurn would brick the burn.
+        // 锁定“重新挂载确实发生”这一点：这正是强制清除必须消除的情况。
+        // 如果移除强制清除，`replacement` 就会存活下来，其 notifyBurn 会使销毁彻底失效。
         vm.expectEmit(true, true, false, true, address(lpm));
         emit INotifier.Subscription(tokenId, address(replacement));
-        // ...and pin that the force-clear then unsubscribes it before the burn, so indexers stay balanced.
+        // ……并锁定强制清除随后会在销毁前将其取消订阅，使索引器的记录保持平衡。
         vm.expectEmit(true, true, false, true, address(lpm));
         emit INotifier.Unsubscription(tokenId, address(replacement));
 
@@ -2598,21 +2598,21 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
             address(lpm).call(abi.encodeWithSelector(_UNWIND_SELECTOR, tokenId, uint128(0), uint128(0), bytes("")));
         assertEq(ok, true);
 
-        // The re-attached subscriber was force-cleared before the burn, so the position is fully detached.
+        // 重新挂载的订阅者已在销毁前被强制清除，因此头寸已完全解除挂载。
         assertEq(address(INotifier(address(lpm)).subscriber(tokenId)), address(0));
         vm.expectRevert();
         IERC721(address(lpm)).ownerOf(tokenId);
     }
 
-    /// @dev Admin force-exit succeeds even when the LP's subscriber overwrites the admin's temporary
-    ///      ERC-721 approval during `notifyUnsubscribe`. `approve` has no `onlyIfPoolManagerLocked` guard so
-    ///      the write lands, but `unwindPosition` sets `getApproved` again after `_unsubscribe` returns and
-    ///      before BURN_POSITION, so the hijacked value is overwritten and the burn still passes
-    ///      `onlyIfApproved`. Here the subscriber is the position owner, so `approve` passes on the
-    ///      `msg.sender == owner` branch.
+    /// @dev 管理员强制退出仍会成功，即使 LP 的订阅者覆盖了管理员临时的
+    ///      ERC-721 授权（在 `notifyUnsubscribe` 期间）。`approve` 没有 `onlyIfPoolManagerLocked` 检查，因此
+    ///      该写入会生效，但 `unwindPosition` 会在 `_unsubscribe` 返回之后、
+    ///      BURN_POSITION 之前再次设置 `getApproved`，因此被劫持的值会被覆盖，销毁仍能通过
+    ///      `onlyIfApproved`。这里订阅者就是头寸所有者，因此 `approve` 会在
+    ///      `msg.sender == owner` 分支上通过。
     function test_unwindPosition_with_approvalHijackingSubscriber_succeeds() public {
         MockApprovalHijackSubscriber sub = new MockApprovalHijackSubscriber(address(lpm), true, address(0));
-        // a contract LP needs LIQUIDITY_ALLOWED on both underlyings to hold the position
+        // 合约形式的 LP 需要在两种底层代币上都拥有 LIQUIDITY_ALLOWED 才能持有该头寸
         MockPermissionedToken(Currency.unwrap(currency0)).setAllowlist(address(sub), PermissionFlags.ALL_ALLOWED);
         MockPermissionedToken(Currency.unwrap(currency2)).setAllowlist(address(sub), PermissionFlags.ALL_ALLOWED);
 
@@ -2629,7 +2629,7 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
             address(lpm).call(abi.encodeWithSelector(_UNWIND_SELECTOR, tokenId, uint128(0), uint128(0), bytes("")));
         assertEq(ok, true);
 
-        // the hijacking write did land inside the callback, and was discarded by the re-approval
+        // 劫持写入确实在回调内生效了，但被重新授权覆盖丢弃
         assertEq(sub.notifyUnsubscribeCount(), 1);
         assertGt(sub.gasUsedByApprove(), 0);
 
@@ -2638,9 +2638,9 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         IERC721(address(lpm)).ownerOf(tokenId);
     }
 
-    /// @dev Same hijack through the `isApprovedForAll[owner][msg.sender]` branch instead: an EOA LP attaches a
-    ///      separate malicious subscriber and grants it operator-for-all. Operator authority outlives the
-    ///      admin's per-token approval, so this shape needs coverage of its own.
+    /// @dev 同样的劫持，但改为经由 `isApprovedForAll[owner][msg.sender]` 分支：一个 EOA 形式的 LP 挂载一个
+    ///      独立的恶意订阅者，并授予其全局操作者（operator-for-all）权限。操作者权限比管理员的
+    ///      单个 token 授权存续更久，因此这种情形需要单独覆盖测试。
     function test_unwindPosition_with_operatorApprovalHijackingSubscriber_succeeds() public {
         uint256 tokenId = lpm.nextTokenId();
         _test_permissioned_mint_allowed_user(key2);
@@ -2663,8 +2663,8 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         IERC721(address(lpm)).ownerOf(tokenId);
     }
 
-    /// @dev LP-initiated burn semantics are preserved: a subscriber that reverts on `notifyBurn`
-    ///      still propagates the revert when the LP burns their own position via BURN_POSITION.
+    /// @dev LP 主动发起的销毁语义保持不变：在 `notifyBurn` 时回滚的订阅者
+    ///      在 LP 通过 BURN_POSITION 销毁自己的头寸时，仍会将回滚向上传递。
     function test_burn_lp_with_burn_reverting_subscriber_still_reverts() public {
         uint256 tokenId = lpm.nextTokenId();
         _test_permissioned_mint_allowed_user(key2);
@@ -2680,35 +2680,35 @@ contract PermissionedPositionManagerTest is Test, PermissionedPosmTestSetup, Liq
         burn(tokenId, config, ZERO_BYTES);
     }
 
-    // ===== Action handler authorization =====
+    // ===== 操作（action）处理器的权限校验 =====
 
-    /// @notice MINT_6909 and UNWIND_WITH_FALLBACK are reachable directly through the public `modifyLiquidities`
-    ///         router (they share the base action dispatcher). That is safe only because PermPosm never holds a
-    ///         standing 6909 claim between calls: with nothing parked, a direct call cannot extract any value.
-    ///         This test pins that invariant. If a future change ever leaves PermPosm holding a standing claim,
-    ///         the UNWIND_WITH_FALLBACK leg here stops reverting, which is the signal that these actions once
-    ///         again need a guard (e.g. the removed `_isUnwinding` flag).
+    /// @notice MINT_6909 和 UNWIND_WITH_FALLBACK 可以直接通过公开的 `modifyLiquidities`
+    ///         路由入口调用（它们共用基础的操作分发器）。这之所以安全，仅仅是因为 PermPosm 在两次调用之间
+    ///         从不持有常驻的 6909 claim：既然没有任何暂存资产，直接调用就无法提取任何价值。
+    ///         本测试锁定这一不变量。如果将来的某次改动使 PermPosm 持有常驻 claim，
+    ///         这里的 UNWIND_WITH_FALLBACK 部分将不再回滚，这就表明这些操作需要再次
+    ///         加上防护（例如已被移除的 `_isUnwinding` 标志）。
     function test_unwindActions_onPublicRouter_cannotExtractValue() public {
         uint256 tokenId = lpm.nextTokenId();
         _test_permissioned_mint_allowed_user(key2);
 
-        // UNWIND_WITH_FALLBACK burns PermPosm's own claim and takes the real asset to `to`. PermPosm holds no
-        // standing claim, so `burn(address(this), id, 1)` has nothing to burn and the whole batch reverts.
+        // UNWIND_WITH_FALLBACK 会销毁 PermPosm 自己的 claim，并将真实资产提取给 `to`。PermPosm 不持有
+        // 常驻 claim，因此 `burn(address(this), id, 1)` 无可销毁，整个批次会回滚。
         Plan memory deliver = Planner.init();
         deliver.add(Actions.UNWIND_WITH_FALLBACK, abi.encode(key2.currency0, unauthorizedUser, uint256(1)));
         bytes memory deliverCalls = deliver.encode();
         vm.expectRevert();
         lpm.modifyLiquidities(deliverCalls, block.timestamp + 1);
 
-        // MINT_6909 mints PermPosm's full positive delta to itself. With no delta, `_getFullCredit` is 0 and the
-        // mint is a no-op: the batch succeeds but parks no claim on PermPosm and hands nothing to the caller.
+        // MINT_6909 会把 PermPosm 的全部正 delta 铸造给它自己。没有 delta 时，`_getFullCredit` 为 0，
+        // 铸造为空操作：批次会成功，但不会在 PermPosm 上暂存任何 claim，也不会给调用者任何东西。
         Plan memory settle = Planner.init();
         settle.add(Actions.MINT_6909, abi.encode(key2.currency0));
         lpm.modifyLiquidities(settle.encode(), block.timestamp + 1);
         assertEq(manager.balanceOf(address(lpm), key2.currency0.toId()), 0, "PermPosm parked no claim");
         assertEq(manager.balanceOf(unauthorizedUser, key2.currency0.toId()), 0, "caller received no claim");
 
-        // Alice's position is untouched.
+        // Alice 的头寸未受影响。
         assertEq(IERC721(address(lpm)).ownerOf(tokenId), alice);
     }
 }
